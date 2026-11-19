@@ -1,0 +1,147 @@
+<main>
+  <header>
+    <button type="button" (click)="goBack()">← Panel</button>
+    <h1>{{ strings.title }}</h1>
+    <button type="button" (click)="openAdd()">{{ strings.add }}</button>
+  </header>
+
+  @if (statusMessage(); as message) {
+    <p role="status">{{ message }}</p>
+  }
+
+  <section class="filters" aria-label="Filtros de jugadores">
+    <label>
+      {{ strings.search }}
+      <input type="search" [value]="search()" (input)="search.set($any($event.target).value)" />
+    </label>
+
+    <label>
+      {{ strings.team }}
+      <select [value]="teamFilter()" (change)="teamFilter.set($any($event.target).value)">
+        <option value="ALL">{{ strings.all }}</option>
+        <option value="UNASSIGNED">{{ strings.withoutTeam }}</option>
+        @for (team of teams(); track team.id) {
+          <option [value]="team.id">{{ team.name }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      {{ strings.category }}
+      <select [value]="categoryFilter()" (change)="categoryFilter.set($any($event.target).value)">
+        <option value="ALL">{{ strings.all }}</option>
+        @for (category of categories(); track category) {
+          <option [value]="category">{{ category }}</option>
+        }
+      </select>
+    </label>
+
+    <label>
+      {{ strings.gender }}
+      <select [value]="genderFilter()" (change)="genderFilter.set($any($event.target).value)">
+        <option value="ALL">{{ strings.all }}</option>
+        <option value="M">{{ strings.male }}</option>
+        <option value="F">{{ strings.female }}</option>
+      </select>
+    </label>
+  </section>
+
+  <p>{{ filteredPlayers.length }} {{ strings.total }}</p>
+
+  @if (formOpen()) {
+    <section class="form-card" aria-label="Formulario de jugador">
+      <h2>{{ editingId() ? strings.edit : strings.add }}</h2>
+
+      <div class="form-grid">
+        <label>
+          {{ strings.firstName }}
+          <input
+            type="text"
+            [value]="firstName()"
+            (input)="firstName.set($any($event.target).value)"
+          />
+        </label>
+
+        <label>
+          {{ strings.lastName }}
+          <input
+            type="text"
+            [value]="lastName()"
+            (input)="lastName.set($any($event.target).value)"
+          />
+        </label>
+
+        <label>
+          {{ strings.category }}
+          <select [value]="category()" (change)="category.set($any($event.target).value)">
+            @for (item of categories(); track item) {
+              <option [value]="item">{{ item }}</option>
+            }
+          </select>
+        </label>
+
+        <label>
+          {{ strings.gender }}
+          <select [value]="gender()" (change)="gender.set($any($event.target).value)">
+            <option value="">—</option>
+            <option value="M">{{ strings.male }}</option>
+            <option value="F">{{ strings.female }}</option>
+          </select>
+        </label>
+
+        <label>
+          {{ strings.team }}
+          <select [value]="teamId() ?? ''" (change)="teamId.set($any($event.target).value || null)">
+            <option value="">{{ strings.withoutTeam }}</option>
+            @for (team of teams(); track team.id) {
+              <option [value]="team.id">{{ team.name }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      @if (formError(); as error) {
+        <p class="error" role="alert">{{ error }}</p>
+      }
+
+      <div class="actions">
+        <button type="button" (click)="savePlayer()">{{ strings.save }}</button>
+        <button type="button" (click)="closeForm()">{{ strings.cancel }}</button>
+      </div>
+    </section>
+  }
+
+  @if (filteredPlayers.length === 0) {
+    <p>{{ players().length === 0 ? strings.noPlayers : strings.noMatches }}</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ strings.firstName }}</th>
+            <th>{{ strings.lastName }}</th>
+            <th>{{ strings.category }}</th>
+            <th>{{ strings.gender }}</th>
+            <th>{{ strings.team }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (player of filteredPlayers; track player.id) {
+            <tr>
+              <td>{{ player.firstName }}</td>
+              <td>{{ playerLabel(player) }}</td>
+              <td>{{ player.category }}</td>
+              <td>{{ player.gender }}</td>
+              <td>{{ teamName(player.teamId) }}</td>
+              <td class="row-actions">
+                <button type="button" (click)="openEdit(player)">Editar</button>
+                <button type="button" (click)="deletePlayer(player)">{{ strings.delete }}</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</main>
