@@ -1,0 +1,19 @@
+<main>
+  <h1>{{ strings.panelTitle }}</h1>
+
+  <section>
+    <p>{{ offlineStatus() }}</p>
+    <p>{{ persistenceStatus() }}</p>
+  </section>
+
+  <button type="button" (click)="saveTest()">{{ strings.saveTest }}</button>
+  <button type="button" (click)="openProjector()">{{ strings.openProjector }}</button>
+
+  @if (lastRecord(); as record) {
+    <p>Último dato guardado: {{ record.message }}</p>
+  }
+
+  @if (popupBlocked()) {
+    <p role="alert">{{ strings.popupBlocked }}</p>
+  }
+</main>
