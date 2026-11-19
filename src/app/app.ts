@@ -1,9 +1,43 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
+import { tournamentRepository } from '../data/tournament-repository';
+import { PERSISTENCE_STRINGS } from '../i18n/persistence-strings';
 
 @Component({
   imports: [RouterOutlet],
   selector: 'app-root',
   templateUrl: './app.html',
 })
-export class App {}
+export class App implements OnInit {
+  protected readonly strings = PERSISTENCE_STRINGS;
+  protected readonly ready = signal(false);
+  protected readonly databaseAvailable = signal(true);
+  private readonly router = inject(Router);
+
+  async ngOnInit(): Promise<void> {
+    this.databaseAvailable.set(await tournamentRepository.isAvailable());
+    if (!this.databaseAvailable()) {
+      this.ready.set(true);
+      return;
+    }
+
+    const tournament = await tournamentRepository.getTournament();
+    if (!tournament) {
+      if (this.router.url === '/panel' || this.router.url === '/') {
+        await this.router.navigateByUrl('/bienvenida');
+      }
+    } else if (this.router.url === '/' || this.router.url === '/bienvenida') {
+      await this.router.navigateByUrl(localStorage.getItem('fast-seven-last-screen') ?? '/panel');
+    }
+
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        if (event.urlAfterRedirects === '/panel' || event.urlAfterRedirects === '/proyector') {
+          localStorage.setItem('fast-seven-last-screen', event.urlAfterRedirects);
+        }
+      });
+    this.ready.set(true);
+  }
+}

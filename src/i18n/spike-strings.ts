@@ -1,9 +1,12 @@
 export const SPIKE_STRINGS = {
   offlineReady: 'Listo para usar sin conexión',
-  offlinePending: 'Preparando el modo sin conexión',
+  offlinePending: 'Verificando el modo sin conexión',
+  offlineDevelopment: 'Modo sin conexión disponible al ejecutar la versión publicada',
   persistenceGranted: 'Almacenamiento persistente concedido',
-  persistenceDenied: 'Almacenamiento persistente denegado',
-  persistenceUnsupported: 'Este navegador no permite consultar almacenamiento persistente',
+  persistenceDenied:
+    'El navegador no confirmó almacenamiento persistente. Tus datos siguen guardándose localmente.',
+  persistenceUnsupported:
+    'Este navegador no permite consultar almacenamiento persistente. Tus datos siguen guardándose localmente.',
   popupBlocked:
     'El navegador bloqueó la ventana del proyector. Permití las ventanas emergentes para este sitio y probá de nuevo.',
   projectorConnected: 'Proyector conectado',

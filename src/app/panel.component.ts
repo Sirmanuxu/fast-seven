@@ -1,7 +1,8 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 import { spikeDatabase, SpikeRecord } from '../data/spike-database';
+import { tournamentRepository } from '../data/tournament-repository';
+import { PERSISTENCE_STRINGS } from '../i18n/persistence-strings';
 import { SPIKE_STRINGS } from '../i18n/spike-strings';
 import { ProjectorChannel } from '../sync/projector-channel';
 
@@ -11,6 +12,7 @@ import { ProjectorChannel } from '../sync/projector-channel';
   styleUrl: './panel.component.css',
 })
 export class PanelComponent implements OnInit {
+  protected readonly persistenceStrings = PERSISTENCE_STRINGS;
   private readonly swUpdate = inject(SwUpdate);
   private readonly projectorChannel = new ProjectorChannel();
   private readonly destroyRef = inject(DestroyRef);
@@ -20,6 +22,8 @@ export class PanelComponent implements OnInit {
   protected readonly persistenceStatus = signal<string>(SPIKE_STRINGS.persistenceUnsupported);
   protected readonly offlineStatus = signal<string>(SPIKE_STRINGS.offlinePending);
   protected readonly popupBlocked = signal(false);
+  protected readonly savedAt = signal<string | null>(null);
+  protected readonly storageError = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
@@ -29,13 +33,28 @@ export class PanelComponent implements OnInit {
   }
 
   protected async saveTest(): Promise<void> {
-    const record: SpikeRecord = {
-      message: `Prueba guardada a las ${new Date().toLocaleTimeString('es-AR')}`,
-      createdAt: new Date().toISOString(),
-    };
-    await spikeDatabase.spikeRecords.add(record);
-    await this.loadLastRecord();
-    this.projectorChannel.publish(record.message);
+    try {
+      const record: SpikeRecord = {
+        message: `Prueba guardada a las ${new Date().toLocaleTimeString('es-AR')}`,
+        createdAt: new Date().toISOString(),
+      };
+      await spikeDatabase.transaction('rw', spikeDatabase.spikeRecords, async () => {
+        await spikeDatabase.spikeRecords.add(record);
+      });
+      await tournamentRepository.touchTournament();
+      await this.loadLastRecord();
+      this.savedAt.set(
+        new Date().toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }),
+      );
+      this.storageError.set(null);
+      this.projectorChannel.publish(record.message);
+    } catch {
+      this.storageError.set(PERSISTENCE_STRINGS.saveFailed);
+    }
   }
 
   protected openProjector(): void {
@@ -64,14 +83,25 @@ export class PanelComponent implements OnInit {
 
   private checkOfflineStatus(): void {
     if (!this.swUpdate.isEnabled) {
+      this.offlineStatus.set(SPIKE_STRINGS.offlineDevelopment);
       return;
     }
 
-    void this.swUpdate.checkForUpdate();
-    this.swUpdate.versionUpdates.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
-      if (event.type === 'NO_NEW_VERSION_DETECTED' || event.type === 'VERSION_READY') {
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.ready
+        .then((registration) => {
+          if (registration.active) {
+            this.offlineStatus.set(SPIKE_STRINGS.offlineReady);
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    void this.swUpdate
+      .checkForUpdate()
+      .then(() => {
         this.offlineStatus.set(SPIKE_STRINGS.offlineReady);
-      }
-    });
+      })
+      .catch(() => undefined);
   }
 }
