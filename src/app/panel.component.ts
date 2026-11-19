@@ -1,5 +1,6 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
+import { Router } from '@angular/router';
 import { spikeDatabase, SpikeRecord } from '../data/spike-database';
 import { tournamentRepository } from '../data/tournament-repository';
 import { PERSISTENCE_STRINGS } from '../i18n/persistence-strings';
@@ -12,6 +13,7 @@ import { ProjectorChannel } from '../sync/projector-channel';
   styleUrl: './panel.component.css',
 })
 export class PanelComponent implements OnInit {
+  private readonly router = inject(Router);
   protected readonly persistenceStrings = PERSISTENCE_STRINGS;
   private readonly swUpdate = inject(SwUpdate);
   private readonly projectorChannel = new ProjectorChannel();
@@ -61,6 +63,10 @@ export class PanelComponent implements OnInit {
     const target = new URL('#/proyector', window.location.href);
     const projector = window.open(target.href, 'fast-seven-projector', 'popup=yes');
     this.popupBlocked.set(projector === null);
+  }
+
+  protected openPlayers(): void {
+    void this.router.navigateByUrl('/jugadores');
   }
 
   private async loadLastRecord(): Promise<void> {
