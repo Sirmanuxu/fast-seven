@@ -42,3 +42,32 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Angular / build
+.angular/
+/dist/
+/out-tsc/
+
+# Datos reales: NUNCA subir (jugadores incluyen menores)
+/private/
+torneo-*.json
+*.xlsx
+*.xls
+*.csv
+# ...excepto datos de prueba inventados
+!src/**/fixtures/*.csv
+!src/**/fixtures/*.xlsx
+
+# Secretos y entorno
+.env
+.env.*
+
+# Editores y sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Agentes (configuración local)
+.claude/settings.local.json
