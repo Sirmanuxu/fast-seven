@@ -10,6 +10,7 @@ import {
   TournamentSnapshot,
 } from '../domain/model';
 import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
+import { canCreateOrDeleteTeam } from '../domain/team';
 
 export interface MatchSaveInput {
   readonly match: Match;
@@ -116,7 +117,91 @@ export class TournamentRepository {
   }
 
   async getTeams(): Promise<readonly Team[]> {
-    return tournamentDatabase.teams.orderBy('name').sortBy('name');
+    const teams = await tournamentDatabase.teams.toArray();
+    return teams.sort((left, right) => left.name.localeCompare(right.name, 'es'));
+  }
+
+  async putTeam(team: Team): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.teams,
+      tournamentDatabase.tournament,
+      async () => {
+        const tournament = await this.getTournament();
+        const existing = await tournamentDatabase.teams.get(team.id);
+        if (tournament?.status === 'RUNNING' && !existing) {
+          throw new Error('Teams cannot be created while the tournament is running');
+        }
+        await tournamentDatabase.teams.put(team);
+        if (tournament) {
+          await tournamentDatabase.tournament.update(tournament.id, {
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      },
+    );
+  }
+
+  async deleteTeam(teamId: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.teams,
+      tournamentDatabase.players,
+      tournamentDatabase.backups,
+      tournamentDatabase.tournament,
+      async () => {
+        const [tournament, players, teams, stages, groups, matches, events, draws] =
+          await Promise.all([
+            tournamentDatabase.tournament.toCollection().first(),
+            tournamentDatabase.players.toArray(),
+            tournamentDatabase.teams.toArray(),
+            tournamentDatabase.stages.toArray(),
+            tournamentDatabase.groups.toArray(),
+            tournamentDatabase.matches.toArray(),
+            tournamentDatabase.events.toArray(),
+            tournamentDatabase.draws.toArray(),
+          ]);
+
+        if (!tournament) {
+          throw new Error('No tournament is available');
+        }
+        if (!canCreateOrDeleteTeam(tournament.status)) {
+          throw new Error('Teams cannot be deleted while the tournament is running');
+        }
+
+        const backup: Backup = {
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          reason: 'BEFORE_CASCADE_EDIT',
+          snapshot: {
+            tournament,
+            players,
+            teams,
+            stages,
+            groups,
+            matches,
+            events,
+            draws,
+          },
+        };
+        await tournamentDatabase.backups.add(backup);
+
+        await tournamentDatabase.players.where('teamId').equals(teamId).modify({ teamId: null });
+        await tournamentDatabase.teams.delete(teamId);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: new Date().toISOString(),
+        });
+
+        const oldIds = await tournamentDatabase.backups
+          .orderBy('createdAt')
+          .reverse()
+          .offset(10)
+          .primaryKeys();
+        if (oldIds.length > 0) {
+          await tournamentDatabase.backups.bulkDelete(oldIds);
+        }
+      },
+    );
   }
 
   async putPlayer(player: Player, previousTeamId: string | null = null): Promise<void> {
