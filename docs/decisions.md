@@ -57,3 +57,9 @@
 - **Reason:** This matches the backlog rule consistently for simple and hyphenated names.
 - **Decision:** Update match event authors and team captain state atomically with player deletion.
 - **Reason:** It preserves match points while keeping the data invariants intact.
+
+## 2026-11-19 - HU-04 - Player list loading
+
+- **Decision:** Sort players in memory instead of using `lastName` as a Dexie key path.
+- **Reason:** `lastName` was not declared as an index in the HU-03 schema, and in-memory sorting
+  avoids an unnecessary migration while preserving alphabetical UI behavior.

@@ -106,7 +106,13 @@ export class TournamentRepository {
   }
 
   async getPlayers(): Promise<readonly Player[]> {
-    return tournamentDatabase.players.orderBy('lastName').sortBy('lastName');
+    const players = await tournamentDatabase.players.toArray();
+    return players.sort((left, right) =>
+      `${left.lastName} ${left.firstName}`.localeCompare(
+        `${right.lastName} ${right.firstName}`,
+        'es',
+      ),
+    );
   }
 
   async getTeams(): Promise<readonly Team[]> {
