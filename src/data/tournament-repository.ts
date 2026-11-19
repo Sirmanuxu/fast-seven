@@ -4,6 +4,8 @@ import {
   Draw,
   Match,
   MatchEvent,
+  Player,
+  Team,
   Tournament,
   TournamentSnapshot,
 } from '../domain/model';
@@ -101,6 +103,75 @@ export class TournamentRepository {
     await tournamentDatabase.transaction('rw', tournamentDatabase.draws, async () => {
       await tournamentDatabase.draws.put(draw);
     });
+  }
+
+  async getPlayers(): Promise<readonly Player[]> {
+    return tournamentDatabase.players.orderBy('lastName').sortBy('lastName');
+  }
+
+  async getTeams(): Promise<readonly Team[]> {
+    return tournamentDatabase.teams.orderBy('name').sortBy('name');
+  }
+
+  async putPlayer(player: Player, previousTeamId: string | null = null): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.players,
+      tournamentDatabase.teams,
+      async () => {
+        await tournamentDatabase.players.put(player);
+
+        if (previousTeamId && previousTeamId !== player.teamId) {
+          const previousTeam = await tournamentDatabase.teams.get(previousTeamId);
+          if (previousTeam?.captainId === player.id) {
+            await tournamentDatabase.teams.update(previousTeam.id, { captainId: null });
+          }
+        }
+      },
+    );
+  }
+
+  async deletePlayer(playerId: string): Promise<boolean> {
+    return tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.players,
+      tournamentDatabase.teams,
+      tournamentDatabase.events,
+      tournamentDatabase.tournament,
+      async () => {
+        const player = await tournamentDatabase.players.get(playerId);
+        if (!player) {
+          return false;
+        }
+
+        let captainCleared = false;
+        const teams = await tournamentDatabase.teams
+          .filter((team) => team.captainId === playerId)
+          .toArray();
+        if (teams.length > 0) {
+          await tournamentDatabase.teams.bulkUpdate(
+            teams.map((team) => ({
+              key: team.id,
+              changes: { captainId: null },
+            })),
+          );
+          captainCleared = true;
+        }
+
+        await tournamentDatabase.events
+          .where('playerId')
+          .equals(playerId)
+          .modify({ playerId: null });
+        await tournamentDatabase.players.delete(playerId);
+        const tournament = await this.getTournament();
+        if (tournament) {
+          await tournamentDatabase.tournament.update(tournament.id, {
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        return captainCleared;
+      },
+    );
   }
 }
 
