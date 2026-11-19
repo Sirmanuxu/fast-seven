@@ -36,3 +36,13 @@
 - **Decision:** Keep `fake-indexeddb` out of dependencies until the owner authorizes an additional
   development package.
 - **Reason:** Repository rules require explicit approval before adding dependencies.
+
+## 2026-11-19 - HU-03 - Persistent and offline status labels
+
+- **Decision:** Mark the application ready for offline use once `navigator.serviceWorker.ready`
+  has an active registration or `SwUpdate.checkForUpdate()` completes successfully.
+- **Reason:** Waiting for a version event can leave the panel on a pending label even when the
+  service worker is already active.
+- **Decision:** Reword denied persistent-storage feedback as a recommendation instead of an error.
+- **Reason:** IndexedDB can keep working even when the browser denies the persistent-storage
+  optimization.

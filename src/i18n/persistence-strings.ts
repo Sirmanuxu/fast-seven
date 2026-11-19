@@ -11,7 +11,7 @@ export const PERSISTENCE_STRINGS = {
   createFailed:
     'No se pudo guardar el torneo. Cerrá el modo privado, habilitá el almacenamiento y probá de nuevo.',
   persistenceDenied:
-    'El navegador no confirmó el almacenamiento persistente. Guardá una copia del torneo periódicamente.',
+    'El navegador no confirmó almacenamiento persistente. Tus datos siguen guardándose localmente; guardá una copia periódicamente.',
   savedPrefix: 'Guardado',
   saveFailed: 'No se pudo guardar. Revisá el almacenamiento del navegador.',
 } as const;

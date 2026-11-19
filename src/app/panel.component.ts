@@ -1,5 +1,4 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 import { spikeDatabase, SpikeRecord } from '../data/spike-database';
 import { tournamentRepository } from '../data/tournament-repository';
@@ -84,14 +83,25 @@ export class PanelComponent implements OnInit {
 
   private checkOfflineStatus(): void {
     if (!this.swUpdate.isEnabled) {
+      this.offlineStatus.set(SPIKE_STRINGS.offlineDevelopment);
       return;
     }
 
-    void this.swUpdate.checkForUpdate();
-    this.swUpdate.versionUpdates.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
-      if (event.type === 'NO_NEW_VERSION_DETECTED' || event.type === 'VERSION_READY') {
+    if ('serviceWorker' in navigator) {
+      void navigator.serviceWorker.ready
+        .then((registration) => {
+          if (registration.active) {
+            this.offlineStatus.set(SPIKE_STRINGS.offlineReady);
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    void this.swUpdate
+      .checkForUpdate()
+      .then(() => {
         this.offlineStatus.set(SPIKE_STRINGS.offlineReady);
-      }
-    });
+      })
+      .catch(() => undefined);
   }
 }
