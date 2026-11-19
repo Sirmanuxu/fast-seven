@@ -1,0 +1,12 @@
+<main>
+  <h1>{{ strings.projectorTitle }}</h1>
+
+  @if (message(); as currentMessage) {
+    <p>{{ currentMessage.text }}</p>
+    @if (latencyMs(); as latency) {
+      <small>Recepción: {{ latency }} ms</small>
+    }
+  } @else {
+    <p>{{ strings.projectorWaiting }}</p>
+  }
+</main>

@@ -1,0 +1,16 @@
+main {
+  min-height: 100dvh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+section {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+button {
+  min-height: 44px;
+  margin-right: 0.75rem;
+}
