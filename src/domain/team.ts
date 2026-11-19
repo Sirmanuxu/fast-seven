@@ -23,6 +23,17 @@ function hexToRgb(hex: string): readonly [number, number, number] | null {
   ];
 }
 
+function relativeLuminance(rgb: readonly [number, number, number]): number {
+  const convert = (channel: number): number => {
+    const value = channel / 255;
+    return value <= 0.03928
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const [red, green, blue] = rgb;
+  return 0.2126 * convert(red) + 0.7152 * convert(green) + 0.0722 * convert(blue);
+}
+
 export function areTeamColorsTooSimilar(primary: string, secondary: string): boolean {
   const first = hexToRgb(primary);
   const second = hexToRgb(secondary);
@@ -33,7 +44,13 @@ export function areTeamColorsTooSimilar(primary: string, secondary: string): boo
   const distance = Math.sqrt(
     (first[0] - second[0]) ** 2 + (first[1] - second[1]) ** 2 + (first[2] - second[2]) ** 2,
   );
-  return distance < 72;
+  const firstLuminance = relativeLuminance(first);
+  const secondLuminance = relativeLuminance(second);
+  const contrast =
+    (Math.max(firstLuminance, secondLuminance) + 0.05) /
+    (Math.min(firstLuminance, secondLuminance) + 0.05);
+
+  return distance < 72 || contrast < 2.5;
 }
 
 export type RosterState = 'BELOW_MINIMUM' | 'ABOVE_MAXIMUM' | 'OK';

@@ -28,6 +28,7 @@
             type="color"
             [value]="primaryColor()"
             (input)="primaryColor.set($any($event.target).value)"
+            (change)="primaryColor.set($any($event.target).value)"
           />
         </label>
         <label>
@@ -36,6 +37,7 @@
             type="color"
             [value]="secondaryColor()"
             (input)="secondaryColor.set($any($event.target).value)"
+            (change)="secondaryColor.set($any($event.target).value)"
           />
         </label>
         <label>

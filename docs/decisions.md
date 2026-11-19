@@ -71,5 +71,9 @@
   becoming duplicate teams.
 - **Decision:** Use a 72-point RGB Euclidean distance threshold for nearly identical colors.
 - **Reason:** It provides a deterministic readability warning without blocking team creation.
+- **Decision:** Extend the team-color warning to low contrast under a 2.5:1 luminance ratio,
+  and handle both browser `input` and `change` color-picker events.
+- **Reason:** `input` support varies across browsers, and nearly identical colors are not the
+  only readability hazard.
 - **Decision:** Put the backup and team deletion in one Dexie transaction.
 - **Reason:** It keeps the destructive operation recoverable and atomically consistent.

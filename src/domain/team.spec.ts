@@ -82,6 +82,8 @@ describe('team rules', () => {
 
   it('warns for similar colors and allows setup fixture changes', () => {
     expect(areTeamColorsTooSimilar('#ffffff', '#fefefe')).toBe(true);
+    expect(areTeamColorsTooSimilar('#ff0000', '#ff0000')).toBe(true);
+    expect(areTeamColorsTooSimilar('#000000', '#ffffff')).toBe(false);
     expect(canCreateOrDeleteTeam('SETUP')).toBe(true);
     expect(canCreateOrDeleteTeam('FIXTURE_GENERATED')).toBe(true);
     expect(canCreateOrDeleteTeam('RUNNING')).toBe(false);
