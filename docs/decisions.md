@@ -46,3 +46,14 @@
 - **Decision:** Reword denied persistent-storage feedback as a recommendation instead of an error.
 - **Reason:** IndexedDB can keep working even when the browser denies the persistent-storage
   optimization.
+
+## 2026-11-19 - HU-04 - Manual player management
+
+- **Decision:** Block normalized duplicate players in HU-04 and reserve the full homonym
+  confirmation flow for HU-07.
+- **Reason:** HU-04 must prevent accidental duplicate creation, while HU-07 owns the two-option
+  same-person/distinct-person dialog and disambiguation numbering.
+- **Decision:** Capitalize words in names and surnames after trimming and collapsing whitespace.
+- **Reason:** This matches the backlog rule consistently for simple and hyphenated names.
+- **Decision:** Update match event authors and team captain state atomically with player deletion.
+- **Reason:** It preserves match points while keeping the data invariants intact.
