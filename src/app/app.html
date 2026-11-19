@@ -1,1 +1,12 @@
-<router-outlet />
+@if (!ready()) {
+  <main aria-live="polite">
+    <p>{{ strings.loading }}</p>
+  </main>
+} @else if (!databaseAvailable()) {
+  <main role="alert">
+    <h1>{{ strings.databaseUnavailableTitle }}</h1>
+    <p>{{ strings.databaseUnavailable }}</p>
+  </main>
+} @else {
+  <router-outlet />
+}

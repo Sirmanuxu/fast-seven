@@ -1,0 +1,15 @@
+main {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+label,
+button,
+input {
+  min-height: 44px;
+  font: inherit;
+}

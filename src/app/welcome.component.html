@@ -1,0 +1,23 @@
+<main>
+  <h1>{{ strings.welcomeTitle }}</h1>
+  <p>{{ strings.welcomePrompt }}</p>
+
+  <label>
+    {{ strings.tournamentNameLabel }}
+    <input
+      type="text"
+      [value]="tournamentName()"
+      (input)="tournamentName.set($any($event.target).value)"
+    />
+  </label>
+
+  <button type="button" (click)="createTournament()">{{ strings.createTournament }}</button>
+
+  @if (errorMessage(); as error) {
+    <p role="alert">{{ error }}</p>
+  }
+
+  @if (persistenceNotice(); as notice) {
+    <p role="status">{{ notice }}</p>
+  }
+</main>
