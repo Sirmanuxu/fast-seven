@@ -63,3 +63,13 @@
 - **Decision:** Sort players in memory instead of using `lastName` as a Dexie key path.
 - **Reason:** `lastName` was not declared as an index in the HU-03 schema, and in-memory sorting
   avoids an unnecessary migration while preserving alphabetical UI behavior.
+
+## 2026-11-19 - HU-05 - Team management
+
+- **Decision:** Use normalized, accent-insensitive team names for uniqueness.
+- **Reason:** It prevents names that differ only by case, accents or extra whitespace from
+  becoming duplicate teams.
+- **Decision:** Use a 72-point RGB Euclidean distance threshold for nearly identical colors.
+- **Reason:** It provides a deterministic readability warning without blocking team creation.
+- **Decision:** Put the backup and team deletion in one Dexie transaction.
+- **Reason:** It keeps the destructive operation recoverable and atomically consistent.
