@@ -12,6 +12,7 @@
   <button type="button" (click)="saveTest()">{{ strings.saveTest }}</button>
   <button type="button" (click)="openProjector()">{{ strings.openProjector }}</button>
   <button type="button" (click)="openPlayers()">Jugadores</button>
+  <button type="button" (click)="openTeams()">Equipos</button>
 
   @if (lastRecord(); as record) {
     <p>Último dato guardado: {{ record.message }}</p>

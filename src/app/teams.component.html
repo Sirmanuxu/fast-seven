@@ -1,0 +1,115 @@
+<main>
+  <header>
+    <button type="button" (click)="goBack()">← Panel</button>
+    <h1>{{ strings.title }}</h1>
+    <button type="button" (click)="openAdd()" [disabled]="!canCreateOrDelete">
+      {{ strings.add }}
+    </button>
+  </header>
+
+  @if (!canCreateOrDelete) {
+    <p role="status">{{ strings.runningCreateDelete }}</p>
+  }
+  @if (statusMessage(); as message) {
+    <p role="status">{{ message }}</p>
+  }
+
+  @if (formOpen()) {
+    <section class="form-card" aria-label="Formulario de equipo">
+      <h2>{{ editingId() ? strings.edit : strings.add }}</h2>
+      <div class="form-grid">
+        <label>
+          {{ strings.name }}
+          <input type="text" [value]="name()" (input)="name.set($any($event.target).value)" />
+        </label>
+        <label>
+          {{ strings.primaryColor }}
+          <input
+            type="color"
+            [value]="primaryColor()"
+            (input)="primaryColor.set($any($event.target).value)"
+          />
+        </label>
+        <label>
+          {{ strings.secondaryColor }}
+          <input
+            type="color"
+            [value]="secondaryColor()"
+            (input)="secondaryColor.set($any($event.target).value)"
+          />
+        </label>
+        <label>
+          {{ strings.captain }}
+          <select
+            [value]="captainId() ?? ''"
+            (change)="captainId.set($any($event.target).value || null)"
+            [disabled]="!editingId()"
+          >
+            <option value="">{{ strings.noCaptain }}</option>
+            @for (player of captainOptions(editingId()); track player.id) {
+              <option [value]="player.id">{{ playerName(player) }}</option>
+            }
+          </select>
+        </label>
+        <label class="seed">
+          <input
+            type="checkbox"
+            [checked]="isSeed()"
+            (change)="isSeed.set($any($event.target).checked)"
+          />
+          {{ strings.seed }}
+        </label>
+      </div>
+
+      @if (colorsWarning()) {
+        <p role="status">{{ strings.similarColors }}</p>
+      }
+      @if (formError(); as error) {
+        <p class="error" role="alert">{{ error }}</p>
+      }
+
+      <div class="actions">
+        <button type="button" (click)="saveTeam()">{{ strings.save }}</button>
+        <button type="button" (click)="closeForm()">{{ strings.cancel }}</button>
+      </div>
+    </section>
+  }
+
+  @if (teams().length === 0) {
+    <p>{{ strings.noTeams }}</p>
+  } @else {
+    <div class="team-grid">
+      @for (team of teams(); track team.id) {
+        <article>
+          <div class="team-heading">
+            <span
+              class="color"
+              [style.background]="team.primaryColor"
+              [style.border-color]="team.secondaryColor"
+            ></span>
+            <h2>{{ team.name }}</h2>
+            @if (team.isSeed) {
+              <small>{{ strings.seed }}</small>
+            }
+          </div>
+          <p class="roster {{ rosterLabel(team) }}">
+            {{ rosterStatus(team) }}
+          </p>
+          @if (isMixed(team)) {
+            <p role="status">{{ strings.mixedRoster }}</p>
+          }
+          <p>
+            {{ strings.captain }}:
+            {{ captainName(team) }}
+          </p>
+          <div class="actions">
+            <button type="button" (click)="openEdit(team)">Editar</button>
+            <button type="button" (click)="deleteTeam(team)" [disabled]="!canCreateOrDelete">
+              {{ strings.delete }}
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</main>
