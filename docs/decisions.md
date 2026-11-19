@@ -77,3 +77,10 @@
   only readability hazard.
 - **Decision:** Put the backup and team deletion in one Dexie transaction.
 - **Reason:** It keeps the destructive operation recoverable and atomically consistent.
+
+## 2026-11-19 - HU-05 - Team deletion transaction
+
+- **Decision:** Declare every snapshot table in the team-deletion Dexie transaction using the
+  table-list overload.
+- **Reason:** The previous direct-table overload omitted `stages`, `groups`, `matches`, `events`
+  and `draws`, which can make the destructive transaction fail when it builds the backup.

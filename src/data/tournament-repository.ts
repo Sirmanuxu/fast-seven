@@ -145,10 +145,17 @@ export class TournamentRepository {
   async deleteTeam(teamId: string): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',
-      tournamentDatabase.teams,
-      tournamentDatabase.players,
-      tournamentDatabase.backups,
-      tournamentDatabase.tournament,
+      [
+        'teams',
+        'players',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+        'tournament',
+      ],
       async () => {
         const [tournament, players, teams, stages, groups, matches, events, draws] =
           await Promise.all([

@@ -142,7 +142,8 @@ export class TeamsComponent implements OnInit {
       this.statusMessage.set(
         this.tournament()?.status === 'FIXTURE_GENERATED' ? TEAM_STRINGS.fixtureDelete : null,
       );
-    } catch {
+    } catch (error) {
+      console.error('Team deletion failed', error);
       this.statusMessage.set(TEAM_STRINGS.deleteFailed);
     }
   }
