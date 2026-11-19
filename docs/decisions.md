@@ -13,3 +13,14 @@
 - **Decision:** Test delivery latency through `BroadcastChannel` in the projector UI.
 - **Reason:** The observed local value gives a concrete manual threshold for the 500 ms acceptance
   criterion. Real cross-device synchronization remains out of scope.
+
+## 2026-11-19 - HU-02 - Project and domain skeleton
+
+- **Decision:** Use a seeded mulberry32 implementation behind the shared `Rng` contract.
+- **Reason:** It provides deterministic sequences and array shuffling without browser randomness.
+- **Decision:** Use a fixed clock utility for domain tests and keep system time outside `domain/`.
+- **Reason:** It satisfies injected-time requirements and preserves browser independence.
+- **Decision:** Keep the existing `model.ts` type contract unchanged and localize the lint
+  compatibility exception to the project configuration.
+- **Reason:** The file is the source-of-truth type contract and must not be changed for a
+  stylistic lint preference.
