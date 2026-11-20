@@ -130,8 +130,7 @@ export class ImportComponent {
     const teamIndex = index(mapping.team);
 
     return preview.rows.slice(0, 5).map((row) => {
-      const fullName =
-        fullIndex >= 0 ? (row[fullIndex] ?? '').trim() : '';
+      const fullName = fullIndex >= 0 ? (row[fullIndex] ?? '').trim() : '';
       const split = fullName
         ? splitFullName(fullName, mapping.splitMode)
         : {
@@ -150,8 +149,7 @@ export class ImportComponent {
 
   protected downloadTemplate(): void {
     const headers = 'Nombre;Apellido;Categoria;Genero;Equipo';
-    const rows =
-      'Juan;Pérez;M16;M;Los Teros\r\nLucía;Fernández;M16;F;';
+    const rows = 'Juan;Pérez;M16;M;Los Teros\r\nLucía;Fernández;M16;F;';
     const blob = new Blob(['\uFEFF', `${headers}\r\n${rows}`], {
       type: 'text/csv;charset=utf-8',
     });
@@ -195,10 +193,7 @@ export class ImportComponent {
 
   private rememberMapping(mapping: ImportColumnMapping): void {
     if (this.rememberedMappingKey) {
-      localStorage.setItem(
-        this.rememberedMappingKey,
-        JSON.stringify(mapping),
-      );
+      localStorage.setItem(this.rememberedMappingKey, JSON.stringify(mapping));
     }
   }
 
@@ -215,7 +210,6 @@ export class ImportComponent {
       this.sheetName.set(preview.selectedSheet ?? '');
       this.encoding.set(preview.encoding ?? '');
       this.delimiter.set(preview.delimiter ?? '');
-      this.setupMapping(preview);
       this.setupMapping(preview);
     } catch (error) {
       this.preview.set(null);

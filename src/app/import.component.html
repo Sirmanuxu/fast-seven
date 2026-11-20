@@ -57,148 +57,136 @@
             @for (sheet of current.sheetNames; track sheet) {
               <option [value]="sheet">{{ sheet }}</option>
             }
-
-            @if (current.headers.length > 0) {
-              <section class="mapping-card">
-                <h3>{{ strings.mappingTitle }}</h3>
-                <div class="mapping-grid">
-                  <label>
-                    {{ strings.fullName }}
-                    <select
-                      [value]="mapping().fullName ?? ''"
-                      (change)="setFullName($event)"
-                    >
-                      <option value="">— {{ strings.none }}</option>
-                      @for (header of current.headers; track header) {
-                        <option [value]="header">{{ header }}</option>
-                      }
-                    </select>
-                  </label>
-
-                  @if (mapping().fullName) {
-                    <label>
-                      {{ strings.splitMode }}
-                      <select
-                        [value]="mapping().splitMode"
-                        (change)="setSplitMode($event)"
-                      >
-                        <option value="COMMA">{{ strings.splitComma }}</option>
-                        <option value="FIRST_SPACE">{{ strings.splitFirstSpace }}</option>
-                      </select>
-                    </label>
-                  } @else {
-                    <label>
-                      {{ strings.firstName }}
-                      <select
-                        [value]="mapping().firstName ?? ''"
-                        (change)="setMappingField('firstName', $event)"
-                      >
-                        <option value="">— {{ strings.none }}</option>
-                        @for (header of current.headers; track header) {
-                          <option [value]="header">{{ header }}</option>
-                        }
-                      </select>
-                    </label>
-                    <label>
-                      {{ strings.lastName }}
-                      <select
-                        [value]="mapping().lastName ?? ''"
-                        (change)="setMappingField('lastName', $event)"
-                      >
-                        <option value="">— {{ strings.none }}</option>
-                        @for (header of current.headers; track header) {
-                          <option [value]="header">{{ header }}</option>
-                        }
-                      </select>
-                    </label>
-                  }
-
-                  <label>
-                    {{ strings.category }}
-                    <select
-                      [value]="mapping().category ?? ''"
-                      (change)="setMappingField('category', $event)"
-                    >
-                      <option value="">— {{ strings.none }}</option>
-                      @for (header of current.headers; track header) {
-                        <option [value]="header">{{ header }}</option>
-                      }
-                    </select>
-                  </label>
-
-                  <label>
-                    {{ strings.gender }}
-                    <select
-                      [value]="mapping().gender ?? ''"
-                      (change)="setMappingField('gender', $event)"
-                    >
-                      <option value="">— {{ strings.none }}</option>
-                      @for (header of current.headers; track header) {
-                        <option [value]="header">{{ header }}</option>
-                      }
-                    </select>
-                  </label>
-
-                  <label>
-                    {{ strings.team }}
-                    <select
-                      [value]="mapping().team ?? ''"
-                      (change)="setMappingField('team', $event)"
-                    >
-                      <option value="">— {{ strings.none }}</option>
-                      @for (header of current.headers; track header) {
-                        <option [value]="header">{{ header }}</option>
-                      }
-                    </select>
-                  </label>
-                </div>
-
-                @if (missingMappings.length > 0) {
-                  <p class="warning" role="alert">
-                    {{ strings.missingMapping }}: {{ missingMappings.join(', ') }}
-                  </p>
-                } @else {
-                  <p role="status">{{ strings.mappingSaved }}</p>
-                }
-
-                <h4>{{ strings.mappedPreview }}</h4>
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>{{ strings.firstName }}</th>
-                        <th>{{ strings.lastName }}</th>
-                        <th>{{ strings.category }}</th>
-                        <th>{{ strings.gender }}</th>
-                        <th>{{ strings.team }}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of mappedPreviewRows; track $index) {
-                        <tr>
-                          <td>{{ row.firstName }}</td>
-                          <td>{{ row.lastName }}</td>
-                          <td>{{ row.category }}</td>
-                          <td>{{ row.gender }}</td>
-                          <td>{{ row.team }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-
-                <div class="options">
-                  <button type="button" (click)="downloadTemplate()">
-                    {{ strings.downloadTemplate }}
-                  </button>
-                  <button type="button" [disabled]="missingMappings.length > 0">
-                    {{ strings.continueNext }}
-                  </button>
-                </div>
-              </section>
-            }
           </select>
         </label>
+      }
+
+      @if (current.headers.length > 0) {
+        <section class="mapping-card">
+          <h3>{{ strings.mappingTitle }}</h3>
+          <div class="mapping-grid">
+            <label>
+              {{ strings.fullName }}
+              <select [value]="mapping().fullName ?? ''" (change)="setFullName($event)">
+                <option value="">— {{ strings.none }}</option>
+                @for (header of current.headers; track header) {
+                  <option [value]="header">{{ header }}</option>
+                }
+              </select>
+            </label>
+
+            @if (mapping().fullName) {
+              <label>
+                {{ strings.splitMode }}
+                <select [value]="mapping().splitMode" (change)="setSplitMode($event)">
+                  <option value="COMMA">{{ strings.splitComma }}</option>
+                  <option value="FIRST_SPACE">{{ strings.splitFirstSpace }}</option>
+                </select>
+              </label>
+            } @else {
+              <label>
+                {{ strings.firstName }}
+                <select
+                  [value]="mapping().firstName ?? ''"
+                  (change)="setMappingField('firstName', $event)"
+                >
+                  <option value="">— {{ strings.none }}</option>
+                  @for (header of current.headers; track header) {
+                    <option [value]="header">{{ header }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                {{ strings.lastName }}
+                <select
+                  [value]="mapping().lastName ?? ''"
+                  (change)="setMappingField('lastName', $event)"
+                >
+                  <option value="">— {{ strings.none }}</option>
+                  @for (header of current.headers; track header) {
+                    <option [value]="header">{{ header }}</option>
+                  }
+                </select>
+              </label>
+            }
+
+            <label>
+              {{ strings.category }}
+              <select
+                [value]="mapping().category ?? ''"
+                (change)="setMappingField('category', $event)"
+              >
+                <option value="">— {{ strings.none }}</option>
+                @for (header of current.headers; track header) {
+                  <option [value]="header">{{ header }}</option>
+                }
+              </select>
+            </label>
+
+            <label>
+              {{ strings.gender }}
+              <select [value]="mapping().gender ?? ''" (change)="setMappingField('gender', $event)">
+                <option value="">— {{ strings.none }}</option>
+                @for (header of current.headers; track header) {
+                  <option [value]="header">{{ header }}</option>
+                }
+              </select>
+            </label>
+
+            <label>
+              {{ strings.team }}
+              <select [value]="mapping().team ?? ''" (change)="setMappingField('team', $event)">
+                <option value="">— {{ strings.none }}</option>
+                @for (header of current.headers; track header) {
+                  <option [value]="header">{{ header }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          @if (missingMappings.length > 0) {
+            <p class="warning" role="alert">
+              {{ strings.missingMapping }}: {{ missingMappings.join(', ') }}
+            </p>
+          } @else {
+            <p role="status">{{ strings.mappingSaved }}</p>
+          }
+
+          <h4>{{ strings.mappedPreview }}</h4>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ strings.firstName }}</th>
+                  <th>{{ strings.lastName }}</th>
+                  <th>{{ strings.category }}</th>
+                  <th>{{ strings.gender }}</th>
+                  <th>{{ strings.team }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of mappedPreviewRows; track $index) {
+                  <tr>
+                    <td>{{ row.firstName }}</td>
+                    <td>{{ row.lastName }}</td>
+                    <td>{{ row.category }}</td>
+                    <td>{{ row.gender }}</td>
+                    <td>{{ row.team }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <div class="options">
+            <button type="button" (click)="downloadTemplate()">
+              {{ strings.downloadTemplate }}
+            </button>
+            <button type="button" [disabled]="missingMappings.length > 0">
+              {{ strings.continueNext }}
+            </button>
+          </div>
+        </section>
       }
 
       @if (current.headers.length > 0) {

@@ -128,3 +128,10 @@
 - **Reason:** It avoids treating “Nombre completo” as an individual-name field.
 - **Decision:** Remember mappings under a normalized header-signature key in localStorage.
 - **Reason:** It is a UI preference and can be reused across reimports without storing tournament data.
+
+## 2026-11-20 - HU-09 - Mapping block rendering fix
+
+- **Decision:** Render the mapping card outside the Excel sheet `<select>` and once for every
+  file format.
+- **Reason:** The previous placement nested the CSV/Excel mapping controls inside an Excel-only
+  select, preventing them from appearing after CSV or XLSX imports.
