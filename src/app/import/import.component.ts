@@ -318,7 +318,7 @@ export class ImportComponent {
   }
 
   protected goBack(): void {
-    void this.router.navigateByUrl('/panel');
+    void this.router.navigateByUrl('/jugadores');
   }
 
   private setupMapping(preview: ImportPreview): void {

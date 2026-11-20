@@ -291,6 +291,10 @@ export class PlayersComponent implements OnInit {
     void this.router.navigateByUrl('/panel');
   }
 
+  protected openImport(): void {
+    void this.router.navigateByUrl('/panel/jugadores/importar');
+  }
+
   private async load(): Promise<void> {
     this.tournament.set(await tournamentRepository.getTournament());
     this.categories.set(this.tournament()?.categories.map((category) => category.code) ?? []);

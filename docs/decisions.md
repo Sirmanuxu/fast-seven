@@ -129,6 +129,15 @@
 - **Decision:** Remember mappings under a normalized header-signature key in localStorage.
 - **Reason:** It is a UI preference and can be reused across reimports without storing tournament data.
 
+## 2026-11-20 - HU-09 - Import entry from players
+
+- **Decision:** Put the import action next to `Agregar jugador` in the player screen.
+- **Reason:** The import flow belongs to player registration and should not live as a separate
+  panel shortcut.
+- **Decision:** Keep `/importar` as an alias and use `/panel/jugadores/importar` as the canonical route.
+- **Reason:** Existing links and bookmarks continue to work while the application follows the
+  backlog route map.
+
 ## 2026-11-20 - HU-09 - Import screen feedback
 
 - **Decision:** Split the screen into File and Mapping steps.

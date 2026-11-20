@@ -2,7 +2,10 @@
   <header>
     <button type="button" (click)="goBack()">← Panel</button>
     <h1>{{ strings.title }}</h1>
-    <button type="button" (click)="openAdd()">{{ strings.add }}</button>
+    <div class="header-actions">
+      <button type="button" (click)="openAdd()">{{ strings.add }}</button>
+      <button type="button" (click)="openImport()">{{ strings.importPlayers }}</button>
+    </div>
   </header>
 
   @if (statusMessage(); as message) {

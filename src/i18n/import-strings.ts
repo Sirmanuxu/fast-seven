@@ -12,7 +12,7 @@ export const IMPORT_STRINGS = {
   preview: 'Vista previa',
   noWrite: 'Esta etapa solo lee el archivo. Todavía no escribe jugadores en la base.',
   reread: 'Volver a leer',
-  back: 'Volver al panel',
+  back: 'Volver a jugadores',
   emptyDrop: 'No se encontró ningún archivo.',
   readFailed: 'No se pudo leer el archivo.',
   mappingTitle: 'Mapeo de columnas',

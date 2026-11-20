@@ -10,6 +10,8 @@ export const routes: Routes = [
   { path: 'bienvenida', component: WelcomeComponent },
   { path: 'panel', component: PanelComponent },
   { path: 'jugadores', component: PlayersComponent },
+  { path: 'panel/jugadores/importar', component: ImportComponent },
+  { path: 'importar', component: ImportComponent },
   { path: 'equipos', component: TeamsComponent },
   { path: 'importar', component: ImportComponent },
   { path: 'proyector', component: ProjectorComponent },
