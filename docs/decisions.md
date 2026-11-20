@@ -178,3 +178,12 @@
   every component in `src/app/`.
 - **Reason:** It keeps templates, styles and component logic for shell, panel, projector, welcome,
   players, teams and import together and avoids a growing mixed folder.
+
+## 2026-11-20 - HU-11 - Atomic import confirmation
+
+- **Decision:** Confirm imports in one Dexie transaction after creating a `BEFORE_IMPORT` snapshot.
+- **Reason:** It guarantees rollback on failure and protects the tournament before destructive
+  or bulk writes.
+- **Decision:** Never create teams while a tournament is running.
+- **Reason:** HU-11 requires running imports to assign only existing teams and leave unknown teams
+  unassigned.
