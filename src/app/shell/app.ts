@@ -9,6 +9,7 @@ import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
   imports: [RouterOutlet],
   selector: 'app-root',
   templateUrl: './app.html',
+  styleUrl: './app.css',
 })
 export class App implements OnInit {
   protected readonly strings = PERSISTENCE_STRINGS;
