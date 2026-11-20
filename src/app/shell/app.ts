@@ -4,6 +4,7 @@ import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
+import { showErrorPopup } from '../error-popup';
 
 @Component({
   imports: [RouterOutlet],
@@ -29,6 +30,7 @@ export class App implements OnInit {
     }
     this.databaseAvailable.set(await tournamentRepository.isAvailable());
     if (!this.databaseAvailable()) {
+      showErrorPopup(PERSISTENCE_STRINGS.databaseUnavailable);
       this.ready.set(true);
       return;
     }

@@ -9,6 +9,7 @@ import {
   getNextHomonymDisambiguation,
 } from '../../domain/player';
 import { PLAYER_STRINGS } from '../../i18n/player-strings';
+import { showErrorPopup } from '../error-popup';
 
 @Component({
   selector: 'app-players',
@@ -35,7 +36,6 @@ export class PlayersComponent implements OnInit {
   protected readonly category = signal('');
   protected readonly gender = signal<Gender | ''>('');
   private readonly teamId = signal<string | null>(null);
-  protected readonly formError = signal<string | null>(null);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly homonymOpen = signal(false);
   protected readonly duplicateCandidate = signal<Player | null>(null);
@@ -70,7 +70,6 @@ export class PlayersComponent implements OnInit {
     this.category.set(this.categories()[0] ?? '');
     this.gender.set('');
     this.teamId.set(null);
-    this.formError.set(null);
     this.formOpen.set(true);
   }
 
@@ -81,13 +80,11 @@ export class PlayersComponent implements OnInit {
     this.category.set(player.category);
     this.gender.set(player.gender);
     this.teamId.set(player.teamId);
-    this.formError.set(null);
     this.formOpen.set(true);
   }
 
   protected closeForm(): void {
     this.formOpen.set(false);
-    this.formError.set(null);
     this.homonymOpen.set(false);
     this.duplicateCandidate.set(null);
   }
@@ -95,7 +92,7 @@ export class PlayersComponent implements OnInit {
   protected async savePlayer(): Promise<void> {
     const gender = this.gender();
     if (!gender) {
-      this.formError.set(PLAYER_STRINGS.required);
+      showErrorPopup(PLAYER_STRINGS.required);
       return;
     }
 
@@ -126,7 +123,7 @@ export class PlayersComponent implements OnInit {
           return;
         }
       }
-      this.formError.set(
+      showErrorPopup(
         validation.error.code === 'DUPLICATE_PLAYER'
           ? PLAYER_STRINGS.duplicate
           : validation.error.message,
@@ -157,7 +154,7 @@ export class PlayersComponent implements OnInit {
       this.closeForm();
       this.statusMessage.set(null);
     } catch {
-      this.formError.set(PLAYER_STRINGS.saveFailed);
+      showErrorPopup(PLAYER_STRINGS.saveFailed);
     }
   }
 
@@ -175,7 +172,7 @@ export class PlayersComponent implements OnInit {
 
     const gender = this.gender();
     if (!gender) {
-      this.formError.set(PLAYER_STRINGS.required);
+      showErrorPopup(PLAYER_STRINGS.required);
       return;
     }
 
@@ -198,20 +195,20 @@ export class PlayersComponent implements OnInit {
       this.closeForm();
       this.statusMessage.set(PLAYER_STRINGS.samePersonDone);
     } catch {
-      this.formError.set(PLAYER_STRINGS.saveFailed);
+      showErrorPopup(PLAYER_STRINGS.saveFailed);
     }
   }
 
   protected async saveDistinctPerson(): Promise<void> {
     const gender = this.gender();
     if (!gender) {
-      this.formError.set(PLAYER_STRINGS.required);
+      showErrorPopup(PLAYER_STRINGS.required);
       return;
     }
 
     const disambiguation = this.disambiguation().trim();
     if (!disambiguation) {
-      this.formError.set('Ingresá una aclaración para distinguir al jugador.');
+      showErrorPopup('Ingresá una aclaración para distinguir al jugador.');
       return;
     }
 
@@ -257,7 +254,7 @@ export class PlayersComponent implements OnInit {
       this.closeForm();
       this.statusMessage.set(PLAYER_STRINGS.distinctDone);
     } catch {
-      this.formError.set(PLAYER_STRINGS.saveFailed);
+      showErrorPopup(PLAYER_STRINGS.saveFailed);
     }
   }
 
@@ -272,7 +269,7 @@ export class PlayersComponent implements OnInit {
       await this.load();
       this.statusMessage.set(captainCleared ? PLAYER_STRINGS.captainCleared : null);
     } catch {
-      this.statusMessage.set(PLAYER_STRINGS.deleteFailed);
+      showErrorPopup(PLAYER_STRINGS.deleteFailed);
     }
   }
 

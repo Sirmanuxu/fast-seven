@@ -6,6 +6,7 @@ import { tournamentRepository } from '../../data/tournament-repository';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
+import { showErrorPopup } from '../error-popup';
 
 @Component({
   selector: 'app-panel',
@@ -23,9 +24,7 @@ export class PanelComponent implements OnInit {
   protected readonly lastRecord = signal<SpikeRecord | null>(null);
   protected readonly persistenceStatus = signal<string>(SPIKE_STRINGS.persistenceUnsupported);
   protected readonly offlineStatus = signal<string>(SPIKE_STRINGS.offlinePending);
-  protected readonly popupBlocked = signal(false);
   protected readonly savedAt = signal<string | null>(null);
-  protected readonly storageError = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
@@ -52,17 +51,18 @@ export class PanelComponent implements OnInit {
           second: '2-digit',
         }),
       );
-      this.storageError.set(null);
       this.projectorChannel.publish(record.message);
     } catch {
-      this.storageError.set(PERSISTENCE_STRINGS.saveFailed);
+      showErrorPopup(PERSISTENCE_STRINGS.saveFailed);
     }
   }
 
   protected openProjector(): void {
     const target = new URL('#/proyector', window.location.href);
     const projector = window.open(target.href, 'fast-seven-projector', 'popup=yes');
-    this.popupBlocked.set(projector === null);
+    if (projector === null) {
+      showErrorPopup(this.strings.popupBlocked);
+    }
   }
 
   protected openPlayers(): void {
