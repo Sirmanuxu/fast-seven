@@ -143,3 +143,13 @@
   file format.
 - **Reason:** The previous placement nested the CSV/Excel mapping controls inside an Excel-only
   select, preventing them from appearing after CSV or XLSX imports.
+
+## 2026-11-20 - HU-10 - Import preview normalization
+
+- **Decision:** Build import row status in a pure import module and keep editing state in the
+  component.
+- **Reason:** It makes category, gender, duplicate and team rules testable without Angular or
+  browser APIs.
+- **Decision:** Revalidate every import row after a cell edit.
+- **Reason:** Errors and warnings must change immediately and the confirmation button must reflect
+  the current active rows.

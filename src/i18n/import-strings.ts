@@ -36,4 +36,13 @@ export const IMPORT_STRINGS = {
   stepMapping: 'Paso 2: Columnas',
   confirmMapping: 'Confirmar mapeo',
   backMapping: 'Volver al archivo',
+  reviewTitle: 'Revisión de importación',
+  reviewFilter: 'Filtrar',
+  reviewAll: 'Todas',
+  reviewDiscard: 'Descartar',
+  reviewRestore: 'Restaurar',
+  reviewDistinct: 'Persona distinta',
+  reviewNotDistinct: 'No persona distinta',
+  reviewConfirm: 'Confirmar importación',
+  reviewBack: 'Volver al mapeo',
 } as const;

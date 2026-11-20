@@ -17,6 +17,9 @@ import {
   splitFullName,
   suggestColumnMapping,
 } from '../import/column-mapping';
+import { tournamentRepository } from '../data/tournament-repository';
+import { Category, Player, Team } from '../domain/model';
+import { buildImportPreview, ImportPreviewRow, MappedImportRow } from '../import/import-preview';
 
 @Component({
   selector: 'app-import',
@@ -34,9 +37,14 @@ export class ImportComponent {
   protected readonly delimiter = signal<ImportDelimiter | ''>('');
   protected readonly sheetName = signal('');
   protected readonly mapping = signal<ImportColumnMapping>(EMPTY_IMPORT_MAPPING);
-  protected readonly step = signal<'FILE' | 'MAPPING'>('FILE');
+  protected readonly step = signal<'FILE' | 'MAPPING' | 'REVIEW'>('FILE');
   protected readonly mappingConfirmed = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
+  protected readonly reviewRows = signal<readonly ImportPreviewRow[]>([]);
+  protected readonly statusFilter = signal<'ALL' | 'OK' | 'WARNING' | 'ERROR'>('ALL');
+  private existingPlayers: readonly Player[] = [];
+  private existingTeams: readonly Team[] = [];
+  private catalog: readonly Category[] = [];
   private rememberedMappingKey = '';
 
   protected async onFileInput(event: Event): Promise<void> {
@@ -178,7 +186,7 @@ export class ImportComponent {
     this.mappingConfirmed.set(false);
   }
 
-  protected confirmMapping(): void {
+  protected async confirmMapping(): Promise<void> {
     if (this.missingMappings.length > 0) {
       this.statusMessage.set(
         `${IMPORT_STRINGS.missingMapping}: ${this.missingMappings.join(', ')}`,
@@ -187,9 +195,106 @@ export class ImportComponent {
     }
     this.rememberMapping(this.mapping());
     this.mappingConfirmed.set(true);
-    this.statusMessage.set(
-      'Mapeo confirmado. La revisión y la importación estarán disponibles en HU-10/HU-11.',
+    await this.buildReview();
+  }
+
+  protected get reviewStatusCounts(): {
+    readonly total: number;
+    readonly ok: number;
+    readonly warning: number;
+    readonly error: number;
+  } {
+    const rows = this.reviewRows();
+    return {
+      total: rows.length,
+      ok: rows.filter((row) => row.status === 'OK').length,
+      warning: rows.filter((row) => row.status === 'WARNING').length,
+      error: rows.filter((row) => row.status === 'ERROR').length,
+    };
+  }
+
+  protected get filteredReviewRows(): readonly ImportPreviewRow[] {
+    const filter = this.statusFilter();
+    return filter === 'ALL'
+      ? this.reviewRows()
+      : this.reviewRows().filter((row) => row.status === filter);
+  }
+
+  protected setStatusFilter(event: Event): void {
+    this.statusFilter.set(
+      (event.target as HTMLSelectElement).value as 'ALL' | 'OK' | 'WARNING' | 'ERROR',
     );
+  }
+
+  protected editReviewRow(
+    rowNumber: number,
+    field: 'firstName' | 'lastName' | 'categoryRaw' | 'genderRaw' | 'teamNameRaw',
+    event: Event,
+  ): void {
+    const value = (event.target as HTMLInputElement).value;
+    const rows = this.reviewRows().map((row) =>
+      row.rowNumber === rowNumber ? { ...row, [field]: value } : row,
+    );
+    this.revalidateReview(rows);
+  }
+
+  protected toggleDiscard(rowNumber: number): void {
+    const rows = this.reviewRows().map((row) =>
+      row.rowNumber === rowNumber ? { ...row, discarded: !row.discarded } : row,
+    );
+    this.reviewRows.set(rows);
+  }
+
+  protected toggleDifferentPerson(rowNumber: number): void {
+    const rows = this.reviewRows().map((row) =>
+      row.rowNumber === rowNumber
+        ? {
+            ...row,
+            differentPerson: !row.differentPerson,
+            discarded: row.differentPerson ? false : false,
+          }
+        : row,
+    );
+    this.revalidateReview(rows);
+  }
+
+  protected issueLabel(row: ImportPreviewRow): string {
+    if (row.status === 'ERROR') {
+      return row.issues
+        .map((issue) => {
+          if (issue.code === 'MISSING_PLAYER_FIELD') return 'Falta nombre o apellido';
+          if (issue.code === 'UNKNOWN_CATEGORY') return 'Categoría no reconocida';
+          if (issue.code === 'UNKNOWN_GENDER') return 'Género no reconocido';
+          return issue.code;
+        })
+        .join('. ');
+    }
+    if (row.status === 'WARNING') {
+      const labels: string[] = [];
+      if (row.duplicateExisting) labels.push('Duplica un jugador existente');
+      if (row.duplicateInFile) labels.push('Duplica otro jugador del archivo');
+      if (row.teamIsNew) labels.push('Equipo nuevo');
+      if (row.teamIsSimilar) labels.push('Equipo parecido');
+      return labels.join('. ');
+    }
+    return 'OK';
+  }
+
+  protected get hasReviewErrors(): boolean {
+    return this.reviewRows().some((row) => !row.discarded && row.status === 'ERROR');
+  }
+
+  protected backToMapping(): void {
+    this.step.set('MAPPING');
+    this.mappingConfirmed.set(false);
+  }
+
+  protected confirmImportPreview(): void {
+    if (this.hasReviewErrors) {
+      this.statusMessage.set('Resolvé o descartá todas las filas con errores.');
+      return;
+    }
+    this.statusMessage.set('Revisión completa. La escritura confirmada se realizará en HU-11.');
   }
 
   protected goBack(): void {
@@ -226,6 +331,56 @@ export class ImportComponent {
     if (this.rememberedMappingKey) {
       localStorage.setItem(this.rememberedMappingKey, JSON.stringify(mapping));
     }
+  }
+
+  private async buildReview(): Promise<void> {
+    this.existingPlayers = await tournamentRepository.getPlayers();
+    this.existingTeams = await tournamentRepository.getTeams();
+    const preview = this.preview();
+    if (!preview) {
+      return;
+    }
+    const tournament = await tournamentRepository.getTournament();
+    const catalog = tournament?.categories ?? [];
+    this.catalog = catalog;
+    const mapped = this.mappedPreviewRows.map((row) => ({
+      firstName: row.firstName,
+      lastName: row.lastName,
+      categoryRaw: row.category,
+      genderRaw: row.gender,
+      teamNameRaw: row.team,
+    }));
+    this.reviewRows.set(
+      buildImportPreview(mapped, catalog, this.existingPlayers, this.existingTeams),
+    );
+    this.statusFilter.set('ALL');
+    this.statusMessage.set('Revisión completa. Corregí filas con error antes de continuar.');
+    this.step.set('REVIEW');
+  }
+
+  private revalidateReview(rows: readonly ImportPreviewRow[]): void {
+    const mapped: readonly MappedImportRow[] = rows.map((row) => ({
+      firstName: row.firstName,
+      lastName: row.lastName,
+      categoryRaw: row.categoryRaw,
+      genderRaw: row.genderRaw,
+      teamNameRaw: row.teamNameRaw,
+    }));
+    const revalidated = buildImportPreview(
+      mapped,
+      this.catalog,
+      this.existingPlayers,
+      this.existingTeams,
+    );
+    const preserved = revalidated.map((row) => {
+      const previous = rows.find((item) => item.rowNumber === row.rowNumber);
+      return {
+        ...row,
+        discarded: previous?.discarded ?? row.discarded,
+        differentPerson: previous?.differentPerson ?? row.differentPerson,
+      };
+    });
+    this.reviewRows.set(preserved);
   }
 
   private async readFile(file: File): Promise<void> {

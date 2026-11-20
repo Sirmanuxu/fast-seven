@@ -105,7 +105,7 @@
           </button>
         </div>
       </section>
-    } @else {
+    } @else if (step() === 'MAPPING') {
       <section class="mapping-card">
         <h2>{{ strings.stepMapping }}</h2>
         @if (current.headers.length > 0) {
@@ -235,6 +235,111 @@
             </button>
           </div>
         }
+      </section>
+    } @else {
+      <section class="review-card">
+        <h2>{{ strings.reviewTitle }}</h2>
+        @if (reviewStatusCounts; as counts) {
+          <div class="review-counts">
+            <span>Total: {{ counts.total }}</span>
+            <span>OK: {{ counts.ok }}</span>
+            <span>Advertencias: {{ counts.warning }}</span>
+            <span>Errores: {{ counts.error }}</span>
+          </div>
+        }
+
+        <label>
+          {{ strings.reviewFilter }}
+          <select [value]="statusFilter()" (change)="setStatusFilter($event)">
+            <option value="ALL">{{ strings.reviewAll }}</option>
+            <option value="OK">OK</option>
+            <option value="WARNING">Advertencias</option>
+            <option value="ERROR">Errores</option>
+          </select>
+        </label>
+
+        <div class="table-wrap review-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Fila</th>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>Categoría</th>
+                <th>Género</th>
+                <th>Equipo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of filteredReviewRows; track row.rowNumber) {
+                <tr [class.discarded]="row.discarded">
+                  <td>{{ row.rowNumber }}</td>
+                  <td>
+                    <input
+                      [value]="row.firstName"
+                      (input)="editReviewRow(row.rowNumber, 'firstName', $event)"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      [value]="row.lastName"
+                      (input)="editReviewRow(row.rowNumber, 'lastName', $event)"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      [value]="row.categoryRaw"
+                      (input)="editReviewRow(row.rowNumber, 'categoryRaw', $event)"
+                    />
+                    @if (row.normalizedCategory) {
+                      <small>{{ row.categoryRaw }} → {{ row.normalizedCategory }}</small>
+                    }
+                  </td>
+                  <td>
+                    <input
+                      [value]="row.genderRaw"
+                      (input)="editReviewRow(row.rowNumber, 'genderRaw', $event)"
+                    />
+                    @if (row.normalizedGender) {
+                      <small>{{ row.genderRaw }} → {{ row.normalizedGender }}</small>
+                    }
+                  </td>
+                  <td>
+                    <input
+                      [value]="row.teamNameRaw"
+                      (input)="editReviewRow(row.rowNumber, 'teamNameRaw', $event)"
+                    />
+                  </td>
+                  <td>
+                    <strong>{{ row.status }}</strong>
+                    <small>{{ issueLabel(row) }}</small>
+                  </td>
+                  <td>
+                    <button type="button" (click)="toggleDiscard(row.rowNumber)">
+                      {{ row.discarded ? strings.reviewRestore : strings.reviewDiscard }}
+                    </button>
+                    @if (row.duplicateExisting || row.duplicateInFile) {
+                      <button type="button" (click)="toggleDifferentPerson(row.rowNumber)">
+                        {{
+                          row.differentPerson ? strings.reviewNotDistinct : strings.reviewDistinct
+                        }}
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="options">
+          <button type="button" (click)="backToMapping()">{{ strings.reviewBack }}</button>
+          <button type="button" [disabled]="hasReviewErrors" (click)="confirmImportPreview()">
+            {{ strings.reviewConfirm }}
+          </button>
+        </div>
       </section>
     }
   }
