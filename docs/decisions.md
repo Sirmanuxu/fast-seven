@@ -197,6 +197,8 @@
 
 ## 2026-11-20 - Build - Visible application version
 
-- **Decision:** Display `v0.11.2` as a footer in the Angular shell and activate detected PWA updates
+- **Decision:** Display `v0.11.2` directly in `src/index.html`, in a fixed bottom-left badge, and
+  activate detected PWA updates
   before reloading.
-- **Reason:** It gives every page a consistent version footer and avoids overlapping page content.
+- **Reason:** It lets the operator verify the loaded build and avoids keeping an old service-worker
+  version across fixes.

@@ -6,8 +6,24 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.png" />
+    <style>
+      .app-version {
+        position: fixed;
+        left: 0.75rem;
+        bottom: 0.75rem;
+        z-index: 2147483647;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        background: rgb(0 0 0 / 75%);
+        color: #fff;
+        font-size: 0.75rem;
+        line-height: 1;
+        pointer-events: none;
+      }
+    </style>
   </head>
   <body>
     <app-root></app-root>
+    <aside class="app-version" aria-label="Versión de la aplicación">v0.11.2</aside>
   </body>
 </html>
