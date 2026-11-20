@@ -13,6 +13,74 @@
   @if (statusMessage(); as message) {
     <p role="status">{{ message }}</p>
   }
+  <section class="draw-section" aria-label="Sorteo de jugadores">
+    <h2>{{ strings.drawTitle }}</h2>
+    @if (!canDraw) {
+      <p role="status">{{ strings.drawDisabledRunning }}</p>
+    } @else if (unassignedPlayers.length === 0) {
+      <p>{{ strings.drawNoPlayers }}</p>
+    } @else {
+      <label>
+        {{ strings.drawTeamCount }}
+        <input
+          type="number"
+          min="0"
+          [value]="drawNewTeamCount()"
+          (input)="drawNewTeamCount.set(+$any($event.target).value)"
+        />
+      </label>
+      @if (teams().length > 0) {
+        <fieldset>
+          <legend>{{ strings.drawExistingTeams }}</legend>
+          @for (team of teams(); track team.id) {
+            <label class="assignment-player">
+              <input
+                type="checkbox"
+                [checked]="drawSelectedExistingIds().has(team.id)"
+                (change)="toggleDrawExistingTeam(team.id)"
+              />
+              {{ team.name }} ({{ teamPlayers(team).length }} jugadores)
+            </label>
+          }
+        </fieldset>
+      } @else {
+        <p>{{ strings.drawNoExistingTeams }}</p>
+      }
+      <label class="seed">
+        <input
+          type="checkbox"
+          [checked]="drawBalance()"
+          (change)="drawBalance.set($any($event.target).checked)"
+        />
+        {{ strings.drawBalance }}
+      </label>
+      <button type="button" (click)="previewDraw()">{{ strings.drawPreview }}</button>
+    }
+    @if (drawError(); as error) {
+      <p class="error" role="alert">{{ error }}</p>
+    }
+    @if (drawPlan(); as plan) {
+      <div class="draw-preview">
+        <h3>{{ strings.drawPreviewTitle }}</h3>
+        @for (assignment of plan.assignments; track assignment.targetId) {
+          <article>
+            <h4>{{ drawTargetName(assignment.targetId) }}</h4>
+            <p>{{ assignment.playerIds.length }} {{ strings.players }}</p>
+            <ul>
+              @for (player of drawPlayers(assignment); track player.id) {
+                <li>{{ playerName(player) }}</li>
+              }
+            </ul>
+          </article>
+        }
+        <button type="button" (click)="previewDraw()">{{ strings.drawRepeat }}</button>
+        <button type="button" (click)="confirmDraw()" [disabled]="drawBusy()">
+          {{ strings.drawConfirm }}
+        </button>
+        <button type="button" (click)="cancelDraw()">{{ strings.drawCancel }}</button>
+      </div>
+    }
+  </section>
 
   @if (formOpen()) {
     <section class="form-card" aria-label="Formulario de equipo">

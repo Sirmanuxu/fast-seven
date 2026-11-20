@@ -131,6 +131,17 @@
 - **Reason:** A finite player set can always be represented by one team when only the minimum is
   constrained, without introducing an artificial configured maximum.
 
+## 2026-11-20 - HU-12 - Team draw
+
+- **Decision:** Model a draw as ordered target assignments so the same plan can create new teams
+  and complete selected existing teams without touching other rosters.
+- **Reason:** HU-12 must preserve already-armed teams while allowing the organizer to choose where
+  unassigned players should go.
+- **Decision:** When balance is enabled, distribute each category-and-gender group in rounds across
+  targets instead of only shuffling one combined list.
+- **Reason:** Interleaving a combined list can still concentrate a group after the final round-robin
+  assignment; per-group rounds guarantee the intended balance.
+
 ## 2026-11-20 - HU-09 - Import column mapping
 
 - **Decision:** Suggest mappings with exact aliases, containment and a bounded edit distance.

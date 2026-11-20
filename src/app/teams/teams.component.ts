@@ -10,6 +10,8 @@ import {
   hasMixedRoster,
   validateTeamInput,
 } from '../../domain/team';
+import { createTeamDrawPlan, TeamDrawPlan } from '../../domain/team-draw';
+import { createSeededRng } from '../../domain/rng';
 import { TEAM_STRINGS } from '../../i18n/team-strings';
 
 @Component({
@@ -36,6 +38,12 @@ export class TeamsComponent implements OnInit {
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly unassignedSelectedIds = signal<ReadonlySet<string>>(new Set());
   protected readonly teamSelectedIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly drawNewTeamCount = signal(1);
+  protected readonly drawBalance = signal(false);
+  protected readonly drawSelectedExistingIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly drawPlan = signal<TeamDrawPlan | null>(null);
+  protected readonly drawError = signal<string | null>(null);
+  protected readonly drawBusy = signal(false);
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -190,6 +198,189 @@ export class TeamsComponent implements OnInit {
   protected selectTeam(teamId: string): void {
     this.selectedTeamId.set(teamId || null);
     this.teamSelectedIds.set(new Set());
+  }
+
+  protected get canDraw(): boolean {
+    return this.tournament()?.status !== 'RUNNING';
+  }
+
+  protected toggleDrawExistingTeam(teamId: string): void {
+    const next = new Set(this.drawSelectedExistingIds());
+    if (next.has(teamId)) {
+      next.delete(teamId);
+    } else {
+      next.add(teamId);
+    }
+    this.drawSelectedExistingIds.set(next);
+    this.drawPlan.set(null);
+    this.drawError.set(null);
+  }
+
+  protected async previewDraw(): Promise<void> {
+    this.drawError.set(null);
+    this.drawPlan.set(null);
+    if (!this.canDraw) {
+      this.drawError.set(TEAM_STRINGS.drawDisabledRunning);
+      return;
+    }
+    if (this.unassignedPlayers.length === 0) {
+      this.drawError.set(TEAM_STRINGS.drawNoPlayers);
+      return;
+    }
+    const newTeamCount = Math.trunc(this.drawNewTeamCount());
+    if (!Number.isInteger(newTeamCount) || newTeamCount < 0) {
+      this.drawError.set(TEAM_STRINGS.drawInvalidCount);
+      return;
+    }
+
+    const selectedExistingIds = this.drawSelectedExistingIds();
+    if (newTeamCount === 0 && selectedExistingIds.size === 0) {
+      this.drawError.set(TEAM_STRINGS.drawInvalidCount);
+      return;
+    }
+    const existingTargets = this.teams()
+      .filter((team) => selectedExistingIds.has(team.id))
+      .map((team) => ({
+        id: team.id,
+        currentPlayerCount: this.teamPlayers(team).length,
+      }));
+    const newTargets = Array.from({ length: newTeamCount }, (_, index) => ({
+      id: `new-team-${index}`,
+      currentPlayerCount: 0,
+    }));
+    const tournament = this.tournament();
+    if (!tournament) {
+      this.drawError.set(TEAM_STRINGS.drawFailed);
+      return;
+    }
+
+    const seed = crypto.randomUUID();
+    const result = createTeamDrawPlan({
+      players: this.unassignedPlayers,
+      targets: [...existingTargets, ...newTargets],
+      roster: tournament.rules.roster,
+      balanceByCategoryGender: this.drawBalance(),
+      drawId: crypto.randomUUID(),
+      seed,
+      createdAt: new Date().toISOString(),
+      rng: createSeededRng(seed),
+    });
+    if (!result.ok) {
+      this.drawError.set(this.drawErrorMessage(result.error.code, result.error.params));
+      return;
+    }
+    this.drawPlan.set(result.value);
+  }
+
+  protected async confirmDraw(): Promise<void> {
+    const plan = this.drawPlan();
+    if (!plan || this.drawBusy()) {
+      return;
+    }
+    this.drawBusy.set(true);
+    try {
+      const newAssignments = plan.assignments.filter((assignment) =>
+        assignment.targetId.startsWith('new-team-'),
+      );
+      const singleCategory =
+        new Set(
+          this.unassignedPlayers
+            .filter((player) =>
+              newAssignments.some((assignment) => assignment.playerIds.includes(player.id)),
+            )
+            .map((player) => player.category),
+        ).size === 1;
+      const category = singleCategory
+        ? this.unassignedPlayers.find((player) =>
+            newAssignments.some((assignment) => assignment.playerIds.includes(player.id)),
+          )?.category
+        : null;
+      const newTeams = newAssignments.map((assignment, index) => {
+        const id = crypto.randomUUID();
+        const colors = getDefaultTeamColorPair(this.teams(), index);
+        return {
+          targetId: assignment.targetId,
+          team: {
+            id,
+            name: category
+              ? `${category} ${String.fromCharCode(65 + index)}`
+              : `Equipo ${index + 1}`,
+            primaryColor: colors.primary,
+            secondaryColor: colors.secondary,
+            captainId: null,
+            logo: null,
+            isSeed: false,
+            status: 'ACTIVE' as const,
+          },
+        };
+      });
+      const replacementIds = new Map(
+        newTeams.map(({ targetId, team }) => [targetId, team.id] as const),
+      );
+      const assignments = plan.assignments.map((assignment) => ({
+        targetId: replacementIds.get(assignment.targetId) ?? assignment.targetId,
+        playerIds: assignment.playerIds,
+      }));
+      await tournamentRepository.applyTeamDraw({
+        assignments,
+        newTeams: newTeams.map(({ team }) => team),
+        draw: {
+          ...plan.draw,
+          payload: {
+            kind: 'TEAMS',
+            teams: assignments.map((assignment) => assignment.playerIds),
+          },
+        },
+      });
+      await this.load();
+      this.drawPlan.set(null);
+      this.drawSelectedExistingIds.set(new Set());
+      this.drawNewTeamCount.set(1);
+      this.statusMessage.set(TEAM_STRINGS.drawSaved);
+    } catch (error) {
+      console.error('Team draw failed', error);
+      this.drawError.set(TEAM_STRINGS.drawFailed);
+    } finally {
+      this.drawBusy.set(false);
+    }
+  }
+
+  protected cancelDraw(): void {
+    this.drawPlan.set(null);
+    this.drawError.set(null);
+  }
+
+  protected drawPlayers(assignment: {
+    readonly targetId: string;
+    readonly playerIds: readonly string[];
+  }): readonly Player[] {
+    return assignment.playerIds
+      .map((playerId) => this.players().find((player) => player.id === playerId))
+      .filter((player): player is Player => player !== undefined);
+  }
+
+  protected drawTargetName(targetId: string): string {
+    if (targetId.startsWith('new-team-')) {
+      const index = Number.parseInt(targetId.replace('new-team-', ''), 10);
+      return `Equipo ${index + 1}`;
+    }
+    return this.teams().find((team) => team.id === targetId)?.name ?? targetId;
+  }
+
+  private drawErrorMessage(
+    code: string,
+    params?: Readonly<Record<string, string | number>>,
+  ): string {
+    if (code === 'notEnoughPlayers') {
+      return TEAM_STRINGS.drawNotEnoughPlayers.replace(
+        '{maximum}',
+        String(params?.['maximumPossible'] ?? 0),
+      );
+    }
+    if (code === 'tooManyPlayers') {
+      return TEAM_STRINGS.drawTooManyPlayers;
+    }
+    return TEAM_STRINGS.drawFailed;
   }
 
   protected async saveTeam(): Promise<void> {

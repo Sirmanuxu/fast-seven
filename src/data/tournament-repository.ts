@@ -41,6 +41,15 @@ export interface ConfirmImportPlayerRow {
   readonly differentPerson: boolean;
 }
 
+export interface ApplyTeamDrawInput {
+  readonly assignments: readonly {
+    readonly targetId: string;
+    readonly playerIds: readonly string[];
+  }[];
+  readonly newTeams: readonly Team[];
+  readonly draw: Draw;
+}
+
 export interface ConfirmImportSummary {
   readonly createdPlayers: number;
   readonly skippedPlayers: number;
@@ -136,6 +145,51 @@ export class TournamentRepository {
     await tournamentDatabase.transaction('rw', tournamentDatabase.draws, async () => {
       await tournamentDatabase.draws.put(draw);
     });
+  }
+
+  async applyTeamDraw(input: ApplyTeamDrawInput): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.teams,
+      tournamentDatabase.players,
+      tournamentDatabase.draws,
+      tournamentDatabase.tournament,
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament || tournament.status === 'RUNNING') {
+          throw new Error('Team draws are disabled while the tournament is running');
+        }
+        const playerIds = input.assignments.flatMap((assignment) => assignment.playerIds);
+        const players = await tournamentDatabase.players.where('id').anyOf(playerIds).toArray();
+        if (
+          players.length !== playerIds.length ||
+          players.some((player) => player.teamId !== null)
+        ) {
+          throw new Error('Team draw players are no longer unassigned');
+        }
+
+        await tournamentDatabase.teams.bulkPut([...input.newTeams]);
+        const teams = await tournamentDatabase.teams.toArray();
+        const teamIds = new Set(teams.map((team) => team.id));
+        if (input.assignments.some((assignment) => !teamIds.has(assignment.targetId))) {
+          throw new Error('Team draw target no longer exists');
+        }
+        for (const assignment of input.assignments) {
+          if (assignment.playerIds.length === 0 || !assignment.targetId) {
+            continue;
+          }
+          await tournamentDatabase.players
+            .where('id')
+            .anyOf([...assignment.playerIds])
+            .modify({ teamId: assignment.targetId });
+        }
+        await tournamentDatabase.draws.put(input.draw);
+
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: new Date().toISOString(),
+        });
+      },
+    );
   }
 
   async getPlayers(): Promise<readonly Player[]> {
