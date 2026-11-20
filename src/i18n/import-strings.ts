@@ -31,4 +31,10 @@ export const IMPORT_STRINGS = {
   continueNext: 'Continuar',
   mappedPreview: 'Vista previa con mapeo',
   mappingSaved: 'El mapeo se recordó para este archivo.',
+  stepFile: 'Paso 1: Archivo',
+  stepMapping: 'Paso 2: Columnas',
+  confirmMapping: 'Confirmar mapeo',
+  backMapping: 'Volver al archivo',
+  templateHelp:
+    'La plantilla incluye exactamente dos filas de ejemplo. Son ejemplos para mostrar el formato; reemplazalas o agregá tus filas reales.',
 } as const;

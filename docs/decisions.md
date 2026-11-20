@@ -129,6 +129,14 @@
 - **Decision:** Remember mappings under a normalized header-signature key in localStorage.
 - **Reason:** It is a UI preference and can be reused across reimports without storing tournament data.
 
+## 2026-11-20 - HU-09 - Import screen feedback
+
+- **Decision:** Split the screen into File and Mapping steps.
+- **Reason:** The file step preserves the HU-08 first-five-row preview, while mapping displays
+  every available mapped row in a single table.
+- **Decision:** Replace the inert continue button with a functional Confirmar mapeo action.
+- **Reason:** Confirmation must have visible behavior and must block incomplete required mappings.
+
 ## 2026-11-20 - HU-09 - Mapping block rendering fix
 
 - **Decision:** Render the mapping card outside the Excel sheet `<select>` and once for every

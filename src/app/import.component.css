@@ -61,6 +61,15 @@ button {
   border-top: 1px solid #bbb;
 }
 
+.mapped-preview {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.status {
+  color: #2f6b35;
+}
+
 .mapping-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(180px, 1fr));

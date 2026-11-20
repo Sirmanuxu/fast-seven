@@ -34,6 +34,9 @@ export class ImportComponent {
   protected readonly delimiter = signal<ImportDelimiter | ''>('');
   protected readonly sheetName = signal('');
   protected readonly mapping = signal<ImportColumnMapping>(EMPTY_IMPORT_MAPPING);
+  protected readonly step = signal<'FILE' | 'MAPPING'>('FILE');
+  protected readonly mappingConfirmed = signal(false);
+  protected readonly statusMessage = signal<string | null>(null);
   private rememberedMappingKey = '';
 
   protected async onFileInput(event: Event): Promise<void> {
@@ -129,7 +132,7 @@ export class ImportComponent {
     const genderIndex = index(mapping.gender);
     const teamIndex = index(mapping.team);
 
-    return preview.rows.slice(0, 5).map((row) => {
+    return preview.rows.map((row) => {
       const fullName = fullIndex >= 0 ? (row[fullIndex] ?? '').trim() : '';
       const split = fullName
         ? splitFullName(fullName, mapping.splitMode)
@@ -159,6 +162,34 @@ export class ImportComponent {
     link.download = 'plantilla-jugadores.csv';
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  protected continueToMapping(): void {
+    if (!this.preview()) {
+      this.statusMessage.set('Primero cargá un archivo.');
+      return;
+    }
+    this.step.set('MAPPING');
+    this.statusMessage.set(null);
+  }
+
+  protected backToFile(): void {
+    this.step.set('FILE');
+    this.mappingConfirmed.set(false);
+  }
+
+  protected confirmMapping(): void {
+    if (this.missingMappings.length > 0) {
+      this.statusMessage.set(
+        `${IMPORT_STRINGS.missingMapping}: ${this.missingMappings.join(', ')}`,
+      );
+      return;
+    }
+    this.rememberMapping(this.mapping());
+    this.mappingConfirmed.set(true);
+    this.statusMessage.set(
+      'Mapeo confirmado. La revisión y la importación estarán disponibles en HU-10/HU-11.',
+    );
   }
 
   protected goBack(): void {
@@ -200,6 +231,9 @@ export class ImportComponent {
   private async readFile(file: File): Promise<void> {
     this.selectedFile = file;
     this.errorMessage.set(null);
+    this.step.set('FILE');
+    this.mappingConfirmed.set(false);
+    this.statusMessage.set(null);
     try {
       const preview = await readImportFile(file, {
         encoding: this.encoding() || undefined,

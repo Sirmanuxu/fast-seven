@@ -6,6 +6,10 @@
 
   <p role="status">{{ strings.noWrite }}</p>
 
+  @if (statusMessage(); as status) {
+    <p role="status" class="status">{{ status }}</p>
+  }
+
   <section class="drop-zone" (drop)="onDrop($event)" (dragover)="preventDrop($event)">
     <p>{{ strings.drop }}</p>
     <label>
@@ -19,51 +23,93 @@
   }
 
   @if (preview(); as current) {
-    <section class="preview-card">
-      <h2>{{ current.fileName }}</h2>
-      <p>{{ strings.format }}: {{ current.format }}</p>
-      <p>{{ strings.rowCount }}: {{ current.rowCount }}</p>
+    @if (step() === 'FILE') {
+      <section class="preview-card">
+        <h2>{{ strings.stepFile }}</h2>
+        <h3>{{ current.fileName }}</h3>
+        <p>{{ strings.format }}: {{ current.format }}</p>
+        <p>{{ strings.rowCount }}: {{ current.rowCount }}</p>
 
-      @if (current.warning) {
-        <p class="warning" role="status">{{ current.warning }}</p>
-      }
+        @if (current.warning) {
+          <p class="warning" role="status">{{ current.warning }}</p>
+        }
 
-      @if (current.format === 'CSV') {
+        @if (current.format === 'CSV') {
+          <div class="options">
+            <label>
+              {{ strings.encoding }}
+              <select [value]="encoding()" (change)="onEncodingChange($event)">
+                <option value="UTF-8">UTF-8</option>
+                <option value="Windows-1252">Windows-1252</option>
+                <option value="ISO-8859-1">ISO-8859-1</option>
+              </select>
+            </label>
+            <label>
+              {{ strings.delimiter }}
+              <select [value]="delimiter()" (change)="onDelimiterChange($event)">
+                <option value=";">; punto y coma</option>
+                <option value=",">, coma</option>
+                <option value="&#9;">tab</option>
+              </select>
+            </label>
+            <button type="button" (click)="reread()">{{ strings.reread }}</button>
+          </div>
+        }
+
+        @if (current.format === 'EXCEL' && current.sheetNames.length > 1) {
+          <label>
+            {{ strings.sheet }}
+            <select [value]="sheetName()" (change)="onSheetChange($event)">
+              @for (sheet of current.sheetNames; track sheet) {
+                <option [value]="sheet">{{ sheet }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (current.headers.length > 0) {
+          <h3>{{ strings.preview }}</h3>
+          <p>Se muestran las primeras 5 filas decodificadas.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  @for (header of current.headers; track $index) {
+                    <th>{{ header }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of current.previewRows; track $index) {
+                  <tr>
+                    @for (value of row; track $index) {
+                      <td>{{ value }}</td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
         <div class="options">
-          <label>
-            {{ strings.encoding }}
-            <select [value]="encoding()" (change)="onEncodingChange($event)">
-              <option value="UTF-8">UTF-8</option>
-              <option value="Windows-1252">Windows-1252</option>
-              <option value="ISO-8859-1">ISO-8859-1</option>
-            </select>
-          </label>
-          <label>
-            {{ strings.delimiter }}
-            <select [value]="delimiter()" (change)="onDelimiterChange($event)">
-              <option value=";">; punto y coma</option>
-              <option value=",">, coma</option>
-              <option value="&#9;">tab</option>
-            </select>
-          </label>
-          <button type="button" (click)="reread()">{{ strings.reread }}</button>
+          <button type="button" (click)="downloadTemplate()">
+            {{ strings.downloadTemplate }}
+          </button>
+          <p>{{ strings.templateHelp }}</p>
+          <button
+            type="button"
+            [disabled]="current.headers.length === 0"
+            (click)="continueToMapping()"
+          >
+            Continuar al mapeo
+          </button>
         </div>
-      }
-
-      @if (current.format === 'EXCEL' && current.sheetNames.length > 1) {
-        <label>
-          {{ strings.sheet }}
-          <select [value]="sheetName()" (change)="onSheetChange($event)">
-            @for (sheet of current.sheetNames; track sheet) {
-              <option [value]="sheet">{{ sheet }}</option>
-            }
-          </select>
-        </label>
-      }
-
-      @if (current.headers.length > 0) {
-        <section class="mapping-card">
-          <h3>{{ strings.mappingTitle }}</h3>
+      </section>
+    } @else {
+      <section class="mapping-card">
+        <h2>{{ strings.stepMapping }}</h2>
+        @if (current.headers.length > 0) {
           <div class="mapping-grid">
             <label>
               {{ strings.fullName }}
@@ -152,8 +198,9 @@
             <p role="status">{{ strings.mappingSaved }}</p>
           }
 
-          <h4>{{ strings.mappedPreview }}</h4>
-          <div class="table-wrap">
+          <h3>{{ strings.mappedPreview }}</h3>
+          <p>Se muestran todas las {{ current.rowCount }} filas mapeadas disponibles.</p>
+          <div class="table-wrap mapped-preview">
             <table>
               <thead>
                 <tr>
@@ -179,39 +226,17 @@
           </div>
 
           <div class="options">
-            <button type="button" (click)="downloadTemplate()">
-              {{ strings.downloadTemplate }}
-            </button>
-            <button type="button" [disabled]="missingMappings.length > 0">
-              {{ strings.continueNext }}
+            <button type="button" (click)="backToFile()">{{ strings.backMapping }}</button>
+            <button
+              type="button"
+              [disabled]="missingMappings.length > 0"
+              (click)="confirmMapping()"
+            >
+              {{ strings.confirmMapping }}
             </button>
           </div>
-        </section>
-      }
-
-      @if (current.headers.length > 0) {
-        <h3>{{ strings.preview }}</h3>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                @for (header of current.headers; track $index) {
-                  <th>{{ header }}</th>
-                }
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of current.previewRows; track $index) {
-                <tr>
-                  @for (value of row; track $index) {
-                    <td>{{ value }}</td>
-                  }
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </section>
+        }
+      </section>
+    }
   }
 </main>
