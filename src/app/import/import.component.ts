@@ -54,6 +54,7 @@ export class ImportComponent {
   protected readonly duplicateActions = signal<Readonly<Record<number, DuplicateAction>>>({});
   protected readonly importSummary = signal<ConfirmImportSummary | null>(null);
   protected readonly tournamentStatus = signal<TournamentStatus>('SETUP');
+  protected readonly isImporting = signal(false);
   private existingPlayers: readonly Player[] = [];
   private existingTeams: readonly Team[] = [];
   private catalog: readonly Category[] = [];
@@ -390,10 +391,14 @@ export class ImportComponent {
   }
 
   protected async executeImport(): Promise<void> {
+    if (this.isImporting()) return;
+    this.isImporting.set(true);
+    this.statusMessage.set('Importando jugadores y equipos…');
     try {
       const tournament = await tournamentRepository.getTournament();
       if (!tournament) {
         this.statusMessage.set('No hay un torneo activo.');
+        this.isImporting.set(false);
         return;
       }
       const summary = await tournamentRepository.confirmImport(
@@ -422,6 +427,8 @@ export class ImportComponent {
     } catch (error) {
       console.error('Import failed', error);
       this.statusMessage.set('No se pudo importar. No se realizaron cambios.');
+    } finally {
+      this.isImporting.set(false);
     }
   }
 

@@ -412,7 +412,9 @@
         <div class="options">
           <button type="button" (click)="step.set('REVIEW')">Volver a revisión</button>
           @if (!importSummary()) {
-            <button type="button" (click)="executeImport()">Importar</button>
+            <button type="button" [disabled]="isImporting()" (click)="executeImport()">
+              {{ isImporting() ? 'Importando…' : 'Importar' }}
+            </button>
           }
         </div>
       </section>

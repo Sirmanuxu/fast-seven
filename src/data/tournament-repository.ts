@@ -365,9 +365,6 @@ export class TournamentRepository {
             await tournamentDatabase.players.update(existingDuplicate.id, {
               teamId,
             });
-            if (existingDuplicate.teamId === existingDuplicate.teamId) {
-              createdPlayers += 0;
-            }
             continue;
           }
 

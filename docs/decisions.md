@@ -187,3 +187,10 @@
 - **Decision:** Never create teams while a tournament is running.
 - **Reason:** HU-11 requires running imports to assign only existing teams and leave unknown teams
   unassigned.
+
+## 2026-11-20 - HU-11 - Confirm import feedback
+
+- **Decision:** Disable the final import button during execution and show Importando/Importación
+  completada or an explicit failure.
+- **Reason:** The confirmation action must provide immediate and visible feedback and prevent
+  repeated writes.
