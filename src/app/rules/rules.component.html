@@ -1,0 +1,103 @@
+<main>
+  <header>
+    <button type="button" (click)="goBack()">{{ strings.back }}</button>
+    <h1>{{ strings.title }}</h1>
+  </header>
+
+  @if (errorMessage(); as error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+  @if (statusMessage(); as status) {
+    <p role="status">{{ status }}</p>
+  }
+  @if (recalculationWarning()) {
+    <p class="warning" role="status">{{ strings.runningWarning }}</p>
+  }
+
+  <section>
+    <h2>{{ strings.general }}</h2>
+    <div class="grid">
+      <label>{{ strings.name }} <input [value]="name()" (input)="setName($any($event.target).value)" /></label>
+      <label>{{ strings.date }} <input type="date" [value]="date()" (change)="setDate($any($event.target).value)" /></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>{{ strings.points }}</h2>
+    @if (pointsWarning()) {
+      <p class="warning" role="status">{{ strings.pointsWarning }}</p>
+    }
+    <label>{{ strings.preset }}
+      <select [value]="preset()" (change)="setPreset($any($event.target).value)">
+        <option value="3_2_1">{{ strings.preset321 }}</option>
+        <option value="4_2_0">{{ strings.preset420 }}</option>
+        <option value="CUSTOM">{{ strings.custom }}</option>
+      </select>
+    </label>
+    <div class="grid">
+      <label>{{ strings.win }} <input type="number" min="0" [value]="points().win" (input)="updatePoint('win', $any($event.target).value)" /></label>
+      <label>{{ strings.draw }} <input type="number" min="0" [value]="points().draw" (input)="updatePoint('draw', $any($event.target).value)" /></label>
+      <label>{{ strings.loss }} <input type="number" min="0" [value]="points().loss" (input)="updatePoint('loss', $any($event.target).value)" /></label>
+      <label>{{ strings.walkoverLoss }} <input type="number" min="0" [value]="points().walkoverLoss" (input)="updatePoint('walkoverLoss', $any($event.target).value)" /></label>
+    </div>
+    <h3>{{ strings.bonus }}</h3>
+    <div class="grid">
+      <label>{{ strings.triesThreshold }} <input type="number" min="0" [value]="points().bonus.triesThreshold ?? ''" (input)="updateBonus('triesThreshold', $any($event.target).value)" /></label>
+      <label>{{ strings.triesBonusPoints }} <input type="number" min="0" [value]="points().bonus.triesBonusPoints" (input)="updateBonus('triesBonusPoints', $any($event.target).value)" /></label>
+      <label>{{ strings.losingMarginMax }} <input type="number" min="0" [value]="points().bonus.losingMarginMax ?? ''" (input)="updateBonus('losingMarginMax', $any($event.target).value)" /></label>
+      <label>{{ strings.losingBonusPoints }} <input type="number" min="0" [value]="points().bonus.losingBonusPoints" (input)="updateBonus('losingBonusPoints', $any($event.target).value)" /></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>{{ strings.tiebreakers }}</h2>
+    <p>{{ strings.tiebreakerHelp }}</p>
+    @for (value of tiebreakers(); track $index) {
+      <div class="tiebreaker">
+        <select [value]="value" (change)="setTiebreaker($index, $event)">
+          @for (option of ['HEAD_TO_HEAD', 'POINT_DIFFERENCE', 'POINTS_FOR', 'TRIES_FOR', 'BUCHHOLZ']; track option) {
+            @if (option !== 'BUCHHOLZ' || isSwiss()) {
+              <option [value]="option">{{ tiebreakerLabel($any(option)) }}</option>
+            }
+          }
+        </select>
+        <button type="button" (click)="moveTiebreaker($index, -1)" [disabled]="$index === 0">{{ strings.moveUp }}</button>
+        <button type="button" (click)="moveTiebreaker($index, 1)" [disabled]="$index === tiebreakers().length - 1">{{ strings.moveDown }}</button>
+      </div>
+    }
+    <p class="tiebreaker fixed">{{ strings.drawCriterion }}</p>
+  </section>
+
+  <section>
+    <h2>{{ strings.walkover }}</h2>
+    <div class="grid">
+      <label>{{ strings.winnerScore }} <input type="number" min="0" [value]="winnerScore()" (input)="updateNumber('winnerScore', $any($event.target).value)" /></label>
+      <label>{{ strings.loserScore }} <input type="number" min="0" [value]="loserScore()" (input)="updateNumber('loserScore', $any($event.target).value)" /></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>{{ strings.bye }}</h2>
+    <label class="check"><input type="checkbox" [checked]="byeWinPoints()" (change)="byeWinPoints.set($any($event.target).checked)" /> {{ strings.byeWinPoints }}</label>
+    <label class="check"><input type="checkbox" [checked]="byeScore()" (change)="byeScore.set($any($event.target).checked)" /> {{ strings.byeScore }}</label>
+  </section>
+
+  <section>
+    <h2>{{ strings.roster }}</h2>
+    <div class="grid">
+      <label>{{ strings.rosterMin }} <input type="number" min="0" [value]="rosterMin()" (input)="updateNumber('rosterMin', $any($event.target).value)" /></label>
+      <label>{{ strings.rosterMax }} <input type="number" min="0" [value]="rosterMax() ?? ''" [placeholder]="strings.unlimited" (input)="updateRosterMax($any($event.target).value)" /></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>{{ strings.schedule }}</h2>
+    <div class="grid">
+      <label>{{ strings.startTime }} <input type="time" [value]="startTime()" (change)="startTime.set($any($event.target).value)" /></label>
+      <label>{{ strings.matchDuration }} <input type="number" min="0" [value]="matchDuration()" (input)="updateNumber('matchDuration', $any($event.target).value)" /></label>
+      <label>{{ strings.rest }} <input type="number" min="0" [value]="rest()" (input)="updateNumber('rest', $any($event.target).value)" /></label>
+    </div>
+  </section>
+
+  <button type="button" (click)="save()" [disabled]="isSaving()">{{ strings.save }}</button>
+</main>

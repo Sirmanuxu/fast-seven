@@ -9,8 +9,10 @@ import {
   MatchEvent,
   Player,
   RosterLimits,
+  ScheduleConfig,
   Team,
   Tournament,
+  TournamentRules,
   TournamentSnapshot,
 } from '../domain/model';
 import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
@@ -132,6 +134,27 @@ export class TournamentRepository {
       }
       await tournamentDatabase.tournament.update(tournament.id, {
         rules: { ...tournament.rules, roster },
+        updatedAt: new Date().toISOString(),
+      });
+    });
+  }
+
+  async updateTournamentConfiguration(input: {
+    readonly name: string;
+    readonly date: string;
+    readonly rules: TournamentRules;
+    readonly schedule: ScheduleConfig;
+  }): Promise<void> {
+    await tournamentDatabase.transaction('rw', tournamentDatabase.tournament, async () => {
+      const tournament = await this.getTournament();
+      if (!tournament) {
+        throw new Error('No tournament is available');
+      }
+      await tournamentDatabase.tournament.update(tournament.id, {
+        name: input.name,
+        date: input.date,
+        rules: input.rules,
+        schedule: input.schedule,
         updatedAt: new Date().toISOString(),
       });
     });

@@ -73,6 +73,10 @@ export class PanelComponent implements OnInit {
     void this.router.navigateByUrl('/equipos');
   }
 
+  protected openRules(): void {
+    void this.router.navigateByUrl('/panel/reglas');
+  }
+
   private async loadLastRecord(): Promise<void> {
     const record = await spikeDatabase.spikeRecords.orderBy('createdAt').last();
     this.lastRecord.set(record ?? null);
