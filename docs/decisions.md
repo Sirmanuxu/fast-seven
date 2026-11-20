@@ -1,5 +1,17 @@
 # Decision log
 
+## 2026-11-20 - HU-16 - Standings domain scope
+
+- **Decision:** Implement standings as a pure derived domain function and defer the positions UI
+  until fixture and result flows exist.
+- **Reason:** The owner confirmed a domain-only scope for HU-16, and the current application has no
+  fixture/result screen from which a positions view could obtain meaningful data.
+- **Decision:** Keep configurable tie-break explanations and persisted tie-break draws for HU-17.
+- **Reason:** HU-16 owns the table accounting, while HU-17 defines the configurable tie-break
+  sequence and its transparent draw behavior.
+
+## 2026-11-20 - HU-15 - Event score domain API
+
 ## 2026-11-20 - HU-15 - Event score domain API
 
 - **Decision:** Implement score calculation and event invariants as pure domain functions, while
