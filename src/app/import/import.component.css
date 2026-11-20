@@ -97,6 +97,29 @@ button {
   margin-top: 0.25rem;
 }
 
+.confirmation-card {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 0.5rem;
+}
+
+.confirmation-summary,
+.import-summary {
+  display: grid;
+  gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+.confirmation-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(220px, 320px);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
 .mapping-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(180px, 1fr));

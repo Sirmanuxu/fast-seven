@@ -236,7 +236,7 @@
           </div>
         }
       </section>
-    } @else {
+    } @else if (step() === 'REVIEW') {
       <section class="review-card">
         <h2>{{ strings.reviewTitle }}</h2>
         @if (reviewStatusCounts; as counts) {
@@ -343,6 +343,77 @@
           <button type="button" [disabled]="hasReviewErrors" (click)="confirmImportPreview()">
             {{ strings.reviewConfirm }}
           </button>
+        </div>
+      </section>
+    } @else if (step() === 'CONFIRMATION') {
+      <section class="confirmation-card">
+        <h2>Confirmación de importación</h2>
+
+        @if (confirmationPlan; as plan) {
+          <div class="confirmation-summary">
+            <p>Jugadores nuevos: {{ plan.createdPlayerCount }}</p>
+            <p>Jugadores omitidos: {{ plan.skippedPlayerCount }}</p>
+            <p>Equipos nuevos: {{ plan.createdTeamCount }}</p>
+            <p>Equipos bajo el mínimo: {{ plan.underMinimumTeamCount }}</p>
+          </div>
+        }
+
+        @if (teamResolutions().length > 0) {
+          <h3>Equipos</h3>
+          @for (resolution of teamResolutions(); track resolution.incomingName) {
+            <div class="confirmation-row">
+              <strong>{{ resolution.incomingName }}</strong>
+              <select
+                [value]="resolution.action"
+                (change)="setTeamResolution(resolution.incomingName, $event)"
+              >
+                @if (resolution.existingTeamId) {
+                  <option value="MERGE">Unificar con equipo existente</option>
+                }
+                @if (tournamentStatus() !== 'RUNNING') {
+                  <option value="CREATE">Crear equipo nuevo</option>
+                }
+              </select>
+            </div>
+          }
+        }
+
+        @if (importSummary(); as summary) {
+          <div class="import-summary" role="status">
+            <h3>Resumen final</h3>
+            <p>Jugadores creados: {{ summary.createdPlayers }}</p>
+            <p>Jugadores omitidos: {{ summary.skippedPlayers }}</p>
+            <p>Equipos creados: {{ summary.createdTeams }}</p>
+            @if (summary.underMinimumTeams.length > 0) {
+              <p>
+                Equipos bajo el mínimo:
+                {{ summary.underMinimumTeams.join(', ') }}
+              </p>
+            }
+          </div>
+        } @else {
+          @for (row of reviewRows(); track row.rowNumber) {
+            @if (row.duplicateExisting || row.duplicateInFile) {
+              <div class="confirmation-row">
+                <strong>{{ row.firstName }} {{ row.lastName }}</strong>
+                <select
+                  [value]="duplicateActions()[row.rowNumber] ?? 'SKIP'"
+                  (change)="setDuplicateAction(row.rowNumber, $event)"
+                >
+                  <option value="SKIP">Omitir</option>
+                  <option value="UPDATE_TEAM">Actualizar equipo</option>
+                  <option value="DISTINCT">Persona distinta</option>
+                </select>
+              </div>
+            }
+          }
+        }
+
+        <div class="options">
+          <button type="button" (click)="step.set('REVIEW')">Volver a revisión</button>
+          @if (!importSummary()) {
+            <button type="button" (click)="executeImport()">Importar</button>
+          }
         </div>
       </section>
     }

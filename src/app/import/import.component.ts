@@ -18,8 +18,16 @@ import {
   suggestColumnMapping,
 } from '../../import/column-mapping';
 import { tournamentRepository } from '../../data/tournament-repository';
-import { Category, Player, Team } from '../../domain/model';
+import { Category, Player, Team, TournamentStatus } from '../../domain/model';
 import { buildImportPreview, ImportPreviewRow, MappedImportRow } from '../../import/import-preview';
+import {
+  buildConfirmationPlan,
+  DuplicateAction,
+  ImportConfirmationPlan,
+  proposeTeamResolutions,
+  TeamResolution,
+} from '../../import/import-confirmation';
+import { ConfirmImportSummary } from '../../data/tournament-repository';
 
 @Component({
   selector: 'app-import',
@@ -37,11 +45,15 @@ export class ImportComponent {
   protected readonly delimiter = signal<ImportDelimiter | ''>('');
   protected readonly sheetName = signal('');
   protected readonly mapping = signal<ImportColumnMapping>(EMPTY_IMPORT_MAPPING);
-  protected readonly step = signal<'FILE' | 'MAPPING' | 'REVIEW'>('FILE');
+  protected readonly step = signal<'FILE' | 'MAPPING' | 'REVIEW' | 'CONFIRMATION'>('FILE');
   protected readonly mappingConfirmed = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly reviewRows = signal<readonly ImportPreviewRow[]>([]);
   protected readonly statusFilter = signal<'ALL' | 'OK' | 'WARNING' | 'ERROR'>('ALL');
+  protected readonly teamResolutions = signal<readonly TeamResolution[]>([]);
+  protected readonly duplicateActions = signal<Readonly<Record<number, DuplicateAction>>>({});
+  protected readonly importSummary = signal<ConfirmImportSummary | null>(null);
+  protected readonly tournamentStatus = signal<TournamentStatus>('SETUP');
   private existingPlayers: readonly Player[] = [];
   private existingTeams: readonly Team[] = [];
   private catalog: readonly Category[] = [];
@@ -309,12 +321,108 @@ export class ImportComponent {
     this.mappingConfirmed.set(false);
   }
 
-  protected confirmImportPreview(): void {
+  protected async confirmImportPreview(): Promise<void> {
     if (this.hasReviewErrors) {
       this.statusMessage.set(this.strings.reviewResolveErrors);
       return;
     }
-    this.statusMessage.set('Revisión completa. La escritura confirmada se realizará en HU-11.');
+    const tournament = await tournamentRepository.getTournament();
+    if (!tournament) {
+      this.statusMessage.set('No hay un torneo activo.');
+      return;
+    }
+    this.tournamentStatus.set(tournament.status);
+    const resolutions = proposeTeamResolutions(
+      this.reviewRows(),
+      this.existingTeams,
+      tournament.status,
+    );
+    this.teamResolutions.set(resolutions);
+    const actions: Record<number, DuplicateAction> = {};
+    for (const row of this.reviewRows()) {
+      if (row.duplicateExisting || row.duplicateInFile) {
+        actions[row.rowNumber] = 'SKIP';
+      }
+    }
+    this.duplicateActions.set(actions);
+    this.importSummary.set(null);
+    this.step.set('CONFIRMATION');
+  }
+
+  protected get confirmationPlan(): ImportConfirmationPlan | null {
+    if (this.step() !== 'CONFIRMATION') return null;
+    const teamCounts: Record<string, number> = {};
+    for (const team of this.existingTeams) {
+      teamCounts[team.id] = this.existingPlayers.filter(
+        (player) => player.teamId === team.id,
+      ).length;
+    }
+    return buildConfirmationPlan(
+      this.reviewRows(),
+      this.teamResolutions(),
+      teamCounts,
+      this.tournamentStatus(),
+      7,
+    );
+  }
+
+  protected setTeamResolution(incomingName: string, event: Event): void {
+    const action = (event.target as HTMLSelectElement).value as 'MERGE' | 'CREATE';
+    this.teamResolutions.set(
+      this.teamResolutions().map((resolution) =>
+        resolution.incomingName === incomingName
+          ? {
+              ...resolution,
+              action,
+              existingTeamId: action === 'MERGE' ? resolution.existingTeamId : null,
+            }
+          : resolution,
+      ),
+    );
+  }
+
+  protected setDuplicateAction(rowNumber: number, event: Event): void {
+    const action = (event.target as HTMLSelectElement).value as DuplicateAction;
+    this.duplicateActions.set({
+      ...this.duplicateActions(),
+      [rowNumber]: action,
+    });
+  }
+
+  protected async executeImport(): Promise<void> {
+    try {
+      const tournament = await tournamentRepository.getTournament();
+      if (!tournament) {
+        this.statusMessage.set('No hay un torneo activo.');
+        return;
+      }
+      const summary = await tournamentRepository.confirmImport(
+        this.reviewRows().map((row) => ({
+          rowNumber: row.rowNumber,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          normalizedCategory: row.normalizedCategory,
+          normalizedGender: row.normalizedGender,
+          normalizedTeamName: row.normalizedTeamName,
+          status: row.status,
+          discarded: row.discarded,
+          duplicateExisting: row.duplicateExisting,
+          duplicateInFile: row.duplicateInFile,
+          differentPerson: row.differentPerson,
+        })),
+        this.teamResolutions().map((resolution) => ({
+          incomingName: resolution.incomingName,
+          existingTeamId: resolution.existingTeamId,
+          action: resolution.action,
+        })),
+        this.duplicateActions(),
+      );
+      this.importSummary.set(summary);
+      this.statusMessage.set('Importación completada.');
+    } catch (error) {
+      console.error('Import failed', error);
+      this.statusMessage.set('No se pudo importar. No se realizaron cambios.');
+    }
   }
 
   protected goBack(): void {

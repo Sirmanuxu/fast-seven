@@ -4,6 +4,7 @@ import {
   Category,
   CategoryStage,
   Draw,
+  Gender,
   Match,
   MatchEvent,
   Player,
@@ -12,11 +13,40 @@ import {
   TournamentSnapshot,
 } from '../domain/model';
 import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
-import { canCreateOrDeleteTeam } from '../domain/team';
+import { canCreateOrDeleteTeam, normalizeTeamName } from '../domain/team';
+import { normalizePlayerKey } from '../domain/player';
 
 export interface MatchSaveInput {
   readonly match: Match;
   readonly events: readonly MatchEvent[];
+}
+
+export interface ConfirmImportTeamResolution {
+  readonly incomingName: string;
+  readonly existingTeamId: string | null;
+  readonly action: 'CREATE' | 'MERGE';
+}
+
+export interface ConfirmImportPlayerRow {
+  readonly rowNumber: number;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly normalizedCategory: string | null;
+  readonly normalizedGender: Gender | null;
+  readonly normalizedTeamName: string | null;
+  readonly status: 'OK' | 'WARNING' | 'ERROR';
+  readonly discarded: boolean;
+  readonly duplicateExisting: boolean;
+  readonly duplicateInFile: boolean;
+  readonly differentPerson: boolean;
+}
+
+export interface ConfirmImportSummary {
+  readonly createdPlayers: number;
+  readonly skippedPlayers: number;
+  readonly createdTeams: number;
+  readonly teamNames: readonly string[];
+  readonly underMinimumTeams: readonly string[];
 }
 
 export class TournamentRepository {
@@ -221,6 +251,204 @@ export class TournamentRepository {
       });
     });
     return category;
+  }
+
+  async confirmImport(
+    rows: readonly ConfirmImportPlayerRow[],
+    teamResolutions: readonly ConfirmImportTeamResolution[],
+    duplicateActions: Readonly<Record<number, 'SKIP' | 'UPDATE_TEAM' | 'DISTINCT'>>,
+  ): Promise<ConfirmImportSummary> {
+    return tournamentDatabase.transaction(
+      'rw',
+      [
+        'teams',
+        'players',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+        'tournament',
+      ],
+      async () => {
+        const [tournament, existingPlayers, existingTeams, stages, groups, matches, events, draws] =
+          await Promise.all([
+            tournamentDatabase.tournament.toCollection().first(),
+            tournamentDatabase.players.toArray(),
+            tournamentDatabase.teams.toArray(),
+            tournamentDatabase.stages.toArray(),
+            tournamentDatabase.groups.toArray(),
+            tournamentDatabase.matches.toArray(),
+            tournamentDatabase.events.toArray(),
+            tournamentDatabase.draws.toArray(),
+          ]);
+        if (!tournament) {
+          throw new Error('No tournament is available');
+        }
+
+        const snapshot: TournamentSnapshot = {
+          tournament,
+          players: existingPlayers,
+          teams: existingTeams,
+          stages,
+          groups,
+          matches,
+          events,
+          draws,
+        };
+        await tournamentDatabase.backups.add({
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          reason: 'BEFORE_IMPORT',
+          snapshot,
+        });
+
+        const teamIds = new Map<string, string>();
+        for (const resolution of teamResolutions) {
+          if (resolution.existingTeamId) {
+            teamIds.set(normalizeTeamName(resolution.incomingName), resolution.existingTeamId);
+            continue;
+          }
+          if (tournament.status === 'RUNNING') continue;
+          if (resolution.action !== 'CREATE') continue;
+
+          const teamId = crypto.randomUUID();
+          const team: Team = {
+            id: teamId,
+            name: resolution.incomingName,
+            primaryColor: '#1f4b99',
+            secondaryColor: '#f1c40f',
+            captainId: null,
+            logo: null,
+            isSeed: false,
+            status: 'ACTIVE',
+          };
+          await tournamentDatabase.teams.add(team);
+          teamIds.set(normalizeTeamName(resolution.incomingName), teamId);
+        }
+
+        let createdPlayers = 0;
+        let skippedPlayers = 0;
+        const allExistingNow = await tournamentDatabase.players.toArray();
+
+        for (const row of rows) {
+          if (row.discarded || row.status === 'ERROR') {
+            skippedPlayers += 1;
+            continue;
+          }
+          if (!row.firstName || !row.lastName || !row.normalizedCategory || !row.normalizedGender) {
+            skippedPlayers += 1;
+            continue;
+          }
+
+          const normalizedKey = normalizePlayerKey(
+            row.firstName,
+            row.lastName,
+            row.normalizedCategory,
+          );
+          const existingDuplicate = allExistingNow.find(
+            (player) => player.normalizedKey === normalizedKey && player.disambiguation === null,
+          );
+          const duplicateAction =
+            duplicateActions[row.rowNumber] ??
+            (row.duplicateExisting || row.duplicateInFile ? 'SKIP' : 'SKIP');
+
+          if (existingDuplicate && duplicateAction === 'SKIP' && !row.differentPerson) {
+            skippedPlayers += 1;
+            continue;
+          }
+          if (existingDuplicate && duplicateAction === 'UPDATE_TEAM') {
+            const teamId = row.normalizedTeamName
+              ? (teamIds.get(normalizeTeamName(row.normalizedTeamName)) ?? null)
+              : null;
+            await tournamentDatabase.players.update(existingDuplicate.id, {
+              teamId,
+            });
+            if (existingDuplicate.teamId === existingDuplicate.teamId) {
+              createdPlayers += 0;
+            }
+            continue;
+          }
+
+          let disambiguation: string | null = null;
+          if (row.differentPerson || duplicateAction === 'DISTINCT' || row.duplicateInFile) {
+            const sameKeyPlayers = allExistingNow.filter(
+              (player) => player.normalizedKey === normalizedKey,
+            );
+            const numbers = sameKeyPlayers.map((player) => {
+              const match = /^\((\d+)\)$/.exec(player.disambiguation ?? '');
+              return match ? Number.parseInt(match[1], 10) : 1;
+            });
+            const next = numbers.length === 0 ? 2 : Math.max(...numbers) + 1;
+            disambiguation = `(${next})`;
+          }
+
+          const teamId =
+            tournament.status === 'RUNNING'
+              ? row.normalizedTeamName
+                ? (teamIds.get(normalizeTeamName(row.normalizedTeamName)) ?? null)
+                : null
+              : row.normalizedTeamName
+                ? (teamIds.get(normalizeTeamName(row.normalizedTeamName)) ?? null)
+                : null;
+
+          const player: Player = {
+            id: crypto.randomUUID(),
+            firstName: row.firstName,
+            lastName: row.lastName,
+            category: row.normalizedCategory,
+            gender: row.normalizedGender,
+            teamId,
+            disambiguation,
+            normalizedKey,
+          };
+          await tournamentDatabase.players.add(player);
+          allExistingNow.push(player);
+          createdPlayers += 1;
+        }
+
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: new Date().toISOString(),
+        });
+
+        const oldIds = await tournamentDatabase.backups
+          .orderBy('createdAt')
+          .reverse()
+          .offset(10)
+          .primaryKeys();
+        if (oldIds.length > 0) {
+          await tournamentDatabase.backups.bulkDelete(oldIds);
+        }
+
+        const teamsAfter = await tournamentDatabase.teams.toArray();
+        const underMinimumTeams = teamsAfter
+          .filter(
+            (team) =>
+              team.status === 'ACTIVE' &&
+              allExistingNow.filter((player) => player.teamId === team.id).length <
+                tournament.rules.roster.min,
+          )
+          .map((team) => team.name);
+
+        return {
+          createdPlayers,
+          skippedPlayers,
+          createdTeams: teamResolutions.filter(
+            (resolution) =>
+              resolution.action === 'CREATE' &&
+              tournament.status !== 'RUNNING' &&
+              resolution.existingTeamId === null,
+          ).length,
+          teamNames: teamResolutions
+            .filter(
+              (resolution) => resolution.action === 'CREATE' && tournament.status !== 'RUNNING',
+            )
+            .map((resolution) => resolution.incomingName),
+          underMinimumTeams,
+        };
+      },
+    );
   }
 
   async putTeam(team: Team): Promise<void> {
