@@ -13,6 +13,43 @@
   @if (statusMessage(); as message) {
     <p role="status">{{ message }}</p>
   }
+  <section class="settings-section" aria-label="Límites de plantel">
+    <h2>{{ strings.rosterSettingsTitle }}</h2>
+    <div class="settings-grid">
+      <label>
+        {{ strings.rosterMinimum }}
+        <input
+          type="number"
+          min="1"
+          step="1"
+          [value]="rosterMinimum() ?? ''"
+          (input)="setRosterMinimum($any($event.target).value)"
+          [disabled]="!canEditRosterSettings"
+        />
+      </label>
+      <label>
+        {{ strings.rosterMaximum }}
+        <input
+          type="number"
+          min="1"
+          step="1"
+          [value]="rosterMaximum() ?? ''"
+          [placeholder]="strings.rosterUnlimited"
+          (input)="setRosterMaximum($any($event.target).value)"
+          [disabled]="!canEditRosterSettings"
+        />
+      </label>
+    </div>
+    @if (!canEditRosterSettings) {
+      <p role="status">{{ strings.rosterSettingsDisabled }}</p>
+    }
+    @if (rosterSettingsMessage(); as message) {
+      <p role="status">{{ message }}</p>
+    }
+    <button type="button" (click)="saveRosterSettings()" [disabled]="!canEditRosterSettings">
+      {{ strings.rosterSettingsSave }}
+    </button>
+  </section>
   <section class="draw-section" aria-label="Sorteo de jugadores">
     <h2>{{ strings.drawTitle }}</h2>
     @if (!canDraw) {

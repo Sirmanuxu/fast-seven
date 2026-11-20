@@ -11,6 +11,8 @@
 - Equipos nuevos con colores por defecto y nombres `Equipo 1..n` o `M16 A..C`.
 - Persistencia atómica de equipos, asignaciones y `Draw` de tipo `TEAMS`.
 - Función deshabilitada cuando el torneo está en curso.
+- Límites mínimo y máximo configurables desde la pestaña de equipos; un máximo vacío significa
+  que no hay límite superior.
 
 ## Tests
 

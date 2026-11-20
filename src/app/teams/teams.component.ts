@@ -44,15 +44,21 @@ export class TeamsComponent implements OnInit {
   protected readonly drawPlan = signal<TeamDrawPlan | null>(null);
   protected readonly drawError = signal<string | null>(null);
   protected readonly drawBusy = signal(false);
+  protected readonly rosterMinimum = signal<number | null>(null);
+  protected readonly rosterMaximum = signal<number | null>(null);
+  protected readonly rosterSettingsMessage = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.load();
   }
 
   protected async load(): Promise<void> {
-    this.tournament.set(await tournamentRepository.getTournament());
+    const tournament = await tournamentRepository.getTournament();
+    this.tournament.set(tournament);
     this.teams.set(await tournamentRepository.getTeams());
     this.players.set(await tournamentRepository.getPlayers());
+    this.rosterMinimum.set(tournament?.rules.roster.min ?? null);
+    this.rosterMaximum.set(tournament?.rules.roster.max ?? null);
   }
 
   protected get canCreateOrDelete(): boolean {
@@ -202,6 +208,45 @@ export class TeamsComponent implements OnInit {
 
   protected get canDraw(): boolean {
     return this.tournament()?.status !== 'RUNNING';
+  }
+
+  protected get canEditRosterSettings(): boolean {
+    return this.tournament()?.status !== 'RUNNING';
+  }
+
+  protected setRosterMinimum(value: string): void {
+    this.rosterMinimum.set(value === '' ? null : Number(value));
+  }
+
+  protected setRosterMaximum(value: string): void {
+    this.rosterMaximum.set(value === '' ? null : Number(value));
+  }
+
+  protected async saveRosterSettings(): Promise<void> {
+    const minimum = this.rosterMinimum();
+    const maximum = this.rosterMaximum();
+    if (
+      minimum === null ||
+      !Number.isInteger(minimum) ||
+      minimum <= 0 ||
+      (maximum !== null && (!Number.isInteger(maximum) || maximum < minimum))
+    ) {
+      this.rosterSettingsMessage.set(TEAM_STRINGS.rosterSettingsInvalid);
+      return;
+    }
+    if (!this.canEditRosterSettings) {
+      this.rosterSettingsMessage.set(TEAM_STRINGS.rosterSettingsDisabled);
+      return;
+    }
+
+    try {
+      await tournamentRepository.updateRosterLimits({ min: minimum, max: maximum });
+      await this.load();
+      this.rosterSettingsMessage.set(TEAM_STRINGS.rosterSettingsSaved);
+    } catch (error) {
+      console.error('Roster settings update failed', error);
+      this.rosterSettingsMessage.set(TEAM_STRINGS.saveFailed);
+    }
   }
 
   protected toggleDrawExistingTeam(teamId: string): void {

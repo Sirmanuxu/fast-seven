@@ -52,4 +52,12 @@ export const TEAM_STRINGS = {
   drawFailed: 'No se pudo guardar el sorteo.',
   drawNotEnoughPlayers: 'No alcanza para la cantidad pedida. El máximo posible es {maximum}.',
   drawTooManyPlayers: 'Los jugadores no entran en los planteles configurados.',
+  rosterSettingsTitle: 'Límites de plantel',
+  rosterMinimum: 'Mínimo de jugadores por equipo',
+  rosterMaximum: 'Máximo de jugadores por equipo',
+  rosterUnlimited: 'Sin máximo',
+  rosterSettingsSave: 'Guardar límites',
+  rosterSettingsSaved: 'Límites de plantel guardados.',
+  rosterSettingsInvalid: 'Ingresá un mínimo positivo y un máximo mayor o igual (o dejalo vacío).',
+  rosterSettingsDisabled: 'No se pueden cambiar los límites con el torneo en curso.',
 } as const;

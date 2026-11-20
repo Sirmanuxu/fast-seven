@@ -8,6 +8,7 @@ import {
   Match,
   MatchEvent,
   Player,
+  RosterLimits,
   Team,
   Tournament,
   TournamentSnapshot,
@@ -117,6 +118,22 @@ export class TournamentRepository {
           updatedAt: new Date().toISOString(),
         });
       }
+    });
+  }
+
+  async updateRosterLimits(roster: RosterLimits): Promise<void> {
+    await tournamentDatabase.transaction('rw', tournamentDatabase.tournament, async () => {
+      const tournament = await this.getTournament();
+      if (!tournament) {
+        throw new Error('No tournament is available');
+      }
+      if (tournament.status === 'RUNNING') {
+        throw new Error('Roster limits cannot be changed while the tournament is running');
+      }
+      await tournamentDatabase.tournament.update(tournament.id, {
+        rules: { ...tournament.rules, roster },
+        updatedAt: new Date().toISOString(),
+      });
     });
   }
 

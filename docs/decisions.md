@@ -141,6 +141,10 @@
   targets instead of only shuffling one combined list.
 - **Reason:** Interleaving a combined list can still concentrate a group after the final round-robin
   assignment; per-group rounds guarantee the intended balance.
+- **Decision:** Expose roster minimum and maximum settings in the teams screen and persist them on
+  the tournament; an empty maximum means unlimited.
+- **Reason:** The draw and roster indicators use the same live limits, so the organizer can adjust
+  team capacity without navigating to a separate configuration screen.
 
 ## 2026-11-20 - HU-09 - Import column mapping
 

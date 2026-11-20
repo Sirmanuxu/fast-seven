@@ -89,6 +89,22 @@ article {
   border-top: 1px solid #bbb;
 }
 
+.settings-section,
+.draw-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #bbb;
+  border-radius: 0.5rem;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 0.75rem;
+  max-width: 40rem;
+  margin-bottom: 1rem;
+}
+
 .assignment-layout {
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
@@ -112,6 +128,9 @@ article {
     grid-template-columns: 1fr;
   }
   .assignment-layout {
+    grid-template-columns: 1fr;
+  }
+  .settings-grid {
     grid-template-columns: 1fr;
   }
 }
