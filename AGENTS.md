@@ -174,6 +174,10 @@ For each HU:
   - Mention the story in the body or footer: `Refs: HU-17`.
 - Commit **regularly, at meaningful checkpoints**: for example domain logic with its tests, then persistence, then UI. Roughly 3 to 8 commits per HU. Do not make one commit per HU and do not make micro-commits for every small edit.
 - Each commit should leave the project building and tests passing.
+- Before every commit, increment the patch version and keep these locations synchronized:
+  `package.json`, `package-lock.json` and `src/index.html`.
+- The version in `src/index.html` is the visible build badge. Include the version bump in the same
+  commit as the change; never leave a committed change with the previous application version.
 - Never force-push, never rewrite shared history, never commit secrets, `node_modules` or build output.
 - Examples:
   - `feat(domain): compute group standings with tiebreak explanation`

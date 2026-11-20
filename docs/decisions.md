@@ -215,3 +215,9 @@
 - **Decision:** Create automatically generated teams with the next unused pair from a fixed palette.
 - **Reason:** It prevents repeated default blue/yellow pairs and keeps newly created teams visually
   distinct while allowing manual edits afterward.
+
+## 2026-11-20 - Build - Version bump convention
+
+- **Decision:** Increment the patch version before every commit and update `package.json`,
+  `package-lock.json` and `src/index.html` together.
+- **Reason:** It prevents the visible application badge from lagging behind the committed code.
