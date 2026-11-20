@@ -194,3 +194,10 @@
   completada or an explicit failure.
 - **Reason:** The confirmation action must provide immediate and visible feedback and prevent
   repeated writes.
+
+## 2026-11-20 - Build - Visible application version
+
+- **Decision:** Display `v0.11.1` in a fixed bottom-left badge and activate detected PWA updates
+  before reloading.
+- **Reason:** It lets the operator verify the loaded build and avoids keeping an old service-worker
+  version across fixes.

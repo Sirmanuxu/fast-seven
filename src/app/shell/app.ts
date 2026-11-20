@@ -1,21 +1,35 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { SwUpdate } from '@angular/service-worker';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
+import { APP_VERSION } from './app-version';
 
 @Component({
   imports: [RouterOutlet],
   selector: 'app-root',
   templateUrl: './app.html',
+  styleUrl: './app.css',
 })
 export class App implements OnInit {
   protected readonly strings = PERSISTENCE_STRINGS;
   protected readonly ready = signal(false);
   protected readonly databaseAvailable = signal(true);
+  protected readonly appVersion = APP_VERSION;
   private readonly router = inject(Router);
+  private readonly swUpdate = inject(SwUpdate, { optional: true });
 
   async ngOnInit(): Promise<void> {
+    const swUpdate = this.swUpdate;
+    if (swUpdate?.isEnabled) {
+      void swUpdate.checkForUpdate();
+      swUpdate.versionUpdates.subscribe((event) => {
+        if (event.type === 'VERSION_READY') {
+          void swUpdate.activateUpdate().then(() => window.location.reload());
+        }
+      });
+    }
     this.databaseAvailable.set(await tournamentRepository.isAvailable());
     if (!this.databaseAvailable()) {
       this.ready.set(true);
