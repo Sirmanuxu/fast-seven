@@ -119,3 +119,27 @@
 - **Reason:** HU-08 needs stable CSV and Excel readers and repository dependencies are pinned.
 - **Decision:** Keep this story read-only.
 - **Reason:** Mapping and confirmation belong to HU-09 through HU-11, so HU-08 must not write data.
+
+## 2026-11-20 - HU-09 - Import column mapping
+
+- **Decision:** Suggest mappings with exact aliases, containment and a bounded edit distance.
+- **Reason:** It handles common header variations without treating unrelated headers as matches.
+- **Decision:** Detect a full-name column before suggesting separate name and surname fields.
+- **Reason:** It avoids treating “Nombre completo” as an individual-name field.
+- **Decision:** Remember mappings under a normalized header-signature key in localStorage.
+- **Reason:** It is a UI preference and can be reused across reimports without storing tournament data.
+
+## 2026-11-20 - HU-09 - Import screen feedback
+
+- **Decision:** Split the screen into File and Mapping steps.
+- **Reason:** The file step preserves the HU-08 first-five-row preview, while mapping displays
+  every available mapped row in a single table.
+- **Decision:** Replace the inert continue button with a functional Confirmar mapeo action.
+- **Reason:** Confirmation must have visible behavior and must block incomplete required mappings.
+
+## 2026-11-20 - HU-09 - Mapping block rendering fix
+
+- **Decision:** Render the mapping card outside the Excel sheet `<select>` and once for every
+  file format.
+- **Reason:** The previous placement nested the CSV/Excel mapping controls inside an Excel-only
+  select, preventing them from appearing after CSV or XLSX imports.

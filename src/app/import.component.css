@@ -13,6 +13,7 @@ header,
 
 header {
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .drop-zone {
@@ -53,6 +54,39 @@ button {
 
 .table-wrap {
   overflow: auto;
+}
+
+.mapping-card {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #bbb;
+}
+
+.mapped-preview {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.status {
+  color: #2f6b35;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mapping-grid label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+@media (max-width: 900px) {
+  .mapping-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 table {

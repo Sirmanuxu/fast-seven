@@ -20,6 +20,7 @@ export interface ImportPreview {
   readonly selectedSheet: string | null;
   readonly headers: readonly string[];
   readonly previewRows: readonly (readonly string[])[];
+  readonly rows: readonly (readonly string[])[];
   readonly rowCount: number;
   readonly warning: string | null;
 }
@@ -105,6 +106,7 @@ async function readCsv(file: File, options: ImportReadOptions): Promise<ImportPr
       selectedSheet: null,
       headers: [],
       previewRows: [],
+      rows: [],
       rowCount: 0,
       warning: 'El archivo está vacío.',
     };
@@ -122,6 +124,7 @@ async function readCsv(file: File, options: ImportReadOptions): Promise<ImportPr
       selectedSheet: null,
       headers: [],
       previewRows: [],
+      rows: [],
       rowCount: 0,
       warning: 'El archivo no tiene encabezados.',
     };
@@ -138,6 +141,7 @@ async function readCsv(file: File, options: ImportReadOptions): Promise<ImportPr
     selectedSheet: null,
     headers,
     previewRows: dataRows.slice(0, 5),
+    rows: dataRows,
     rowCount: dataRows.length,
     warning:
       dataRows.length > 2000
@@ -164,6 +168,7 @@ async function readExcel(file: File, options: ImportReadOptions): Promise<Import
       selectedSheet: null,
       headers: [],
       previewRows: [],
+      rows: [],
       rowCount: 0,
       warning: 'El archivo no contiene hojas.',
     };
@@ -180,6 +185,7 @@ async function readExcel(file: File, options: ImportReadOptions): Promise<Import
       selectedSheet,
       headers: [],
       previewRows: [],
+      rows: [],
       rowCount: 0,
       warning: 'La hoja seleccionada no existe.',
     };
@@ -204,6 +210,7 @@ async function readExcel(file: File, options: ImportReadOptions): Promise<Import
       selectedSheet,
       headers: [],
       previewRows: [],
+      rows: [],
       rowCount: 0,
       warning: 'La hoja seleccionada está vacía.',
     };
@@ -220,6 +227,7 @@ async function readExcel(file: File, options: ImportReadOptions): Promise<Import
     selectedSheet,
     headers,
     previewRows: dataRows.slice(0, 5),
+    rows: dataRows,
     rowCount: dataRows.length,
     warning: dataRows.length > 2000 ? 'El archivo supera las 2000 filas.' : null,
   };
