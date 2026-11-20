@@ -101,6 +101,42 @@
     </section>
   }
 
+  @if (homonymOpen()) {
+    <section class="homonym-dialog" role="dialog" aria-modal="true">
+      <h2>{{ strings.homonymTitle }}</h2>
+      <p>{{ strings.homonymDescription }}</p>
+
+      @if (duplicateCandidate(); as duplicate) {
+        <p>
+          Existente: {{ duplicate.firstName }} {{ duplicate.lastName }}
+          {{ duplicate.disambiguation ?? '' }}
+          — {{ duplicate.category }} — {{ duplicate.gender }}
+        </p>
+      }
+      <p>
+        Nuevo: {{ firstName() }} {{ lastName() }} — {{ category() }} — {{ gender() }}
+      </p>
+
+      <label>
+        {{ strings.disambiguation }}
+        <input
+          type="text"
+          [value]="disambiguation()"
+          (input)="disambiguation.set($any($event.target).value)"
+          aria-label="Aclaración del homónimo"
+        />
+      </label>
+
+      <div class="actions">
+        <button type="button" (click)="useSamePerson()">{{ strings.samePerson }}</button>
+        <button type="button" (click)="saveDistinctPerson()">
+          {{ strings.distinctPerson }}
+        </button>
+        <button type="button" (click)="closeForm()">{{ strings.homonymCancel }}</button>
+      </div>
+    </section>
+  }
+
   @if (filteredPlayers.length === 0) {
     <p>{{ players().length === 0 ? strings.noPlayers : strings.noMatches }}</p>
   } @else {
