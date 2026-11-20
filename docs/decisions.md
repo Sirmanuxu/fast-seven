@@ -119,3 +119,12 @@
 - **Reason:** HU-08 needs stable CSV and Excel readers and repository dependencies are pinned.
 - **Decision:** Keep this story read-only.
 - **Reason:** Mapping and confirmation belong to HU-09 through HU-11, so HU-08 must not write data.
+
+## 2026-11-20 - HU-09 - Import column mapping
+
+- **Decision:** Suggest mappings with exact aliases, containment and a bounded edit distance.
+- **Reason:** It handles common header variations without treating unrelated headers as matches.
+- **Decision:** Detect a full-name column before suggesting separate name and surname fields.
+- **Reason:** It avoids treating “Nombre completo” as an individual-name field.
+- **Decision:** Remember mappings under a normalized header-signature key in localStorage.
+- **Reason:** It is a UI preference and can be reused across reimports without storing tournament data.
