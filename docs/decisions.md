@@ -162,3 +162,10 @@
 - **Decision:** Offer to add an unknown category to the tournament catalog from the row review.
 - **Reason:** It follows the backlog's category-extension behavior and lets the row be revalidated
   immediately.
+
+## 2026-11-20 - Refactor - Feature folder structure
+
+- **Decision:** Organize Angular components under `src/app/<feature>/` folders instead of placing
+  every component in `src/app/`.
+- **Reason:** It keeps templates, styles and component logic for shell, panel, projector, welcome,
+  players, teams and import together and avoids a growing mixed folder.

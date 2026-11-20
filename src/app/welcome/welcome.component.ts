@@ -1,13 +1,13 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { tournamentRepository } from '../data/tournament-repository';
-import { PERSISTENCE_STRINGS } from '../i18n/persistence-strings';
+import { tournamentRepository } from '../../data/tournament-repository';
+import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import {
   DEFAULT_CATEGORIES,
   DEFAULT_TIEBREAKERS,
   PRESET_POINTS_3_2_1,
   Tournament,
-} from '../domain/model';
+} from '../../domain/model';
 
 @Component({
   selector: 'app-welcome',

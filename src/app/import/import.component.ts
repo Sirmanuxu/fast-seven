@@ -5,8 +5,8 @@ import {
   ImportEncoding,
   ImportPreview,
   readImportFile,
-} from '../import/file-reader';
-import { IMPORT_STRINGS } from '../i18n/import-strings';
+} from '../../import/file-reader';
+import { IMPORT_STRINGS } from '../../i18n/import-strings';
 import {
   FullNameSplitMode,
   ImportColumnMapping,
@@ -16,10 +16,10 @@ import {
   mappingSignature,
   splitFullName,
   suggestColumnMapping,
-} from '../import/column-mapping';
-import { tournamentRepository } from '../data/tournament-repository';
-import { Category, Player, Team } from '../domain/model';
-import { buildImportPreview, ImportPreviewRow, MappedImportRow } from '../import/import-preview';
+} from '../../import/column-mapping';
+import { tournamentRepository } from '../../data/tournament-repository';
+import { Category, Player, Team } from '../../domain/model';
+import { buildImportPreview, ImportPreviewRow, MappedImportRow } from '../../import/import-preview';
 
 @Component({
   selector: 'app-import',

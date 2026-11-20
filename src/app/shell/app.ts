@@ -1,8 +1,8 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { tournamentRepository } from '../data/tournament-repository';
-import { PERSISTENCE_STRINGS } from '../i18n/persistence-strings';
+import { tournamentRepository } from '../../data/tournament-repository';
+import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 
 @Component({
   imports: [RouterOutlet],
