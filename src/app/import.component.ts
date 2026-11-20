@@ -258,23 +258,43 @@ export class ImportComponent {
     this.revalidateReview(rows);
   }
 
+  protected async addUnknownCategory(rowNumber: number): Promise<void> {
+    const row = this.reviewRows().find((item) => item.rowNumber === rowNumber);
+    if (!row) return;
+    const label = window.prompt('Ingresá el nombre visible de la categoría:', row.categoryRaw);
+    if (!label?.trim()) return;
+    try {
+      await tournamentRepository.addTournamentCategory(label);
+      await this.buildReview();
+      this.statusMessage.set(`Categoría agregada: ${label.trim()}`);
+    } catch (error) {
+      console.error('Category creation failed', error);
+      this.statusMessage.set('No se pudo agregar la categoría.');
+    }
+  }
+
   protected issueLabel(row: ImportPreviewRow): string {
     if (row.status === 'ERROR') {
       return row.issues
         .map((issue) => {
-          if (issue.code === 'MISSING_PLAYER_FIELD') return 'Falta nombre o apellido';
-          if (issue.code === 'UNKNOWN_CATEGORY') return 'Categoría no reconocida';
-          if (issue.code === 'UNKNOWN_GENDER') return 'Género no reconocido';
-          return issue.code;
+          if (issue.code === 'MISSING_PLAYER_FIELD') return this.strings.issueMissingField;
+          if (issue.code === 'UNKNOWN_CATEGORY') return this.strings.issueUnknownCategory;
+          if (issue.code === 'UNKNOWN_GENDER') return this.strings.issueUnknownGender;
+          if (issue.code === 'NEW_TEAM') return this.strings.issueTeamNew;
+          if (issue.code === 'SIMILAR_TEAM') return this.strings.issueTeamSimilar;
+          if (issue.code === 'DUPLICATE_EXISTING_PLAYER')
+            return this.strings.issueDuplicateExisting;
+          if (issue.code === 'DUPLICATE_IN_FILE') return this.strings.issueDuplicateInFile;
+          return this.strings.issueGeneric;
         })
         .join('. ');
     }
     if (row.status === 'WARNING') {
       const labels: string[] = [];
-      if (row.duplicateExisting) labels.push('Duplica un jugador existente');
-      if (row.duplicateInFile) labels.push('Duplica otro jugador del archivo');
-      if (row.teamIsNew) labels.push('Equipo nuevo');
-      if (row.teamIsSimilar) labels.push('Equipo parecido');
+      if (row.duplicateExisting) labels.push(this.strings.issueDuplicateExisting);
+      if (row.duplicateInFile) labels.push(this.strings.issueDuplicateInFile);
+      if (row.teamIsNew) labels.push(this.strings.issueTeamNew);
+      if (row.teamIsSimilar) labels.push(this.strings.issueTeamSimilar);
       return labels.join('. ');
     }
     return 'OK';
@@ -291,7 +311,7 @@ export class ImportComponent {
 
   protected confirmImportPreview(): void {
     if (this.hasReviewErrors) {
-      this.statusMessage.set('Resolvé o descartá todas las filas con errores.');
+      this.statusMessage.set(this.strings.reviewResolveErrors);
       return;
     }
     this.statusMessage.set('Revisión completa. La escritura confirmada se realizará en HU-11.');

@@ -153,3 +153,12 @@
 - **Decision:** Revalidate every import row after a cell edit.
 - **Reason:** Errors and warnings must change immediately and the confirmation button must reflect
   the current active rows.
+
+## 2026-11-20 - HU-10 - Spanish import warning labels
+
+- **Decision:** Translate every import warning through i18n and never render raw issue codes.
+- **Reason:** Codes such as `NEW_TEAM` and `SIMILAR_TEAM` are technical identifiers and must not
+  appear in the Spanish UI.
+- **Decision:** Offer to add an unknown category to the tournament catalog from the row review.
+- **Reason:** It follows the backlog's category-extension behavior and lets the row be revalidated
+  immediately.

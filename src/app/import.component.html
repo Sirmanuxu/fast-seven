@@ -295,6 +295,10 @@
                     />
                     @if (row.normalizedCategory) {
                       <small>{{ row.categoryRaw }} → {{ row.normalizedCategory }}</small>
+                    } @else {
+                      <button type="button" (click)="addUnknownCategory(row.rowNumber)">
+                        {{ strings.addCategory }}
+                      </button>
                     }
                   </td>
                   <td>
