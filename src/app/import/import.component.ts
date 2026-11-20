@@ -364,6 +364,7 @@ export class ImportComponent {
       teamCounts,
       this.tournamentStatus(),
       7,
+      this.duplicateActions(),
     );
   }
 

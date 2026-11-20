@@ -202,3 +202,10 @@
   before reloading.
 - **Reason:** It lets the operator verify the loaded build and avoids keeping an old service-worker
   version across fixes.
+
+## 2026-11-20 - HU-11 - Duplicate import actions
+
+- **Decision:** A duplicate inside the file is skipped by default and only becomes a distinct
+  person when the operator chooses that action and deselects the discard.
+- **Reason:** It preserves the backlog rule that the second duplicate is omitted by default while
+  keeping the confirmation summary consistent with the selected action.

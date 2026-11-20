@@ -369,7 +369,7 @@ export class TournamentRepository {
           }
 
           let disambiguation: string | null = null;
-          if (row.differentPerson || duplicateAction === 'DISTINCT' || row.duplicateInFile) {
+          if (row.differentPerson || duplicateAction === 'DISTINCT') {
             const sameKeyPlayers = allExistingNow.filter(
               (player) => player.normalizedKey === normalizedKey,
             );

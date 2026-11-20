@@ -62,6 +62,15 @@ describe('import team confirmation', () => {
     expect(resolutions[0].action).toBe('MERGE');
   });
 
+  it('proposes a merge for an edit distance of two', () => {
+    const resolutions = proposeTeamResolutions(
+      [row(2, 'Los Teos')],
+      [team('team-1', 'Los Teros')],
+      'SETUP',
+    );
+    expect(resolutions[0].action).toBe('MERGE');
+  });
+
   it('does not merge trailing-letter or trailing-number variants', () => {
     expect(
       proposeTeamResolutions([row(2, 'M16 B')], [team('team-1', 'M16 A')], 'SETUP')[0].action,
@@ -83,5 +92,37 @@ describe('import team confirmation', () => {
     expect(plan.duplicateActions[2]).toBe('SKIP');
     expect(plan.createdPlayerCount).toBe(0);
     expect(plan.skippedPlayerCount).toBe(1);
+  });
+
+  it('counts update-team and distinct duplicate actions correctly', () => {
+    const existingDuplicate = { ...row(2, 'Los Teros'), duplicateExisting: true };
+    const inFileDuplicate = { ...row(3, 'Los Teros'), duplicateInFile: true };
+    const resolutions = proposeTeamResolutions(
+      [existingDuplicate, inFileDuplicate],
+      [team('team-1', 'Los Teros')],
+      'SETUP',
+    );
+
+    const plan = buildConfirmationPlan(
+      [existingDuplicate, inFileDuplicate],
+      resolutions,
+      { 'team-1': 2 },
+      'SETUP',
+      7,
+      { 2: 'UPDATE_TEAM', 3: 'DISTINCT' },
+    );
+
+    expect(plan.createdPlayerCount).toBe(1);
+    expect(plan.skippedPlayerCount).toBe(0);
+  });
+
+  it('includes new teams in the under-minimum preview', () => {
+    const firstRow = row(2, 'Halcones');
+    const secondRow = row(3, 'Halcones');
+    const resolutions = proposeTeamResolutions([firstRow, secondRow], [], 'SETUP');
+    const plan = buildConfirmationPlan([firstRow, secondRow], resolutions, {}, 'SETUP', 7);
+
+    expect(plan.createdTeamCount).toBe(1);
+    expect(plan.underMinimumTeamCount).toBe(1);
   });
 });

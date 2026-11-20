@@ -88,8 +88,9 @@ export function buildConfirmationPlan(
   existingTeamCounts: Readonly<Record<string, number>>,
   tournamentStatus: TournamentStatus,
   minimumRosterSize: number,
+  duplicateActions: Readonly<Record<number, DuplicateAction>> = {},
 ): ImportConfirmationPlan {
-  const duplicateActions: Record<number, DuplicateAction> = {};
+  const resolvedDuplicateActions: Record<number, DuplicateAction> = { ...duplicateActions };
   let createdPlayerCount = 0;
   let skippedPlayerCount = 0;
   for (const row of rows) {
@@ -98,9 +99,14 @@ export function buildConfirmationPlan(
       continue;
     }
     if (row.status === 'ERROR') continue;
-    if (row.duplicateExisting) {
-      duplicateActions[row.rowNumber] = 'SKIP';
-      skippedPlayerCount += 1;
+    if (row.duplicateExisting || row.duplicateInFile) {
+      const action = resolvedDuplicateActions[row.rowNumber] ?? 'SKIP';
+      resolvedDuplicateActions[row.rowNumber] = action;
+      if (action === 'SKIP') {
+        skippedPlayerCount += 1;
+      } else if (action === 'DISTINCT') {
+        createdPlayerCount += 1;
+      }
       continue;
     }
     createdPlayerCount += 1;
@@ -111,13 +117,28 @@ export function buildConfirmationPlan(
   ).length;
 
   const underMinimumTeamCount = teamResolutions.filter((resolution) => {
-    if (!resolution.existingTeamId) return false;
-    return (existingTeamCounts[resolution.existingTeamId] ?? 0) < minimumRosterSize;
+    if (tournamentStatus === 'RUNNING' && resolution.existingTeamId === null) return false;
+
+    const importedTeamCount = rows.filter(
+      (row) =>
+        !row.discarded &&
+        row.status !== 'ERROR' &&
+        row.normalizedTeamName &&
+        normalizeTeamName(row.normalizedTeamName) === normalizeTeamName(resolution.incomingName) &&
+        !(
+          (row.duplicateExisting || row.duplicateInFile) &&
+          (resolvedDuplicateActions[row.rowNumber] ?? 'SKIP') !== 'DISTINCT'
+        ),
+    ).length;
+    const existingCount = resolution.existingTeamId
+      ? (existingTeamCounts[resolution.existingTeamId] ?? 0)
+      : 0;
+    return existingCount + importedTeamCount < minimumRosterSize;
   }).length;
 
   return {
     teamResolutions,
-    duplicateActions,
+    duplicateActions: resolvedDuplicateActions,
     createdPlayerCount,
     skippedPlayerCount,
     createdTeamCount,
