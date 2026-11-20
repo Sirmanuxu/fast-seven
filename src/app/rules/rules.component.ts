@@ -186,6 +186,7 @@ export class RulesComponent implements OnInit {
           ? this.strings.runningSaved
           : this.strings.saved,
       );
+      await this.router.navigateByUrl('/panel');
     } catch {
       this.errorMessage.set(this.strings.saveFailed);
     } finally {
