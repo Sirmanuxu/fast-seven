@@ -1,5 +1,12 @@
 # Decision log
 
+## 2026-11-20 - HU-15 - Event score domain API
+
+- **Decision:** Implement score calculation and event invariants as pure domain functions, while
+  leaving the event-entry screen to the later match-control story.
+- **Reason:** HU-15 defines the scoring contract and validations, but the application does not
+  yet have fixture or match-control screens; keeping the UI out avoids duplicating HU-34.
+
 # Decision log
 
 ## 2026-11-19 - HU-01 - Deployment spike

@@ -6,3 +6,4 @@ export * from './team';
 export * from './team-assignment';
 export * from './capacity';
 export * from './team-draw';
+export * from './match-events';
