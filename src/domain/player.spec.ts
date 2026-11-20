@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Player } from './model';
 import {
   capitalizeName,
+  findNormalizedDuplicates,
+  getNextHomonymDisambiguation,
   normalizePlayerKey,
   normalizeWhitespace,
   validatePlayerInput,
@@ -78,5 +80,50 @@ describe('player normalization', () => {
         'player-1',
       ).ok,
     ).toBe(true);
+  });
+
+  it('finds accent, case and apostrophe variants as the same normalized player', () => {
+    const player: Player = {
+      id: 'player-1',
+      firstName: 'José',
+      lastName: "O'Connor",
+      category: 'M16',
+      gender: 'M',
+      teamId: null,
+      disambiguation: null,
+      normalizedKey: normalizePlayerKey('Jose', 'OConnor', 'M16'),
+    };
+
+    expect(
+      findNormalizedDuplicates(
+        { firstName: ' JOSE ', lastName: 'Pérez-Gómez', category: 'M16' },
+        [player],
+      ),
+    ).toEqual([]);
+
+    expect(
+      findNormalizedDuplicates(
+        { firstName: 'Jose', lastName: "O'Connor", category: 'M16' },
+        [player],
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('generates the next homonym disambiguation', () => {
+    const first: Player = {
+      id: '1',
+      firstName: 'Juan',
+      lastName: 'Pérez',
+      category: 'M16',
+      gender: 'M',
+      teamId: null,
+      disambiguation: null,
+      normalizedKey: normalizePlayerKey('Juan', 'Pérez', 'M16'),
+    };
+    const second: Player = { ...first, id: '2', disambiguation: '(2)' };
+    const third: Player = { ...first, id: '3', disambiguation: '(3)' };
+    expect(
+      getNextHomonymDisambiguation(first.normalizedKey, [first, second, third]),
+    ).toBe('(4)');
   });
 });
