@@ -153,6 +153,20 @@
 - **Reason:** The draw and roster indicators use the same live limits, so the organizer can adjust
   team capacity without navigating to a separate configuration screen.
 
+## 2026-11-20 - HU-14 - Tournament rules
+
+- **Decision:** Persist tournament identity, rules and schedule together through one repository
+  transaction.
+- **Reason:** Saving the configuration as one operation prevents partially updated tournament
+  settings after a browser interruption.
+- **Decision:** Keep the draw as a fixed final tiebreaker and expose Buchholz only for Swiss
+  tournaments.
+- **Reason:** These constraints are explicit in HU-14 and prevent invalid combinations in the
+  rules editor.
+- **Decision:** Route application errors through a replaceable native-popup helper.
+- **Reason:** HU-14 introduced the first rules validation flow, and centralizing popup delivery
+  allows a future custom modal without reintroducing inline error text in templates.
+
 ## 2026-11-20 - HU-09 - Import column mapping
 
 - **Decision:** Suggest mappings with exact aliases, containment and a bounded edit distance.
