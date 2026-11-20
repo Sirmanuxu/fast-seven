@@ -28,6 +28,7 @@ export const IMPORT_STRINGS = {
   splitFirstSpace: 'Nombre + resto como apellido',
   missingMapping: 'Faltan campos obligatorios',
   downloadTemplate: 'Descargar plantilla',
+  downloadExampleTemplate: 'Descargar plantilla de ejemplo',
   continueNext: 'Continuar',
   mappedPreview: 'Vista previa con mapeo',
   mappingSaved: 'El mapeo se recordó para este archivo.',

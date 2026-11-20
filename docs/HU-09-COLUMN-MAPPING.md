@@ -10,6 +10,7 @@
 - One mapped preview instead of duplicate file and mapping tables.
 - Required-mapping validation that disables continuation.
 - CSV template download with semicolon delimiters and UTF-8 BOM.
+- The example-template button stays visible in the screen header and is clearly labeled.
 - Mapping remembered in localStorage by normalized header signature.
 
 ## Manual verification

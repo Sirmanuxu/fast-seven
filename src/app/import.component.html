@@ -2,6 +2,9 @@
   <header>
     <button type="button" (click)="goBack()">← {{ strings.back }}</button>
     <h1>{{ strings.title }}</h1>
+    <button type="button" (click)="downloadTemplate()">
+      {{ strings.downloadExampleTemplate }}
+    </button>
   </header>
 
   <p role="status">{{ strings.noWrite }}</p>
@@ -93,9 +96,6 @@
         }
 
         <div class="options">
-          <button type="button" (click)="downloadTemplate()">
-            {{ strings.downloadTemplate }}
-          </button>
           <p>{{ strings.templateHelp }}</p>
           <button
             type="button"
