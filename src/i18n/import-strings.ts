@@ -36,6 +36,4 @@ export const IMPORT_STRINGS = {
   stepMapping: 'Paso 2: Columnas',
   confirmMapping: 'Confirmar mapeo',
   backMapping: 'Volver al archivo',
-  templateHelp:
-    'La plantilla incluye exactamente dos filas de ejemplo. Son ejemplos para mostrar el formato; reemplazalas o agregá tus filas reales.',
 } as const;
