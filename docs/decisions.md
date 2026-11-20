@@ -120,6 +120,17 @@
 - **Decision:** Keep this story read-only.
 - **Reason:** Mapping and confirmation belong to HU-09 through HU-11, so HU-08 must not write data.
 
+## 2026-11-20 - HU-13 - Capacity calculation
+
+- **Decision:** Represent each possible team count as descending roster-size groups, omitting groups
+  with zero members.
+- **Reason:** This matches the reference cases while keeping the result compact for the future
+  team-building UI.
+- **Decision:** Treat a null maximum roster limit as no upper bound and use the player count as
+  the finite upper bound for calculating the minimum team count.
+- **Reason:** A finite player set can always be represented by one team when only the minimum is
+  constrained, without introducing an artificial configured maximum.
+
 ## 2026-11-20 - HU-09 - Import column mapping
 
 - **Decision:** Suggest mappings with exact aliases, containment and a bounded edit distance.
