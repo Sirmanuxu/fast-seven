@@ -29,7 +29,7 @@ export class PlayersComponent implements OnInit {
   protected readonly lastName = signal('');
   protected readonly category = signal('');
   protected readonly gender = signal<Gender | ''>('');
-  protected readonly teamId = signal<string | null>(null);
+  private readonly teamId = signal<string | null>(null);
   protected readonly formError = signal<string | null>(null);
   protected readonly statusMessage = signal<string | null>(null);
 

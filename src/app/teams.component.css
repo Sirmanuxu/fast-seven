@@ -83,8 +83,35 @@ article {
   color: #247a35;
 }
 
+.assignment-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #bbb;
+}
+
+.assignment-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.assignment-layout article {
+  min-height: 220px;
+}
+
+.assignment-player {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 @media (max-width: 900px) {
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .assignment-layout {
     grid-template-columns: 1fr;
   }
 }

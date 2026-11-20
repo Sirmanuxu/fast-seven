@@ -32,6 +32,9 @@ export class TeamsComponent implements OnInit {
   protected readonly isSeed = signal(false);
   protected readonly formError = signal<string | null>(null);
   protected readonly statusMessage = signal<string | null>(null);
+  protected readonly selectedTeamId = signal<string | null>(null);
+  protected readonly unassignedSelectedIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly teamSelectedIds = signal<ReadonlySet<string>>(new Set());
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -73,9 +76,118 @@ export class TeamsComponent implements OnInit {
     this.formOpen.set(true);
   }
 
+  protected get unassignedPlayers(): readonly Player[] {
+    return this.players().filter((player) => player.teamId === null);
+  }
+
+  protected get selectedTeamPlayers(): readonly Player[] {
+    const teamId = this.selectedTeamId();
+    return teamId ? this.players().filter((player) => player.teamId === teamId) : [];
+  }
+
+  protected toggleUnassigned(playerId: string): void {
+    const next = new Set(this.unassignedSelectedIds());
+    if (next.has(playerId)) {
+      next.delete(playerId);
+    } else {
+      next.add(playerId);
+    }
+    this.unassignedSelectedIds.set(next);
+  }
+
+  protected toggleTeamPlayer(playerId: string): void {
+    const next = new Set(this.teamSelectedIds());
+    if (next.has(playerId)) {
+      next.delete(playerId);
+    } else {
+      next.add(playerId);
+    }
+    this.teamSelectedIds.set(next);
+  }
+
+  protected isUnassignedSelected(playerId: string): boolean {
+    return this.unassignedSelectedIds().has(playerId);
+  }
+
+  protected isTeamPlayerSelected(playerId: string): boolean {
+    return this.teamSelectedIds().has(playerId);
+  }
+
+  protected async moveSelectedToTeam(): Promise<void> {
+    const teamId = this.selectedTeamId();
+    if (!teamId) {
+      this.statusMessage.set('Seleccioná un equipo.');
+      window.alert('Seleccioná un equipo antes de asignar jugadores.');
+      return;
+    }
+    await this.movePlayers([...this.unassignedSelectedIds()], teamId);
+  }
+
+  protected async moveSelectedToUnassigned(): Promise<void> {
+    const teamId = this.selectedTeamId();
+    if (!teamId) {
+      this.statusMessage.set('Seleccioná un equipo.');
+      return;
+    }
+    await this.movePlayers([...this.teamSelectedIds()], null);
+  }
+
+  private async movePlayers(
+    playerIds: readonly string[],
+    destinationTeamId: string | null,
+  ): Promise<void> {
+    if (playerIds.length === 0) {
+      this.statusMessage.set(TEAM_STRINGS.noSelection);
+      window.alert(TEAM_STRINGS.noSelection);
+      return;
+    }
+
+    const captainIsMoving = this.teams().some(
+      (team) =>
+        team.captainId !== null &&
+        playerIds.includes(team.captainId) &&
+        team.id !== destinationTeamId,
+    );
+    if (captainIsMoving && !window.confirm(TEAM_STRINGS.captainMoveWarning)) {
+      return;
+    }
+
+    try {
+      await tournamentRepository.assignPlayers(playerIds, destinationTeamId);
+      await this.load();
+      this.unassignedSelectedIds.set(new Set());
+      this.teamSelectedIds.set(new Set());
+
+      if (destinationTeamId) {
+        const remainingPlayers = this.players();
+        if (hasMixedRoster(remainingPlayers, destinationTeamId)) {
+          window.confirm(TEAM_STRINGS.mixedConfirmation);
+        }
+        const limits = this.tournament()?.rules.roster;
+        if (limits) {
+          const status = getRosterStatus(remainingPlayers, destinationTeamId, limits);
+          if (status.state !== 'OK') {
+            window.confirm(TEAM_STRINGS.rosterWarning);
+          }
+        }
+      }
+
+      this.statusMessage.set(TEAM_STRINGS.assignmentDone);
+    } catch (error) {
+      console.error('Player assignment failed', error);
+      this.statusMessage.set(TEAM_STRINGS.saveFailed);
+      window.alert(TEAM_STRINGS.saveFailed);
+    }
+  }
+
   protected closeForm(): void {
     this.formOpen.set(false);
     this.formError.set(null);
+  }
+
+  protected selectTeam(teamId: string): void {
+    this.selectedTeamId.set(teamId || null);
+    this.teamSelectedIds.set(new Set());
   }
 
   protected async saveTeam(): Promise<void> {
@@ -99,6 +211,10 @@ export class TeamsComponent implements OnInit {
 
     if (!existing && !this.canCreateOrDelete) {
       this.formError.set(TEAM_STRINGS.runningCreateDelete);
+      return;
+    }
+
+    if (this.colorsWarning() && !window.confirm(TEAM_STRINGS.similarColors)) {
       return;
     }
 

@@ -84,3 +84,22 @@
   table-list overload.
 - **Reason:** The previous direct-table overload omitted `stages`, `groups`, `matches`, `events`
   and `draws`, which can make the destructive transaction fail when it builds the backup.
+
+## 2026-11-20 - HU-06 - Player team assignment
+
+- **Decision:** Implement player reassignment as a bulk Dexie transaction over the player,
+  team and tournament tables.
+- **Reason:** It atomically updates assignments, clears moved captains and touches the
+  tournament timestamp.
+- **Decision:** Keep assignment available regardless of tournament status.
+- **Reason:** HU-06 explicitly allows player reassignment while the tournament is running.
+
+## 2026-11-20 - HU-06 - Consolidated assignment and visible warnings
+
+- **Decision:** Remove team assignment and captain selection from the player form and manage both
+  from the team screen.
+- **Reason:** It creates one clear place for roster and captain ownership.
+- **Decision:** Show browser confirmation dialogs for captain removal, mixed rosters, roster-limit
+  warnings and similar colors.
+- **Reason:** The user requested that warnings be visibly actionable instead of remaining only
+  as inline status text.

@@ -24,4 +24,15 @@ export const TEAM_STRINGS = {
   saveFailed: 'No se pudo guardar el equipo.',
   noTeams: 'Todavía no cargaste equipos.',
   logoReserved: 'Logo reservado para una versión futura.',
+  assignmentTitle: 'Asignación de jugadores',
+  unassigned: 'Jugadores sueltos',
+  selectedTeam: 'Equipo seleccionado',
+  moveToTeam: 'Asignar al equipo',
+  moveToUnassigned: 'Devolver a sueltos',
+  noSelection: 'Seleccioná al menos un jugador.',
+  captainMoveWarning:
+    'Uno de los jugadores seleccionados es capitán. Al moverlo, el cargo de capitán quedará vacío.',
+  mixedConfirmation: 'El equipo quedará con categorías o géneros mezclados. ¿Querés continuar?',
+  rosterWarning: 'La asignación dejará el equipo fuera del mínimo o máximo configurado.',
+  assignmentDone: 'Asignación guardada.',
 } as const;

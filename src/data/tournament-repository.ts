@@ -121,6 +121,61 @@ export class TournamentRepository {
     return teams.sort((left, right) => left.name.localeCompare(right.name, 'es'));
   }
 
+  async assignPlayers(
+    playerIds: readonly string[],
+    destinationTeamId: string | null,
+  ): Promise<readonly string[]> {
+    if (playerIds.length === 0) {
+      return [];
+    }
+
+    return tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.players,
+      tournamentDatabase.teams,
+      tournamentDatabase.tournament,
+      async () => {
+        const selected = new Set(playerIds);
+        const players = await tournamentDatabase.players.where('id').anyOf(playerIds).toArray();
+        const teams = await tournamentDatabase.teams.toArray();
+        const captainClearedTeamIds: string[] = [];
+
+        for (const team of teams) {
+          if (
+            team.captainId &&
+            selected.has(team.captainId) &&
+            players.find((player) => player.id === team.captainId)?.teamId !== destinationTeamId
+          ) {
+            captainClearedTeamIds.push(team.id);
+          }
+        }
+
+        await tournamentDatabase.players
+          .where('id')
+          .anyOf(playerIds)
+          .modify({ teamId: destinationTeamId });
+
+        if (captainClearedTeamIds.length > 0) {
+          await tournamentDatabase.teams.bulkUpdate(
+            captainClearedTeamIds.map((teamId) => ({
+              key: teamId,
+              changes: { captainId: null },
+            })),
+          );
+        }
+
+        const tournament = await this.getTournament();
+        if (tournament) {
+          await tournamentDatabase.tournament.update(tournament.id, {
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        return captainClearedTeamIds;
+      },
+    );
+  }
+
   async putTeam(team: Team): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',

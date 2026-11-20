@@ -88,16 +88,6 @@
             <option value="F">{{ strings.female }}</option>
           </select>
         </label>
-
-        <label>
-          {{ strings.team }}
-          <select [value]="teamId() ?? ''" (change)="teamId.set($any($event.target).value || null)">
-            <option value="">{{ strings.withoutTeam }}</option>
-            @for (team of teams(); track team.id) {
-              <option [value]="team.id">{{ team.name }}</option>
-            }
-          </select>
-        </label>
       </div>
 
       @if (formError(); as error) {
