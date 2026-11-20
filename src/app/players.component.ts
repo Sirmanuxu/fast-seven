@@ -3,6 +3,11 @@ import { Router } from '@angular/router';
 import { tournamentRepository } from '../data/tournament-repository';
 import { Gender, Player, Team, Tournament } from '../domain/model';
 import { normalizePlayerKey, validatePlayerInput } from '../domain/player';
+import {
+  capitalizeName,
+  findNormalizedDuplicates,
+  getNextHomonymDisambiguation,
+} from '../domain/player';
 import { PLAYER_STRINGS } from '../i18n/player-strings';
 
 @Component({
@@ -32,6 +37,9 @@ export class PlayersComponent implements OnInit {
   private readonly teamId = signal<string | null>(null);
   protected readonly formError = signal<string | null>(null);
   protected readonly statusMessage = signal<string | null>(null);
+  protected readonly homonymOpen = signal(false);
+  protected readonly duplicateCandidate = signal<Player | null>(null);
+  protected readonly disambiguation = signal('');
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -80,6 +88,8 @@ export class PlayersComponent implements OnInit {
   protected closeForm(): void {
     this.formOpen.set(false);
     this.formError.set(null);
+    this.homonymOpen.set(false);
+    this.duplicateCandidate.set(null);
   }
 
   protected async savePlayer(): Promise<void> {
@@ -102,6 +112,22 @@ export class PlayersComponent implements OnInit {
     );
 
     if (!validation.ok) {
+      if (validation.error.code === 'DUPLICATE_PLAYER') {
+        const candidate = validation.error.duplicate ?? null;
+        if (candidate) {
+          this.duplicateCandidate.set(candidate);
+          const normalizedKey = normalizePlayerKey(
+            capitalizeName(this.firstName()),
+            capitalizeName(this.lastName()),
+            this.category(),
+          );
+          this.disambiguation.set(
+            getNextHomonymDisambiguation(normalizedKey, this.players()),
+          );
+          this.homonymOpen.set(true);
+          return;
+        }
+      }
       this.formError.set(
         validation.error.code === 'DUPLICATE_PLAYER'
           ? PLAYER_STRINGS.duplicate
@@ -132,6 +158,106 @@ export class PlayersComponent implements OnInit {
       await this.load();
       this.closeForm();
       this.statusMessage.set(null);
+    } catch {
+      this.formError.set(PLAYER_STRINGS.saveFailed);
+    }
+  }
+
+  protected async useSamePerson(): Promise<void> {
+    const candidate = this.duplicateCandidate();
+    if (!candidate) {
+      return;
+    }
+
+    if (this.editingId()) {
+      this.closeForm();
+      this.statusMessage.set(PLAYER_STRINGS.samePersonDone);
+      return;
+    }
+
+    const gender = this.gender();
+    if (!gender) {
+      this.formError.set(PLAYER_STRINGS.required);
+      return;
+    }
+
+    const updated: Player = {
+      ...candidate,
+      firstName: capitalizeName(this.firstName()),
+      lastName: capitalizeName(this.lastName()),
+      category: this.category(),
+      gender,
+      normalizedKey: normalizePlayerKey(
+        capitalizeName(this.firstName()),
+        capitalizeName(this.lastName()),
+        this.category(),
+      ),
+    };
+
+    try {
+      await tournamentRepository.putPlayer(updated, candidate.teamId);
+      await this.load();
+      this.closeForm();
+      this.statusMessage.set(PLAYER_STRINGS.samePersonDone);
+    } catch {
+      this.formError.set(PLAYER_STRINGS.saveFailed);
+    }
+  }
+
+  protected async saveDistinctPerson(): Promise<void> {
+    const gender = this.gender();
+    if (!gender) {
+      this.formError.set(PLAYER_STRINGS.required);
+      return;
+    }
+
+    const disambiguation = this.disambiguation().trim();
+    if (!disambiguation) {
+      this.formError.set('Ingresá una aclaración para distinguir al jugador.');
+      return;
+    }
+
+    const normalizedKey = normalizePlayerKey(
+      capitalizeName(this.firstName()),
+      capitalizeName(this.lastName()),
+      this.category(),
+    );
+    const duplicateCount = findNormalizedDuplicates(
+      {
+        firstName: capitalizeName(this.firstName()),
+        lastName: capitalizeName(this.lastName()),
+        category: this.category(),
+      },
+      this.players(),
+      this.editingId(),
+    ).length;
+    if (duplicateCount === 0) {
+      this.homonymOpen.set(false);
+      await this.savePlayer();
+      return;
+    }
+
+    const existing = this.editingId()
+      ? (this.players().find((player) => player.id === this.editingId()) ?? null)
+      : null;
+    const player: Player = {
+      id: existing?.id ?? crypto.randomUUID(),
+      firstName: capitalizeName(this.firstName()),
+      lastName: capitalizeName(this.lastName()),
+      category: this.category(),
+      gender,
+      teamId: existing?.teamId ?? null,
+      disambiguation: disambiguation.match(/^\(\d+\)$/)
+        ? disambiguation
+        : `(${disambiguation.replace(/[()]/g, '')})`,
+      normalizedKey,
+    };
+
+    try {
+      await tournamentRepository.putPlayer(player, existing?.teamId ?? null);
+      await this.load();
+      this.closeForm();
+      this.statusMessage.set(PLAYER_STRINGS.distinctDone);
     } catch {
       this.formError.set(PLAYER_STRINGS.saveFailed);
     }

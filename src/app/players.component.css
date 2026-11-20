@@ -53,6 +53,20 @@ button {
   color: #a00;
 }
 
+.homonym-dialog {
+  position: fixed;
+  z-index: 10;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 2rem));
+  padding: 1.25rem;
+  box-sizing: border-box;
+  border: 1px solid #888;
+  border-radius: 0.5rem;
+  background: white;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 30%);
+}
+
 .table-wrap {
   overflow-x: auto;
 }

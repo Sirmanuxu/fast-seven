@@ -46,6 +46,31 @@ export type PlayerValidationResult =
   | { readonly ok: true; readonly playerInput: PlayerInput }
   | { readonly ok: false; readonly error: PlayerValidationError };
 
+export function findNormalizedDuplicates(
+  player: Pick<Player, 'firstName' | 'lastName' | 'category'>,
+  existingPlayers: readonly Player[],
+  excludePlayerId: string | null = null,
+): readonly Player[] {
+  const key = normalizePlayerKey(player.firstName, player.lastName, player.category);
+  return existingPlayers.filter(
+    (existing) => existing.id !== excludePlayerId && existing.normalizedKey === key,
+  );
+}
+
+export function getNextHomonymDisambiguation(
+  normalizedKey: string,
+  existingPlayers: readonly Player[],
+): string {
+  const numbers = existingPlayers
+    .filter((player) => player.normalizedKey === normalizedKey)
+    .map((player) => {
+      const match = /^\((\d+)\)$/.exec(player.disambiguation ?? '');
+      return match ? Number.parseInt(match[1], 10) : 1;
+    });
+  const next = numbers.length === 0 ? 2 : Math.max(...numbers) + 1;
+  return `(${next})`;
+}
+
 export function validatePlayerInput(
   input: PlayerInput,
   existingPlayers: readonly Player[],
