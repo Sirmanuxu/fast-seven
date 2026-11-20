@@ -103,3 +103,12 @@
   warnings and similar colors.
 - **Reason:** The user requested that warnings be visibly actionable instead of remaining only
   as inline status text.
+
+## 2026-11-20 - HU-07 - Player homonym resolution
+
+- **Decision:** Show an inline modal dialog instead of reusing `window.confirm`.
+- **Reason:** The user needs to compare both records and choose between two named actions.
+- **Decision:** Start distinct-player disambiguation at `(2)` and increment it to the next unused
+  numeric suffix.
+- **Reason:** `(1)` is represented by no suffix on the original record, while `(2)` and onward
+  distinguish additional players.
