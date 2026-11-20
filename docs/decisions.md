@@ -209,3 +209,9 @@
   person when the operator chooses that action and deselects the discard.
 - **Reason:** It preserves the backlog rule that the second duplicate is omitted by default while
   keeping the confirmation summary consistent with the selected action.
+
+## 2026-11-20 - HU-11 - Automatic team colors
+
+- **Decision:** Create automatically generated teams with the next unused pair from a fixed palette.
+- **Reason:** It prevents repeated default blue/yellow pairs and keeps newly created teams visually
+  distinct while allowing manual edits afterward.

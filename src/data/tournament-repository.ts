@@ -13,7 +13,7 @@ import {
   TournamentSnapshot,
 } from '../domain/model';
 import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
-import { canCreateOrDeleteTeam, normalizeTeamName } from '../domain/team';
+import { canCreateOrDeleteTeam, getDefaultTeamColorPair, normalizeTeamName } from '../domain/team';
 import { normalizePlayerKey } from '../domain/player';
 
 export interface MatchSaveInput {
@@ -305,6 +305,7 @@ export class TournamentRepository {
         });
 
         const teamIds = new Map<string, string>();
+        let createdTeamOffset = 0;
         for (const resolution of teamResolutions) {
           if (resolution.existingTeamId) {
             teamIds.set(normalizeTeamName(resolution.incomingName), resolution.existingTeamId);
@@ -314,11 +315,13 @@ export class TournamentRepository {
           if (resolution.action !== 'CREATE') continue;
 
           const teamId = crypto.randomUUID();
+          const colors = getDefaultTeamColorPair(existingTeams, createdTeamOffset);
+          createdTeamOffset += 1;
           const team: Team = {
             id: teamId,
             name: resolution.incomingName,
-            primaryColor: '#1f4b99',
-            secondaryColor: '#f1c40f',
+            primaryColor: colors.primary,
+            secondaryColor: colors.secondary,
             captainId: null,
             logo: null,
             isSeed: false,

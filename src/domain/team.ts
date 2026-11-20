@@ -8,6 +8,40 @@ export function normalizeTeamName(value: string): string {
     .toLocaleLowerCase('es');
 }
 
+export interface TeamColorPair {
+  readonly primary: string;
+  readonly secondary: string;
+}
+
+const DEFAULT_TEAM_COLOR_PALETTE: readonly TeamColorPair[] = [
+  { primary: '#1f4b99', secondary: '#f1c40f' },
+  { primary: '#b91c1c', secondary: '#fef3c7' },
+  { primary: '#166534', secondary: '#dcfce7' },
+  { primary: '#7e22ce', secondary: '#f3e8ff' },
+  { primary: '#c2410c', secondary: '#ffedd5' },
+  { primary: '#0f766e', secondary: '#ccfbf1' },
+  { primary: '#1d4ed8', secondary: '#dbeafe' },
+  { primary: '#a21caf', secondary: '#fae8ff' },
+  { primary: '#0369a1', secondary: '#e0f2fe' },
+  { primary: '#4d7c0f', secondary: '#ecfccb' },
+  { primary: '#be123c', secondary: '#ffe4e6' },
+  { primary: '#4338ca', secondary: '#e0e7ff' },
+];
+
+export function getDefaultTeamColorPair(existingTeams: readonly Team[], offset = 0): TeamColorPair {
+  const usedPrimaries = new Set(existingTeams.map((team) => team.primaryColor.toLocaleUpperCase()));
+  for (let step = 0; step < DEFAULT_TEAM_COLOR_PALETTE.length; step += 1) {
+    const paletteIndex = (offset + step) % DEFAULT_TEAM_COLOR_PALETTE.length;
+    const colors = DEFAULT_TEAM_COLOR_PALETTE[paletteIndex];
+    if (!usedPrimaries.has(colors.primary.toLocaleUpperCase())) {
+      return colors;
+    }
+  }
+  return DEFAULT_TEAM_COLOR_PALETTE[
+    (existingTeams.length + offset) % DEFAULT_TEAM_COLOR_PALETTE.length
+  ];
+}
+
 export function isValidTeamColor(value: string): boolean {
   return /^#[0-9A-Fa-f]{6}$/.test(value);
 }
@@ -26,9 +60,7 @@ function hexToRgb(hex: string): readonly [number, number, number] | null {
 function relativeLuminance(rgb: readonly [number, number, number]): number {
   const convert = (channel: number): number => {
     const value = channel / 255;
-    return value <= 0.03928
-      ? value / 12.92
-      : ((value + 0.055) / 1.055) ** 2.4;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   };
   const [red, green, blue] = rgb;
   return 0.2126 * convert(red) + 0.7152 * convert(green) + 0.0722 * convert(blue);

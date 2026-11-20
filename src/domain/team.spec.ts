@@ -4,6 +4,7 @@ import {
   areTeamColorsTooSimilar,
   canCreateOrDeleteTeam,
   getRosterStatus,
+  getDefaultTeamColorPair,
   hasMixedRoster,
   normalizeTeamName,
   validateTeamInput,
@@ -87,5 +88,29 @@ describe('team rules', () => {
     expect(canCreateOrDeleteTeam('SETUP')).toBe(true);
     expect(canCreateOrDeleteTeam('FIXTURE_GENERATED')).toBe(true);
     expect(canCreateOrDeleteTeam('RUNNING')).toBe(false);
+  });
+
+  it('assigns unused default color pairs to newly created teams', () => {
+    const existingTeam = {
+      ...player('unused', null),
+      id: 'team-1',
+      name: 'Azules',
+      primaryColor: '#1f4b99',
+      secondaryColor: '#f1c40f',
+      captainId: null,
+      logo: null,
+      isSeed: false,
+      status: 'ACTIVE' as const,
+    };
+
+    expect(getDefaultTeamColorPair([existingTeam])).toEqual({
+      primary: '#b91c1c',
+      secondary: '#fef3c7',
+    });
+
+    expect(getDefaultTeamColorPair([existingTeam], 1)).toEqual({
+      primary: '#b91c1c',
+      secondary: '#fef3c7',
+    });
   });
 });

@@ -5,6 +5,7 @@ import { Player, Team, Tournament } from '../../domain/model';
 import {
   areTeamColorsTooSimilar,
   canCreateOrDeleteTeam,
+  getDefaultTeamColorPair,
   getRosterStatus,
   hasMixedRoster,
   validateTeamInput,
@@ -55,10 +56,11 @@ export class TeamsComponent implements OnInit {
       this.statusMessage.set(TEAM_STRINGS.runningCreateDelete);
       return;
     }
+    const colors = getDefaultTeamColorPair(this.teams());
     this.editingId.set(null);
     this.name.set('');
-    this.primaryColor.set('#1f4b99');
-    this.secondaryColor.set('#f1c40f');
+    this.primaryColor.set(colors.primary);
+    this.secondaryColor.set(colors.secondary);
     this.captainId.set(null);
     this.isSeed.set(false);
     this.formError.set(null);
