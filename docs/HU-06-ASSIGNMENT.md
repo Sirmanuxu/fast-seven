@@ -10,6 +10,9 @@
 - Historical match events retain their team and player attribution.
 - Minimum and maximum roster status for the selected team.
 - Assignment remains available for setup, fixture-generated and running tournaments.
+- Assignment and captain selection are both managed inside the team screen.
+- The separate assignment route was removed so teams are the only roster-management entry point.
+- Captain, mixed roster and out-of-range roster changes show confirmation dialogs.
 
 ## Manual verification
 

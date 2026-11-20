@@ -45,7 +45,6 @@
           <select
             [value]="captainId() ?? ''"
             (change)="captainId.set($any($event.target).value || null)"
-            [disabled]="!editingId()"
           >
             <option value="">{{ strings.noCaptain }}</option>
             @for (player of captainOptions(editingId()); track player.id) {
@@ -105,6 +104,7 @@
             {{ captainName(team) }}
           </p>
           <div class="actions">
+            <button type="button" (click)="selectTeam(team.id)">Asignar jugadores</button>
             <button type="button" (click)="openEdit(team)">Editar</button>
             <button type="button" (click)="deleteTeam(team)" [disabled]="!canCreateOrDelete">
               {{ strings.delete }}
@@ -113,5 +113,78 @@
         </article>
       }
     </div>
+  }
+
+  @if (teams().length > 0) {
+    <section class="assignment-section" aria-label="Asignación de jugadores">
+      <h2>{{ strings.assignmentTitle }}</h2>
+      <label>
+        {{ strings.selectedTeam }}
+        <select [value]="selectedTeamId() ?? ''" (change)="selectTeam($any($event.target).value)">
+          <option value="">—</option>
+          @for (team of teams(); track team.id) {
+            <option [value]="team.id">{{ team.name }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="assignment-layout">
+        <article>
+          <h3>{{ strings.unassigned }}</h3>
+          @if (unassignedPlayers.length === 0) {
+            <p>No hay jugadores sueltos.</p>
+          } @else {
+            @for (player of unassignedPlayers; track player.id) {
+              <label class="assignment-player">
+                <input
+                  type="checkbox"
+                  [checked]="isUnassignedSelected(player.id)"
+                  (change)="toggleUnassigned(player.id)"
+                />
+                {{ playerName(player) }}
+              </label>
+            }
+          }
+          <button
+            type="button"
+            (click)="moveSelectedToTeam()"
+            [disabled]="unassignedSelectedIds().size === 0 || !selectedTeamId()"
+          >
+            → {{ strings.moveToTeam }}
+          </button>
+        </article>
+
+        <article>
+          <h3>
+            @if (selectedTeamId()) {
+              {{ teams().find((team) => team.id === selectedTeamId())?.name }}
+            } @else {
+              {{ strings.selectedTeam }}
+            }
+          </h3>
+          @if (selectedTeamPlayers.length === 0) {
+            <p>No hay jugadores asignados.</p>
+          } @else {
+            @for (player of selectedTeamPlayers; track player.id) {
+              <label class="assignment-player">
+                <input
+                  type="checkbox"
+                  [checked]="isTeamPlayerSelected(player.id)"
+                  (change)="toggleTeamPlayer(player.id)"
+                />
+                {{ playerName(player) }}
+              </label>
+            }
+          }
+          <button
+            type="button"
+            (click)="moveSelectedToUnassigned()"
+            [disabled]="teamSelectedIds().size === 0"
+          >
+            ← {{ strings.moveToUnassigned }}
+          </button>
+        </article>
+      </div>
+    </section>
   }
 </main>
