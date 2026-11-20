@@ -129,6 +129,15 @@
 - **Decision:** Remember mappings under a normalized header-signature key in localStorage.
 - **Reason:** It is a UI preference and can be reused across reimports without storing tournament data.
 
+## 2026-11-20 - HU-09 - Import entry from players
+
+- **Decision:** Put the import action next to `Agregar jugador` in the player screen.
+- **Reason:** The import flow belongs to player registration and should not live as a separate
+  panel shortcut.
+- **Decision:** Keep `/importar` as an alias and use `/panel/jugadores/importar` as the canonical route.
+- **Reason:** Existing links and bookmarks continue to work while the application follows the
+  backlog route map.
+
 ## 2026-11-20 - HU-09 - Import screen feedback
 
 - **Decision:** Split the screen into File and Mapping steps.
@@ -143,3 +152,29 @@
   file format.
 - **Reason:** The previous placement nested the CSV/Excel mapping controls inside an Excel-only
   select, preventing them from appearing after CSV or XLSX imports.
+
+## 2026-11-20 - HU-10 - Import preview normalization
+
+- **Decision:** Build import row status in a pure import module and keep editing state in the
+  component.
+- **Reason:** It makes category, gender, duplicate and team rules testable without Angular or
+  browser APIs.
+- **Decision:** Revalidate every import row after a cell edit.
+- **Reason:** Errors and warnings must change immediately and the confirmation button must reflect
+  the current active rows.
+
+## 2026-11-20 - HU-10 - Spanish import warning labels
+
+- **Decision:** Translate every import warning through i18n and never render raw issue codes.
+- **Reason:** Codes such as `NEW_TEAM` and `SIMILAR_TEAM` are technical identifiers and must not
+  appear in the Spanish UI.
+- **Decision:** Offer to add an unknown category to the tournament catalog from the row review.
+- **Reason:** It follows the backlog's category-extension behavior and lets the row be revalidated
+  immediately.
+
+## 2026-11-20 - Refactor - Feature folder structure
+
+- **Decision:** Organize Angular components under `src/app/<feature>/` folders instead of placing
+  every component in `src/app/`.
+- **Reason:** It keeps templates, styles and component logic for shell, panel, projector, welcome,
+  players, teams and import together and avoids a growing mixed folder.

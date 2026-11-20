@@ -1,11 +1,11 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
 import { Router } from '@angular/router';
-import { spikeDatabase, SpikeRecord } from '../data/spike-database';
-import { tournamentRepository } from '../data/tournament-repository';
-import { PERSISTENCE_STRINGS } from '../i18n/persistence-strings';
-import { SPIKE_STRINGS } from '../i18n/spike-strings';
-import { ProjectorChannel } from '../sync/projector-channel';
+import { spikeDatabase, SpikeRecord } from '../../data/spike-database';
+import { tournamentRepository } from '../../data/tournament-repository';
+import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
+import { SPIKE_STRINGS } from '../../i18n/spike-strings';
+import { ProjectorChannel } from '../../sync/projector-channel';
 
 @Component({
   selector: 'app-panel',
@@ -71,10 +71,6 @@ export class PanelComponent implements OnInit {
 
   protected openTeams(): void {
     void this.router.navigateByUrl('/equipos');
-  }
-
-  protected openImport(): void {
-    void this.router.navigateByUrl('/importar');
   }
 
   private async loadLastRecord(): Promise<void> {

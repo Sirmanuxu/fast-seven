@@ -1,14 +1,14 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { tournamentRepository } from '../data/tournament-repository';
-import { Gender, Player, Team, Tournament } from '../domain/model';
-import { normalizePlayerKey, validatePlayerInput } from '../domain/player';
+import { tournamentRepository } from '../../data/tournament-repository';
+import { Gender, Player, Team, Tournament } from '../../domain/model';
+import { normalizePlayerKey, validatePlayerInput } from '../../domain/player';
 import {
   capitalizeName,
   findNormalizedDuplicates,
   getNextHomonymDisambiguation,
-} from '../domain/player';
-import { PLAYER_STRINGS } from '../i18n/player-strings';
+} from '../../domain/player';
+import { PLAYER_STRINGS } from '../../i18n/player-strings';
 
 @Component({
   selector: 'app-players',
@@ -121,9 +121,7 @@ export class PlayersComponent implements OnInit {
             capitalizeName(this.lastName()),
             this.category(),
           );
-          this.disambiguation.set(
-            getNextHomonymDisambiguation(normalizedKey, this.players()),
-          );
+          this.disambiguation.set(getNextHomonymDisambiguation(normalizedKey, this.players()));
           this.homonymOpen.set(true);
           return;
         }
@@ -291,6 +289,10 @@ export class PlayersComponent implements OnInit {
 
   protected goBack(): void {
     void this.router.navigateByUrl('/panel');
+  }
+
+  protected openImport(): void {
+    void this.router.navigateByUrl('/panel/jugadores/importar');
   }
 
   private async load(): Promise<void> {

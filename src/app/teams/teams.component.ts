@@ -1,15 +1,15 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { tournamentRepository } from '../data/tournament-repository';
-import { Player, Team, Tournament } from '../domain/model';
+import { tournamentRepository } from '../../data/tournament-repository';
+import { Player, Team, Tournament } from '../../domain/model';
 import {
   areTeamColorsTooSimilar,
   canCreateOrDeleteTeam,
   getRosterStatus,
   hasMixedRoster,
   validateTeamInput,
-} from '../domain/team';
-import { TEAM_STRINGS } from '../i18n/team-strings';
+} from '../../domain/team';
+import { TEAM_STRINGS } from '../../i18n/team-strings';
 
 @Component({
   selector: 'app-teams',

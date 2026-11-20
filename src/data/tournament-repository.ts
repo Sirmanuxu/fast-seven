@@ -1,6 +1,8 @@
 import {
   Backup,
   BackupReason,
+  Category,
+  CategoryStage,
   Draw,
   Match,
   MatchEvent,
@@ -174,6 +176,51 @@ export class TournamentRepository {
         return captainClearedTeamIds;
       },
     );
+  }
+
+  async addTournamentCategory(rawLabel: string): Promise<Category> {
+    const label = rawLabel.trim().replace(/\s+/g, ' ');
+    if (!label) {
+      throw new Error('Category label is required');
+    }
+    const code = label
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleUpperCase('es')
+      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (!code) {
+      throw new Error('Category code is invalid');
+    }
+
+    const numeric = /^M(7|8|9|10|11|12|13|14|15|16|17|18|19)$/.exec(code);
+    const stage: CategoryStage = numeric
+      ? Number.parseInt(code.slice(1), 10) <= 12
+        ? 'INFANT'
+        : 'YOUTH'
+      : 'ADULT';
+
+    const category: Category = {
+      code,
+      label,
+      stage,
+      aliases: [label.toLocaleLowerCase('es')],
+    };
+
+    await tournamentDatabase.transaction('rw', tournamentDatabase.tournament, async () => {
+      const tournament = await this.getTournament();
+      if (!tournament) {
+        throw new Error('No tournament is available');
+      }
+      if (tournament.categories.some((item) => item.code === code)) {
+        return;
+      }
+      await tournamentDatabase.tournament.update(tournament.id, {
+        categories: [...tournament.categories, category],
+        updatedAt: new Date().toISOString(),
+      });
+    });
+    return category;
   }
 
   async putTeam(team: Team): Promise<void> {

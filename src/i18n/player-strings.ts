@@ -28,12 +28,12 @@ export const PLAYER_STRINGS = {
   noMatches: 'No hay jugadores que coincidan con la búsqueda.',
   listDisambiguationSuffix: ' (distinto)',
   homonymTitle: 'Coincidencia con un jugador existente',
-  homonymDescription:
-    'Encontramos otro registro con el mismo nombre, apellido y categoría.',
+  homonymDescription: 'Encontramos otro registro con el mismo nombre, apellido y categoría.',
   samePerson: 'Es la misma persona',
   distinctPerson: 'Son personas distintas',
   disambiguation: 'Aclaración',
   homonymCancel: 'Cancelar',
   samePersonDone: 'Se actualizó el registro existente.',
   distinctDone: 'Se creó el jugador distinto.',
+  importPlayers: 'Importar planilla',
 } as const;

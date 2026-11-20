@@ -1,6 +1,6 @@
 import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { SPIKE_STRINGS } from '../i18n/spike-strings';
-import { ProjectorChannel, ProjectorPing } from '../sync/projector-channel';
+import { SPIKE_STRINGS } from '../../i18n/spike-strings';
+import { ProjectorChannel, ProjectorPing } from '../../sync/projector-channel';
 
 @Component({
   selector: 'app-projector',

@@ -71,6 +71,32 @@ button {
   color: #2f6b35;
 }
 
+.review-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.review-table input {
+  width: 100%;
+  min-width: 130px;
+}
+
+.review-table tr.discarded {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.review-table td {
+  vertical-align: top;
+}
+
+.review-table small {
+  display: block;
+  margin-top: 0.25rem;
+}
+
 .mapping-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(180px, 1fr));
