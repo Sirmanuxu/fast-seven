@@ -4,9 +4,6 @@
     <h1>{{ strings.title }}</h1>
   </header>
 
-  @if (errorMessage(); as error) {
-    <p class="error" role="alert">{{ error }}</p>
-  }
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }

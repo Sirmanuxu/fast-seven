@@ -93,10 +93,6 @@
         </label>
       </div>
 
-      @if (formError(); as error) {
-        <p class="error" role="alert">{{ error }}</p>
-      }
-
       <div class="actions">
         <button type="button" (click)="savePlayer()">{{ strings.save }}</button>
         <button type="button" (click)="closeForm()">{{ strings.cancel }}</button>

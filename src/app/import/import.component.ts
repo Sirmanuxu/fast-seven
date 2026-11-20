@@ -28,6 +28,7 @@ import {
   TeamResolution,
 } from '../../import/import-confirmation';
 import { ConfirmImportSummary } from '../../data/tournament-repository';
+import { showErrorPopup } from '../error-popup';
 
 @Component({
   selector: 'app-import',
@@ -40,7 +41,6 @@ export class ImportComponent {
 
   protected readonly strings = IMPORT_STRINGS;
   protected readonly preview = signal<ImportPreview | null>(null);
-  protected readonly errorMessage = signal<string | null>(null);
   protected readonly encoding = signal<ImportEncoding | ''>('');
   protected readonly delimiter = signal<ImportDelimiter | ''>('');
   protected readonly sheetName = signal('');
@@ -64,7 +64,7 @@ export class ImportComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) {
-      this.errorMessage.set(IMPORT_STRINGS.emptyDrop);
+      showErrorPopup(IMPORT_STRINGS.emptyDrop);
       return;
     }
     await this.readFile(file);
@@ -74,7 +74,7 @@ export class ImportComponent {
     event.preventDefault();
     const file = event.dataTransfer?.files?.[0];
     if (!file) {
-      this.errorMessage.set(IMPORT_STRINGS.emptyDrop);
+      showErrorPopup(IMPORT_STRINGS.emptyDrop);
       return;
     }
     await this.readFile(file);
@@ -187,7 +187,7 @@ export class ImportComponent {
 
   protected continueToMapping(): void {
     if (!this.preview()) {
-      this.statusMessage.set('Primero cargá un archivo.');
+      showErrorPopup('Primero cargá un archivo.');
       return;
     }
     this.step.set('MAPPING');
@@ -201,9 +201,7 @@ export class ImportComponent {
 
   protected async confirmMapping(): Promise<void> {
     if (this.missingMappings.length > 0) {
-      this.statusMessage.set(
-        `${IMPORT_STRINGS.missingMapping}: ${this.missingMappings.join(', ')}`,
-      );
+      showErrorPopup(`${IMPORT_STRINGS.missingMapping}: ${this.missingMappings.join(', ')}`);
       return;
     }
     this.rememberMapping(this.mapping());
@@ -282,7 +280,7 @@ export class ImportComponent {
       this.statusMessage.set(`Categoría agregada: ${label.trim()}`);
     } catch (error) {
       console.error('Category creation failed', error);
-      this.statusMessage.set('No se pudo agregar la categoría.');
+      showErrorPopup('No se pudo agregar la categoría.');
     }
   }
 
@@ -324,12 +322,12 @@ export class ImportComponent {
 
   protected async confirmImportPreview(): Promise<void> {
     if (this.hasReviewErrors) {
-      this.statusMessage.set(this.strings.reviewResolveErrors);
+      showErrorPopup(this.strings.reviewResolveErrors);
       return;
     }
     const tournament = await tournamentRepository.getTournament();
     if (!tournament) {
-      this.statusMessage.set('No hay un torneo activo.');
+      showErrorPopup('No hay un torneo activo.');
       return;
     }
     this.tournamentStatus.set(tournament.status);
@@ -398,7 +396,7 @@ export class ImportComponent {
     try {
       const tournament = await tournamentRepository.getTournament();
       if (!tournament) {
-        this.statusMessage.set('No hay un torneo activo.');
+        showErrorPopup('No hay un torneo activo.');
         this.isImporting.set(false);
         return;
       }
@@ -427,7 +425,7 @@ export class ImportComponent {
       this.statusMessage.set('Importación completada.');
     } catch (error) {
       console.error('Import failed', error);
-      this.statusMessage.set('No se pudo importar. No se realizaron cambios.');
+      showErrorPopup('No se pudo importar. No se realizaron cambios.');
     } finally {
       this.isImporting.set(false);
     }
@@ -490,7 +488,7 @@ export class ImportComponent {
       buildImportPreview(mapped, catalog, this.existingPlayers, this.existingTeams),
     );
     this.statusFilter.set('ALL');
-    this.statusMessage.set('Revisión completa. Corregí filas con error antes de continuar.');
+    showErrorPopup('Revisión completa. Corregí filas con error antes de continuar.');
     this.step.set('REVIEW');
   }
 
@@ -521,7 +519,6 @@ export class ImportComponent {
 
   private async readFile(file: File): Promise<void> {
     this.selectedFile = file;
-    this.errorMessage.set(null);
     this.step.set('FILE');
     this.mappingConfirmed.set(false);
     this.statusMessage.set(null);
@@ -538,7 +535,7 @@ export class ImportComponent {
       this.setupMapping(preview);
     } catch (error) {
       this.preview.set(null);
-      this.errorMessage.set(error instanceof Error ? error.message : IMPORT_STRINGS.readFailed);
+      showErrorPopup(error instanceof Error ? error.message : IMPORT_STRINGS.readFailed);
     }
   }
 }

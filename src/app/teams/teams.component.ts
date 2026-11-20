@@ -13,6 +13,7 @@ import {
 import { createTeamDrawPlan, TeamDrawPlan } from '../../domain/team-draw';
 import { createSeededRng } from '../../domain/rng';
 import { TEAM_STRINGS } from '../../i18n/team-strings';
+import { showErrorPopup } from '../error-popup';
 
 @Component({
   selector: 'app-teams',
@@ -33,7 +34,6 @@ export class TeamsComponent implements OnInit {
   protected readonly secondaryColor = signal('#f1c40f');
   protected readonly captainId = signal<string | null>(null);
   protected readonly isSeed = signal(false);
-  protected readonly formError = signal<string | null>(null);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly unassignedSelectedIds = signal<ReadonlySet<string>>(new Set());
@@ -42,7 +42,6 @@ export class TeamsComponent implements OnInit {
   protected readonly drawBalance = signal(false);
   protected readonly drawSelectedExistingIds = signal<ReadonlySet<string>>(new Set());
   protected readonly drawPlan = signal<TeamDrawPlan | null>(null);
-  protected readonly drawError = signal<string | null>(null);
   protected readonly drawBusy = signal(false);
   protected readonly rosterMinimum = signal<number | null>(null);
   protected readonly rosterMaximum = signal<number | null>(null);
@@ -67,7 +66,7 @@ export class TeamsComponent implements OnInit {
 
   protected openAdd(): void {
     if (!this.canCreateOrDelete) {
-      this.statusMessage.set(TEAM_STRINGS.runningCreateDelete);
+      showErrorPopup(TEAM_STRINGS.runningCreateDelete);
       return;
     }
     const colors = getDefaultTeamColorPair(this.teams());
@@ -77,7 +76,6 @@ export class TeamsComponent implements OnInit {
     this.secondaryColor.set(colors.secondary);
     this.captainId.set(null);
     this.isSeed.set(false);
-    this.formError.set(null);
     this.formOpen.set(true);
   }
 
@@ -88,7 +86,6 @@ export class TeamsComponent implements OnInit {
     this.secondaryColor.set(team.secondaryColor);
     this.captainId.set(team.captainId);
     this.isSeed.set(team.isSeed);
-    this.formError.set(null);
     this.formOpen.set(true);
   }
 
@@ -132,8 +129,7 @@ export class TeamsComponent implements OnInit {
   protected async moveSelectedToTeam(): Promise<void> {
     const teamId = this.selectedTeamId();
     if (!teamId) {
-      this.statusMessage.set('Seleccioná un equipo.');
-      window.alert('Seleccioná un equipo antes de asignar jugadores.');
+      showErrorPopup('Seleccioná un equipo antes de asignar jugadores.');
       return;
     }
     await this.movePlayers([...this.unassignedSelectedIds()], teamId);
@@ -142,7 +138,7 @@ export class TeamsComponent implements OnInit {
   protected async moveSelectedToUnassigned(): Promise<void> {
     const teamId = this.selectedTeamId();
     if (!teamId) {
-      this.statusMessage.set('Seleccioná un equipo.');
+      showErrorPopup('Seleccioná un equipo.');
       return;
     }
     await this.movePlayers([...this.teamSelectedIds()], null);
@@ -153,8 +149,7 @@ export class TeamsComponent implements OnInit {
     destinationTeamId: string | null,
   ): Promise<void> {
     if (playerIds.length === 0) {
-      this.statusMessage.set(TEAM_STRINGS.noSelection);
-      window.alert(TEAM_STRINGS.noSelection);
+      showErrorPopup(TEAM_STRINGS.noSelection);
       return;
     }
 
@@ -191,14 +186,12 @@ export class TeamsComponent implements OnInit {
       this.statusMessage.set(TEAM_STRINGS.assignmentDone);
     } catch (error) {
       console.error('Player assignment failed', error);
-      this.statusMessage.set(TEAM_STRINGS.saveFailed);
-      window.alert(TEAM_STRINGS.saveFailed);
+      showErrorPopup(TEAM_STRINGS.saveFailed);
     }
   }
 
   protected closeForm(): void {
     this.formOpen.set(false);
-    this.formError.set(null);
   }
 
   protected selectTeam(teamId: string): void {
@@ -231,11 +224,11 @@ export class TeamsComponent implements OnInit {
       minimum <= 0 ||
       (maximum !== null && (!Number.isInteger(maximum) || maximum < minimum))
     ) {
-      this.rosterSettingsMessage.set(TEAM_STRINGS.rosterSettingsInvalid);
+      showErrorPopup(TEAM_STRINGS.rosterSettingsInvalid);
       return;
     }
     if (!this.canEditRosterSettings) {
-      this.rosterSettingsMessage.set(TEAM_STRINGS.rosterSettingsDisabled);
+      showErrorPopup(TEAM_STRINGS.rosterSettingsDisabled);
       return;
     }
 
@@ -245,7 +238,7 @@ export class TeamsComponent implements OnInit {
       this.rosterSettingsMessage.set(TEAM_STRINGS.rosterSettingsSaved);
     } catch (error) {
       console.error('Roster settings update failed', error);
-      this.rosterSettingsMessage.set(TEAM_STRINGS.saveFailed);
+      showErrorPopup(TEAM_STRINGS.saveFailed);
     }
   }
 
@@ -258,29 +251,27 @@ export class TeamsComponent implements OnInit {
     }
     this.drawSelectedExistingIds.set(next);
     this.drawPlan.set(null);
-    this.drawError.set(null);
   }
 
   protected async previewDraw(): Promise<void> {
-    this.drawError.set(null);
     this.drawPlan.set(null);
     if (!this.canDraw) {
-      this.drawError.set(TEAM_STRINGS.drawDisabledRunning);
+      showErrorPopup(TEAM_STRINGS.drawDisabledRunning);
       return;
     }
     if (this.unassignedPlayers.length === 0) {
-      this.drawError.set(TEAM_STRINGS.drawNoPlayers);
+      showErrorPopup(TEAM_STRINGS.drawNoPlayers);
       return;
     }
     const newTeamCount = Math.trunc(this.drawNewTeamCount());
     if (!Number.isInteger(newTeamCount) || newTeamCount < 0) {
-      this.drawError.set(TEAM_STRINGS.drawInvalidCount);
+      showErrorPopup(TEAM_STRINGS.drawInvalidCount);
       return;
     }
 
     const selectedExistingIds = this.drawSelectedExistingIds();
     if (newTeamCount === 0 && selectedExistingIds.size === 0) {
-      this.drawError.set(TEAM_STRINGS.drawInvalidCount);
+      showErrorPopup(TEAM_STRINGS.drawInvalidCount);
       return;
     }
     const existingTargets = this.teams()
@@ -295,7 +286,7 @@ export class TeamsComponent implements OnInit {
     }));
     const tournament = this.tournament();
     if (!tournament) {
-      this.drawError.set(TEAM_STRINGS.drawFailed);
+      showErrorPopup(TEAM_STRINGS.drawFailed);
       return;
     }
 
@@ -311,7 +302,7 @@ export class TeamsComponent implements OnInit {
       rng: createSeededRng(seed),
     });
     if (!result.ok) {
-      this.drawError.set(this.drawErrorMessage(result.error.code, result.error.params));
+      showErrorPopup(this.drawErrorMessage(result.error.code, result.error.params));
       return;
     }
     this.drawPlan.set(result.value);
@@ -384,7 +375,7 @@ export class TeamsComponent implements OnInit {
       this.statusMessage.set(TEAM_STRINGS.drawSaved);
     } catch (error) {
       console.error('Team draw failed', error);
-      this.drawError.set(TEAM_STRINGS.drawFailed);
+      showErrorPopup(TEAM_STRINGS.drawFailed);
     } finally {
       this.drawBusy.set(false);
     }
@@ -392,7 +383,6 @@ export class TeamsComponent implements OnInit {
 
   protected cancelDraw(): void {
     this.drawPlan.set(null);
-    this.drawError.set(null);
   }
 
   protected drawPlayers(assignment: {
@@ -443,12 +433,12 @@ export class TeamsComponent implements OnInit {
       teams: this.teams(),
     });
     if (!validation.ok) {
-      this.formError.set(validation.error.message);
+      showErrorPopup(validation.error.message);
       return;
     }
 
     if (!existing && !this.canCreateOrDelete) {
-      this.formError.set(TEAM_STRINGS.runningCreateDelete);
+      showErrorPopup(TEAM_STRINGS.runningCreateDelete);
       return;
     }
 
@@ -473,13 +463,13 @@ export class TeamsComponent implements OnInit {
       this.closeForm();
       this.statusMessage.set(null);
     } catch {
-      this.formError.set(TEAM_STRINGS.saveFailed);
+      showErrorPopup(TEAM_STRINGS.saveFailed);
     }
   }
 
   protected async deleteTeam(team: Team): Promise<void> {
     if (!this.canCreateOrDelete) {
-      this.statusMessage.set(TEAM_STRINGS.runningCreateDelete);
+      showErrorPopup(TEAM_STRINGS.runningCreateDelete);
       return;
     }
 
@@ -498,7 +488,7 @@ export class TeamsComponent implements OnInit {
       );
     } catch (error) {
       console.error('Team deletion failed', error);
-      this.statusMessage.set(TEAM_STRINGS.deleteFailed);
+      showErrorPopup(TEAM_STRINGS.deleteFailed);
     }
   }
 

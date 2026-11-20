@@ -13,10 +13,6 @@
 
   <button type="button" (click)="createTournament()">{{ strings.createTournament }}</button>
 
-  @if (errorMessage(); as error) {
-    <p role="alert">{{ error }}</p>
-  }
-
   @if (persistenceNotice(); as notice) {
     <p role="status">{{ notice }}</p>
   }

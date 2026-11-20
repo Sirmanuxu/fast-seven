@@ -12,6 +12,7 @@ import {
 } from '../../domain/model';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { RULES_STRINGS } from '../../i18n/rules-strings';
+import { showErrorPopup } from '../error-popup';
 
 type Preset = '3_2_1' | '4_2_0' | 'CUSTOM';
 
@@ -23,7 +24,6 @@ type Preset = '3_2_1' | '4_2_0' | 'CUSTOM';
 export class RulesComponent implements OnInit {
   protected readonly strings = RULES_STRINGS;
   protected readonly tournament = signal<Tournament | null>(null);
-  protected readonly errorMessage = signal<string | null>(null);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly recalculationWarning = signal(false);
   protected readonly pointsWarning = signal(false);
@@ -152,7 +152,7 @@ export class RulesComponent implements OnInit {
     const tournament = this.tournament();
     const rules = this.buildRules();
     if (!tournament || !this.name().trim() || !this.date() || !rules || this.matchDuration() < 0 || this.rest() < 0) {
-      this.errorMessage.set(
+      showErrorPopup(
         !this.name().trim()
           ? this.strings.nameRequired
           : !this.date()
@@ -162,12 +162,11 @@ export class RulesComponent implements OnInit {
       return;
     }
     if (this.rosterMax() !== null && this.rosterMin() > this.rosterMax()!) {
-      this.errorMessage.set(this.strings.rosterOrder);
+      showErrorPopup(this.strings.rosterOrder);
       return;
     }
 
     this.isSaving.set(true);
-    this.errorMessage.set(null);
     const schedule: ScheduleConfig = {
       startTime: this.startTime() ? `${this.date()}T${this.startTime()}:00` : null,
       matchDurationMin: this.matchDuration(),
@@ -188,7 +187,7 @@ export class RulesComponent implements OnInit {
       );
       await this.router.navigateByUrl('/panel');
     } catch {
-      this.errorMessage.set(this.strings.saveFailed);
+      showErrorPopup(this.strings.saveFailed);
     } finally {
       this.isSaving.set(false);
     }

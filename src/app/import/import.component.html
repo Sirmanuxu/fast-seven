@@ -21,10 +21,6 @@
     </label>
   </section>
 
-  @if (errorMessage(); as error) {
-    <p class="error" role="alert">{{ error }}</p>
-  }
-
   @if (preview(); as current) {
     @if (step() === 'FILE') {
       <section class="preview-card">
@@ -189,11 +185,7 @@
             </label>
           </div>
 
-          @if (missingMappings.length > 0) {
-            <p class="warning" role="alert">
-              {{ strings.missingMapping }}: {{ missingMappings.join(', ') }}
-            </p>
-          } @else {
+          @if (missingMappings.length === 0) {
             <p role="status">{{ strings.mappingSaved }}</p>
           }
 

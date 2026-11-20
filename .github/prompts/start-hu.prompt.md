@@ -10,4 +10,16 @@ Work on user story ${input:hu:e.g. HU-17}.
 4. Write a short plan (files to touch, tests to write, open questions) and wait for my OK.
 5. After my OK: create branch feat/hu-NN-slug, write the tests first from the reference cases,
    then the implementation, then the UI. Run lint, tests and build.
-6. Stop with the handoff summary described in AGENTS.md section 9. Do not start another story.
+6. Before stopping, create a persistent handoff document at
+   `docs/HU-NN-SLUG.md` (for example, `docs/HU-14-RULES.md`). This is mandatory; a chat
+   summary alone is not sufficient. The document must contain:
+   - an `Implementado` section with one checklist item for every acceptance criterion;
+   - a `Tests` section with the exact validation commands and their results, including lint,
+     the full test suite and the build;
+   - a `Verificación manual` section with concrete steps for every UI flow;
+   - a `Decisiones y pendientes` section with uncertainties, deferred dependencies and
+     anything requiring human approval.
+   Append every non-trivial decision to `docs/decisions.md` and link the handoff document
+   from the final response.
+7. Stop with the handoff summary described in AGENTS.md section 9. Do not start another story
+   or modify code for a subsequent story.

@@ -93,9 +93,6 @@
       </label>
       <button type="button" (click)="previewDraw()">{{ strings.drawPreview }}</button>
     }
-    @if (drawError(); as error) {
-      <p class="error" role="alert">{{ error }}</p>
-    }
     @if (drawPlan(); as plan) {
       <div class="draw-preview">
         <h3>{{ strings.drawPreviewTitle }}</h3>
@@ -170,10 +167,6 @@
       @if (colorsWarning()) {
         <p role="status">{{ strings.similarColors }}</p>
       }
-      @if (formError(); as error) {
-        <p class="error" role="alert">{{ error }}</p>
-      }
-
       <div class="actions">
         <button type="button" (click)="saveTeam()">{{ strings.save }}</button>
         <button type="button" (click)="closeForm()">{{ strings.cancel }}</button>

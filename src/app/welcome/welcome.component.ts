@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
+import { showErrorPopup } from '../error-popup';
 import {
   DEFAULT_CATEGORIES,
   DEFAULT_TIEBREAKERS,
@@ -17,7 +18,6 @@ import {
 export class WelcomeComponent implements OnInit {
   protected readonly strings = PERSISTENCE_STRINGS;
   protected readonly tournamentName = signal('');
-  protected readonly errorMessage = signal<string | null>(null);
   protected readonly persistenceNotice = signal<string | null>(null);
   private readonly router = inject(Router);
 
@@ -31,7 +31,7 @@ export class WelcomeComponent implements OnInit {
   protected async createTournament(): Promise<void> {
     const name = this.tournamentName().trim();
     if (!name) {
-      this.errorMessage.set(PERSISTENCE_STRINGS.nameRequired);
+      showErrorPopup(PERSISTENCE_STRINGS.nameRequired);
       return;
     }
 
@@ -68,7 +68,7 @@ export class WelcomeComponent implements OnInit {
       localStorage.setItem('fast-seven-last-screen', '/panel');
       await this.router.navigateByUrl('/panel');
     } catch {
-      this.errorMessage.set(PERSISTENCE_STRINGS.createFailed);
+      showErrorPopup(PERSISTENCE_STRINGS.createFailed);
     }
   }
 

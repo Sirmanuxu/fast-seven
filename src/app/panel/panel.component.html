@@ -19,11 +19,4 @@
     <p>Último dato guardado: {{ record.message }}</p>
   }
 
-  @if (popupBlocked()) {
-    <p role="alert">{{ strings.popupBlocked }}</p>
-  }
-
-  @if (storageError(); as error) {
-    <p role="alert">{{ error }}</p>
-  }
 </main>
