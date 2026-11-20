@@ -1,0 +1,89 @@
+<main>
+  <header>
+    <button type="button" (click)="goBack()">← {{ strings.back }}</button>
+    <h1>{{ strings.title }}</h1>
+  </header>
+
+  <p role="status">{{ strings.noWrite }}</p>
+
+  <section class="drop-zone" (drop)="onDrop($event)" (dragover)="preventDrop($event)">
+    <p>{{ strings.drop }}</p>
+    <label>
+      {{ strings.select }}
+      <input type="file" accept=".csv,.xlsx,.xls,text/csv" (change)="onFileInput($event)" />
+    </label>
+  </section>
+
+  @if (errorMessage(); as error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+
+  @if (preview(); as current) {
+    <section class="preview-card">
+      <h2>{{ current.fileName }}</h2>
+      <p>{{ strings.format }}: {{ current.format }}</p>
+      <p>{{ strings.rowCount }}: {{ current.rowCount }}</p>
+
+      @if (current.warning) {
+        <p class="warning" role="status">{{ current.warning }}</p>
+      }
+
+      @if (current.format === 'CSV') {
+        <div class="options">
+          <label>
+            {{ strings.encoding }}
+            <select [value]="encoding()" (change)="onEncodingChange($event)">
+              <option value="UTF-8">UTF-8</option>
+              <option value="Windows-1252">Windows-1252</option>
+              <option value="ISO-8859-1">ISO-8859-1</option>
+            </select>
+          </label>
+          <label>
+            {{ strings.delimiter }}
+            <select [value]="delimiter()" (change)="onDelimiterChange($event)">
+              <option value=";">; punto y coma</option>
+              <option value=",">, coma</option>
+              <option value="&#9;">tab</option>
+            </select>
+          </label>
+          <button type="button" (click)="reread()">{{ strings.reread }}</button>
+        </div>
+      }
+
+      @if (current.format === 'EXCEL' && current.sheetNames.length > 1) {
+        <label>
+          {{ strings.sheet }}
+          <select [value]="sheetName()" (change)="onSheetChange($event)">
+            @for (sheet of current.sheetNames; track sheet) {
+              <option [value]="sheet">{{ sheet }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      @if (current.headers.length > 0) {
+        <h3>{{ strings.preview }}</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                @for (header of current.headers; track $index) {
+                  <th>{{ header }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of current.previewRows; track $index) {
+                <tr>
+                  @for (value of row; track $index) {
+                    <td>{{ value }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+</main>

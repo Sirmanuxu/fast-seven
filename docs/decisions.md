@@ -112,3 +112,10 @@
   numeric suffix.
 - **Reason:** `(1)` is represented by no suffix on the original record, while `(2)` and onward
   distinguish additional players.
+
+## 2026-11-20 - HU-08 - Import file reading
+
+- **Decision:** Pin PapaParse 5.7.1 and SheetJS 0.18.5 with exact versions.
+- **Reason:** HU-08 needs stable CSV and Excel readers and repository dependencies are pinned.
+- **Decision:** Keep this story read-only.
+- **Reason:** Mapping and confirmation belong to HU-09 through HU-11, so HU-08 must not write data.
