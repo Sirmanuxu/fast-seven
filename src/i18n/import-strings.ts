@@ -1,0 +1,18 @@
+export const IMPORT_STRINGS = {
+  title: 'Importar jugadores',
+  drop: 'Arrastrá un archivo CSV, XLSX o XLS acá',
+  select: 'Elegir archivo',
+  unsupported: 'Formato no admitido. Seleccioná un archivo CSV, XLSX o XLS.',
+  encoding: 'Codificación',
+  delimiter: 'Separador',
+  sheet: 'Hoja',
+  file: 'Archivo',
+  format: 'Formato',
+  rowCount: 'Filas de datos',
+  preview: 'Vista previa',
+  noWrite: 'Esta etapa solo lee el archivo. Todavía no escribe jugadores en la base.',
+  reread: 'Volver a leer',
+  back: 'Volver al panel',
+  emptyDrop: 'No se encontró ningún archivo.',
+  readFailed: 'No se pudo leer el archivo.',
+} as const;
