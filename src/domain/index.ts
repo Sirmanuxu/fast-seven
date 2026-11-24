@@ -13,3 +13,4 @@ export * from './scorers';
 export * from './format-options';
 export * from './group-draw';
 export * from './round-robin';
+export * from './knockout';
