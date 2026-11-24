@@ -1,5 +1,19 @@
 # Decision log
 
+## 2026-11-23 - HU-17 - Tiebreak resolution
+
+- **Decision:** Resolve tied standings recursively from the configured criterion sequence, using
+  mini-tables for three or more teams and restarting the sequence for subsets that remain tied.
+- **Reason:** This matches the backlog requirement and prevents an overall statistic from
+  incorrectly deciding a subset that was separated by head-to-head results.
+- **Decision:** Reuse a persisted `TIEBREAK` draw only when its exact tied team set is unchanged.
+- **Reason:** Editing results can change the participants in a tie; reusing the old order would make
+  the derived table depend on stale randomness.
+- **Decision:** Use an epoch sentinel for newly created draw timestamps.
+- **Reason:** `ComputeStandings` currently injects an `Rng` but no `Clock`; using browser time would
+  violate domain purity, while the sentinel keeps recomputation deterministic until the contract
+  can be extended.
+
 ## 2026-11-20 - HU-16 - Standings domain scope
 
 - **Decision:** Implement standings as a pure derived domain function and defer the positions UI
