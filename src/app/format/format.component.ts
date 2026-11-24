@@ -16,6 +16,7 @@ export class FormatComponent implements OnInit {
   protected readonly tournament = signal<Tournament | null>(null);
   protected readonly teamCount = signal(0);
   protected readonly matchDuration = signal(40);
+  protected readonly restDuration = signal(10);
   protected readonly selected = signal<FormatId | null>(null);
   protected readonly compared = signal<readonly FormatId[]>([]);
   protected readonly statusMessage = signal<string | null>(null);
@@ -29,6 +30,7 @@ export class FormatComponent implements OnInit {
     return computeFormatOptions(this.teamCount(), {
       ...tournament.schedule,
       matchDurationMin: this.matchDuration(),
+      restMin: this.restDuration(),
     });
   }
 
@@ -41,6 +43,7 @@ export class FormatComponent implements OnInit {
     this.tournament.set(tournament);
     this.teamCount.set(await this.getTeamCount());
     this.matchDuration.set(tournament.schedule.matchDurationMin);
+    this.restDuration.set(tournament.schedule.restMin);
     this.selected.set(tournament.formatParams?.format ?? null);
     this.rebuildComparison();
   }
@@ -54,6 +57,11 @@ export class FormatComponent implements OnInit {
   protected setMatchDuration(value: string): void {
     const parsed = Number(value);
     this.matchDuration.set(Number.isInteger(parsed) && parsed >= 0 ? parsed : 0);
+  }
+
+  protected setRestDuration(value: string): void {
+    const parsed = Number(value);
+    this.restDuration.set(Number.isInteger(parsed) && parsed >= 0 ? parsed : 0);
   }
 
   protected toggleComparison(format: FormatId): void {

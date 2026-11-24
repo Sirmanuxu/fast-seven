@@ -15,6 +15,9 @@
     <label>{{ strings.matchDuration }}
       <input type="number" min="0" [value]="matchDuration()" (input)="setMatchDuration($any($event.target).value)" />
     </label>
+    <label>{{ strings.restDuration }}
+      <input type="number" min="0" [value]="restDuration()" (input)="setRestDuration($any($event.target).value)" />
+    </label>
   </section>
 
   <section class="comparison">

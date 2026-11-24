@@ -6,6 +6,7 @@ interface FormatStrings {
   readonly back: string;
   readonly teamCount: string;
   readonly matchDuration: string;
+  readonly restDuration: string;
   readonly minutes: string;
   readonly hours: string;
   readonly compare: string;
@@ -29,6 +30,7 @@ export const FORMAT_STRINGS: FormatStrings = {
   back: 'Volver',
   teamCount: 'Cantidad de equipos',
   matchDuration: 'Duración de cada partido (minutos)',
+  restDuration: 'Descanso entre partidos (minutos)',
   minutes: 'min',
   hours: 'h',
   compare: 'Comparar',

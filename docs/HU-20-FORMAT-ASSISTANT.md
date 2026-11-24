@@ -4,7 +4,7 @@
 
 - [x] Catálogo de los siete formatos con una tarjeta por formato.
 - [x] Cantidad de equipos real cargada desde la base y editable para simular escenarios.
-- [x] Duración de partido editable; la duración estimada usa partido más descanso configurado.
+- [x] Duración de partido y descanso editables; la duración estimada usa ambos valores.
 - [x] Parámetros sugeridos, partidos totales, mínimo por equipo y advertencias.
 - [x] Duraciones de hasta 60 minutos en minutos y duraciones mayores expresadas en horas y minutos.
 - [x] Formatos no viables deshabilitados con el motivo en español.
