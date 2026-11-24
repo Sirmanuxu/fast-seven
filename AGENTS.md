@@ -18,18 +18,18 @@ A local, single-user web app to run a rugby seven tournament end to end: players
 
 Use the latest stable version of each tool **at project creation**, then pin exact versions (no `^` or `~` in `package.json`) and record them in the table below. Never upgrade a dependency on your own.
 
-| Concern | Choice |
-|---|---|
-| Framework | Angular (latest stable), standalone components, signals, new control flow (`@if`, `@for`) |
-| Language | TypeScript, `strict` mode on, no `any` unless justified in a comment |
-| UI components | Angular Material, themed through a single token file (see section 7) |
-| Persistence | IndexedDB with Dexie |
-| CSV / Excel import | PapaParse / SheetJS |
-| Tests | Vitest |
-| Lint / format | angular-eslint + Prettier (defaults) |
-| Package manager | npm |
-| PWA | `@angular/service-worker` |
-| Routing | Hash routing (GitHub Pages cannot serve SPA routes) |
+| Concern            | Choice                                                                                    |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| Framework          | Angular (latest stable), standalone components, signals, new control flow (`@if`, `@for`) |
+| Language           | TypeScript, `strict` mode on, no `any` unless justified in a comment                      |
+| UI components      | Angular Material, themed through a single token file (see section 7)                      |
+| Persistence        | IndexedDB with Dexie                                                                      |
+| CSV / Excel import | PapaParse / SheetJS                                                                       |
+| Tests              | Vitest                                                                                    |
+| Lint / format      | angular-eslint + Prettier (defaults)                                                      |
+| Package manager    | npm                                                                                       |
+| PWA                | `@angular/service-worker`                                                                 |
+| Routing            | Hash routing (GitHub Pages cannot serve SPA routes)                                       |
 
 fast-seven@0.0.0 /home/manuel/Desktop/fast-seven/fast-seven
 ├── @angular/build@22.3.0
@@ -71,19 +71,19 @@ Allowed dependencies between folders: `app` -> `data`, `domain`, `sync`, `import
 
 ## 4. Glossary (backlog term -> code name)
 
-| Backlog (Spanish) | Code |
-|---|---|
-| Torneo | `Tournament` |
-| Jugador | `Player` |
-| Equipo | `Team` |
-| Fase / Grupo / Partido | `Stage` / `Group` / `Match` |
-| EventoPartido | `MatchEvent` (`TRY`, `CONVERSION`) |
-| Sorteo | `Draw` |
-| Respaldo | `Backup` |
-| EstadoProyector | `ProjectorState` |
-| Capitan / Cabeza de serie | `captain` / `seed` (boolean `isSeed`) |
-| Categoria / Genero | `category` / `gender` (`'M' \| 'F'`) |
-| Retirado | `WITHDRAWN` (team status, `ACTIVE` otherwise) |
+| Backlog (Spanish)         | Code                                          |
+| ------------------------- | --------------------------------------------- |
+| Torneo                    | `Tournament`                                  |
+| Jugador                   | `Player`                                      |
+| Equipo                    | `Team`                                        |
+| Fase / Grupo / Partido    | `Stage` / `Group` / `Match`                   |
+| EventoPartido             | `MatchEvent` (`TRY`, `CONVERSION`)            |
+| Sorteo                    | `Draw`                                        |
+| Respaldo                  | `Backup`                                      |
+| EstadoProyector           | `ProjectorState`                              |
+| Capitan / Cabeza de serie | `captain` / `seed` (boolean `isSeed`)         |
+| Categoria / Genero        | `category` / `gender` (`'M' \| 'F'`)          |
+| Retirado                  | `WITHDRAWN` (team status, `ACTIVE` otherwise) |
 
 Enums (UPPER_SNAKE_CASE values):
 
@@ -174,10 +174,21 @@ For each HU:
   - Mention the story in the body or footer: `Refs: HU-17`.
 - Commit **regularly, at meaningful checkpoints**: for example domain logic with its tests, then persistence, then UI. Roughly 3 to 8 commits per HU. Do not make one commit per HU and do not make micro-commits for every small edit.
 - Each commit should leave the project building and tests passing.
-- Before every commit, increment the patch version and keep these locations synchronized:
-  `package.json`, `package-lock.json` and `src/index.html`.
-- The version in `src/index.html` is the visible build badge. Include the version bump in the same
-  commit as the change; never leave a committed change with the previous application version.
+- Use semantic version components for HU work:
+  - **Minor = HU number**: HU-21 uses minor `21` (for example, `0.21.0`).
+  - **Patch = commit within that HU**: the first commit of HU-21 can be `0.21.0` and each
+    later commit increments only the patch (`0.21.1`, `0.21.2`, etc.).
+  - **Major** is reserved for explicit breaking or fundamental product releases and is not
+    incremented automatically when starting a HU or changing functionality.
+- At the start of HU-N, set the version to `0.N.0` unless the project major has already been
+  changed explicitly. Before every later commit in that HU, increment only the patch.
+- Keep these locations synchronized for every version change:
+  `package.json` and `package-lock.json`.
+- `package.json` is the only source of truth for the application version.
+- The visible badge must read the version from `package.json` through the application code.
+  Never duplicate the version in `src/index.html` or in component constants.
+- Before each commit, update `package.json` and let `npm install --package-lock-only`
+  synchronize `package-lock.json`. Include the version bump in the same commit as the change.
 - Never force-push, never rewrite shared history, never commit secrets, `node_modules` or build output.
 - Examples:
   - `feat(domain): compute group standings with tiebreak explanation`

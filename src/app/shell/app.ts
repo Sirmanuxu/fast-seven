@@ -5,14 +5,17 @@ import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { showErrorPopup } from '../error-popup';
+import packageMetadata from '../../../package.json';
 
 @Component({
   imports: [RouterOutlet],
   selector: 'app-root',
   templateUrl: './app.html',
+  styleUrl: './app.css',
 })
 export class App implements OnInit {
   protected readonly strings = PERSISTENCE_STRINGS;
+  protected readonly appVersion = packageMetadata.version;
   protected readonly ready = signal(false);
   protected readonly databaseAvailable = signal(true);
   private readonly router = inject(Router);

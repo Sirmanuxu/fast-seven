@@ -11,6 +11,7 @@
 - [x] Las rondas suizas se limitan a 1..n-1 y advierten si quedan pocas para definir campeón.
 - [x] Los errores bloqueantes impiden guardar el formato.
 - [x] Cada parámetro visible incluye una descripción en español rioplatense.
+- [x] El badge de versión se obtiene de `package.json`; `src/index.html` no duplica el número.
 
 ## Cómo verificarlo
 
