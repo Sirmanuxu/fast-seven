@@ -17,6 +17,7 @@ interface FormatStrings {
   readonly saveFailed: string;
   readonly totalMatches: string;
   readonly minMatchesPerTeam: string;
+  readonly maxMatchesPerTeam: string;
   readonly estimatedDuration: string;
   readonly warnings: string;
   readonly notViable: string;
@@ -41,6 +42,7 @@ export const FORMAT_STRINGS: FormatStrings = {
   saveFailed: 'No se pudo guardar el formato. Revisá el almacenamiento del navegador.',
   totalMatches: 'Partidos totales',
   minMatchesPerTeam: 'Partidos mínimos por equipo',
+  maxMatchesPerTeam: 'Partidos máximos por equipo',
   estimatedDuration: 'Duración estimada',
   warnings: 'Advertencias',
   notViable: 'No disponible',

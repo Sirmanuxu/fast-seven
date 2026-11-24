@@ -83,19 +83,27 @@ const makeSuggestedParams = (format: FormatId, teamCount: number): FormatParams 
 const calculateTotals = (
   params: FormatParams,
   teamCount: number,
-): { readonly totalMatches: number; readonly minMatchesPerTeam: number; readonly warnings: readonly Warning[] } => {
+): {
+  readonly totalMatches: number;
+  readonly minMatchesPerTeam: number;
+  readonly maxMatchesPerTeam: number;
+  readonly warnings: readonly Warning[];
+} => {
   switch (params.format) {
     case 'ROUND_ROBIN':
       return {
         totalMatches: (params.rounds * teamCount * (teamCount - 1)) / 2,
         minMatchesPerTeam: params.rounds * (teamCount - 1),
+        maxMatchesPerTeam: params.rounds * (teamCount - 1),
         warnings: [],
       };
     case 'KNOCKOUT': {
       const totalMatches = teamCount - 1 + (params.thirdPlaceMatch ? 1 : 0);
+      const bracketRounds = Math.log2(nextPowerOfTwo(teamCount));
       return {
         totalMatches,
         minMatchesPerTeam: 1,
+        maxMatchesPerTeam: bracketRounds,
         warnings:
           teamCount !== nextPowerOfTwo(teamCount)
             ? [warning('KNOCKOUT_BYES', 'format.knockoutByes', { count: nextPowerOfTwo(teamCount) - teamCount })]
@@ -116,6 +124,7 @@ const calculateTotals = (
       return {
         totalMatches,
         minMatchesPerTeam: Math.min(...sizes) - 1,
+        maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(bracketSize),
         warnings,
       };
     }
@@ -128,6 +137,7 @@ const calculateTotals = (
         totalMatches: groupMatches(sizes) + cupCount * (params.groupCount - 1) +
           (params.thirdPlaceMatch ? cupCount : 0),
         minMatchesPerTeam: Math.min(...sizes) - 1 + 1,
+        maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)),
         warnings,
       };
     }
@@ -138,6 +148,7 @@ const calculateTotals = (
       return {
         totalMatches: groupMatches(sizes) + playoffMatches,
         minMatchesPerTeam: Math.min(...sizes),
+        maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)) + 1,
         warnings,
       };
     }
@@ -150,6 +161,7 @@ const calculateTotals = (
       return {
         totalMatches: params.rounds * Math.floor(teamCount / 2),
         minMatchesPerTeam,
+        maxMatchesPerTeam: params.rounds,
         warnings,
       };
     }
@@ -157,6 +169,8 @@ const calculateTotals = (
       return {
         totalMatches: 2 * teamCount - 2 + (params.grandFinalReset ? 1 : 0),
         minMatchesPerTeam: 2,
+        maxMatchesPerTeam:
+          2 * Math.log2(nextPowerOfTwo(teamCount)) + (params.grandFinalReset ? 1 : 0),
         warnings:
           teamCount !== nextPowerOfTwo(teamCount)
             ? [warning('DOUBLE_ELIMINATION_BYES', 'format.doubleEliminationByes', {
@@ -173,7 +187,7 @@ export const computeFormatOptions: ComputeFormatOptions = (teamCount, schedule) 
     const suggestedParams = makeSuggestedParams(format, teamCount);
     const totals = suggestedParams
       ? calculateTotals(suggestedParams, teamCount)
-      : { totalMatches: 0, minMatchesPerTeam: 0, warnings: [] };
+      : { totalMatches: 0, minMatchesPerTeam: 0, maxMatchesPerTeam: 0, warnings: [] };
     return {
       format,
       viable: reason === null,
@@ -181,6 +195,7 @@ export const computeFormatOptions: ComputeFormatOptions = (teamCount, schedule) 
       suggestedParams,
       totalMatches: totals.totalMatches,
       minMatchesPerTeam: totals.minMatchesPerTeam,
+      maxMatchesPerTeam: totals.maxMatchesPerTeam,
       estimatedDurationMin:
         totals.totalMatches * Math.max(0, schedule.matchDurationMin + schedule.restMin),
       warnings: totals.warnings,

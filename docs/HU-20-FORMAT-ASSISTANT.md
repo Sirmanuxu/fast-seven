@@ -6,6 +6,7 @@
 - [x] Cantidad de equipos real cargada desde la base y editable para simular escenarios.
 - [x] Duración de partido y descanso editables; la duración estimada usa ambos valores.
 - [x] Parámetros sugeridos, partidos totales, mínimo por equipo y advertencias.
+- [x] Máximo de partidos posibles por equipo según la ruta más larga del formato.
 - [x] Duraciones de hasta 60 minutos en minutos y duraciones mayores expresadas en horas y minutos.
 - [x] Formatos no viables deshabilitados con el motivo en español.
 - [x] Comparación lado a lado de hasta tres formatos, incluyendo los partidos mínimos por equipo.

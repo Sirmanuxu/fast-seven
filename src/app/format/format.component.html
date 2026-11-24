@@ -45,6 +45,7 @@
           <dl>
             <div><dt>{{ strings.totalMatches }}</dt><dd>{{ option.totalMatches }}</dd></div>
             <div><dt>{{ strings.minMatchesPerTeam }}</dt><dd>{{ option.minMatchesPerTeam }}</dd></div>
+            <div><dt>{{ strings.maxMatchesPerTeam }}</dt><dd>{{ option.maxMatchesPerTeam }}</dd></div>
             <div><dt>{{ strings.estimatedDuration }}</dt><dd>{{ formatDuration(option.estimatedDurationMin) }}</dd></div>
           </dl>
           @for (warning of option.warnings; track warning.code) {
@@ -68,6 +69,7 @@
               <h3>{{ formatLabel(format) }}</h3>
               <p>{{ option.totalMatches }} {{ strings.totalMatches.toLowerCase() }}</p>
               <p>{{ strings.minMatchesPerTeam }}: {{ option.minMatchesPerTeam }}</p>
+              <p>{{ strings.maxMatchesPerTeam }}: {{ option.maxMatchesPerTeam }}</p>
               <p>{{ formatDuration(option.estimatedDurationMin) }}</p>
             </div>
           }
