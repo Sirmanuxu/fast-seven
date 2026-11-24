@@ -1,5 +1,13 @@
 # Decision log
 
+## 2026-11-24 - HU-23 - Round-robin fixture balance
+
+- **Decision:** Generate one-lap circles with deterministic team order and use precomputed
+  home/away orientations for 2–8 teams, so 1–2 laps satisfy pair, round and venue-balance rules.
+- **Reason:** The circle method provides one fixture per pair and one bye position for odd team
+  counts; deterministic orientations keep the home/away difference within one for the required
+  reference sizes without introducing browser randomness or storing derived data.
+
 ## 2026-11-24 - HU-22 - Seeded group draw
 
 - **Decision:** Distribute seeded teams in deterministic rounds, assigning one to each group

@@ -12,3 +12,4 @@ export * from './compare-across-groups';
 export * from './scorers';
 export * from './format-options';
 export * from './group-draw';
+export * from './round-robin';
