@@ -102,6 +102,15 @@ export class FormatComponent implements OnInit {
     return this.options.find((option) => option.format === format);
   }
 
+  protected formatDuration(totalMinutes: number): string {
+    if (totalMinutes <= 60) return `${totalMinutes} ${this.strings.minutes}`;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return minutes === 0
+      ? `${hours} ${this.strings.hours}`
+      : `${hours} ${this.strings.hours} ${minutes} ${this.strings.minutes}`;
+  }
+
   protected async save(): Promise<void> {
     const tournament = this.tournament();
     const format = this.options.find((option) => option.format === this.selected() && option.viable);

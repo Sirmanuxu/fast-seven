@@ -7,6 +7,7 @@ interface FormatStrings {
   readonly teamCount: string;
   readonly matchDuration: string;
   readonly minutes: string;
+  readonly hours: string;
   readonly compare: string;
   readonly selected: string;
   readonly select: string;
@@ -29,6 +30,7 @@ export const FORMAT_STRINGS: FormatStrings = {
   teamCount: 'Cantidad de equipos',
   matchDuration: 'Duración de cada partido (minutos)',
   minutes: 'min',
+  hours: 'h',
   compare: 'Comparar',
   selected: 'Seleccionado',
   select: 'Elegir formato',
@@ -36,7 +38,7 @@ export const FORMAT_STRINGS: FormatStrings = {
   saved: 'Formato guardado. Todavía no se generó el fixture.',
   saveFailed: 'No se pudo guardar el formato. Revisá el almacenamiento del navegador.',
   totalMatches: 'Partidos totales',
-  minMatchesPerTeam: 'Mínimo por equipo',
+  minMatchesPerTeam: 'Partidos mínimos por equipo',
   estimatedDuration: 'Duración estimada',
   warnings: 'Advertencias',
   notViable: 'No disponible',
