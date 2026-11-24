@@ -1,6 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { computeFormatOptions } from '../../domain/format-options';
+import {
+  computeFormatOption,
+  computeFormatOptions,
+  getGroupCountAlternatives,
+  getGroupSizes,
+  validateFormatParams,
+} from '../../domain/format-options';
 import { FormatId, FormatOption, FormatParams, Tournament } from '../../domain/model';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { FORMAT_STRINGS } from '../../i18n/format-strings';
@@ -18,6 +24,7 @@ export class FormatComponent implements OnInit {
   protected readonly matchDuration = signal(40);
   protected readonly restDuration = signal(10);
   protected readonly selected = signal<FormatId | null>(null);
+  protected readonly formatParams = signal<FormatParams | null>(null);
   protected readonly compared = signal<readonly FormatId[]>([]);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly isSaving = signal(false);
@@ -27,11 +34,16 @@ export class FormatComponent implements OnInit {
   protected get options(): readonly FormatOption[] {
     const tournament = this.tournament();
     if (!tournament) return [];
-    return computeFormatOptions(this.teamCount(), {
+    const schedule = {
       ...tournament.schedule,
       matchDurationMin: this.matchDuration(),
       restMin: this.restDuration(),
-    });
+    };
+    const catalog = computeFormatOptions(this.teamCount(), schedule);
+    const params = this.formatParams();
+    if (!params) return catalog;
+    const custom = computeFormatOption(this.teamCount(), schedule, params);
+    return catalog.map((option) => (option.format === params.format ? custom : option));
   }
 
   async ngOnInit(): Promise<void> {
@@ -45,6 +57,7 @@ export class FormatComponent implements OnInit {
     this.matchDuration.set(tournament.schedule.matchDurationMin);
     this.restDuration.set(tournament.schedule.restMin);
     this.selected.set(tournament.formatParams?.format ?? null);
+    this.formatParams.set(tournament.formatParams);
     this.rebuildComparison();
   }
 
@@ -74,7 +87,86 @@ export class FormatComponent implements OnInit {
   }
 
   protected choose(option: FormatOption): void {
-    if (option.viable) this.selected.set(option.format);
+    if (option.viable && option.suggestedParams) {
+      this.selected.set(option.format);
+      this.formatParams.set(option.suggestedParams);
+    }
+  }
+
+  protected setRoundCount(value: string): void {
+    const params = this.formatParams();
+    const rounds = Number(value);
+    if (!params || !Number.isInteger(rounds)) return;
+    if (params.format === 'ROUND_ROBIN')
+      this.formatParams.set({ ...params, rounds: rounds === 2 ? 2 : 1 });
+    if (params.format === 'SWISS') this.formatParams.set({ ...params, rounds });
+  }
+
+  protected setGroupCount(value: string): void {
+    const params = this.formatParams();
+    const groupCount = Number(value);
+    if (!params || !Number.isInteger(groupCount)) return;
+    if (
+      params.format === 'GROUPS_KNOCKOUT' ||
+      params.format === 'GROUPS_CUPS' ||
+      params.format === 'GROUPS_POSITION_PLAYOFFS'
+    )
+      this.formatParams.set({ ...params, groupCount });
+  }
+
+  protected setQualifiers(value: string): void {
+    const params = this.formatParams();
+    const qualifiersPerGroup = Number(value);
+    if (!params || params.format !== 'GROUPS_KNOCKOUT' || !Number.isInteger(qualifiersPerGroup))
+      return;
+    this.formatParams.set({ ...params, qualifiersPerGroup });
+  }
+
+  protected setThirdPlace(value: boolean): void {
+    const params = this.formatParams();
+    if (!params) return;
+    if (params.format === 'GROUPS_KNOCKOUT')
+      this.formatParams.set({ ...params, thirdPlaceMatch: value });
+    if (params.format === 'GROUPS_CUPS')
+      this.formatParams.set({ ...params, thirdPlaceMatch: value });
+    if (params.format === 'KNOCKOUT') this.formatParams.set({ ...params, thirdPlaceMatch: value });
+  }
+
+  protected setGrandFinalReset(value: boolean): void {
+    const params = this.formatParams();
+    if (!params || params.format !== 'DOUBLE_ELIMINATION') return;
+    this.formatParams.set({ ...params, grandFinalReset: value });
+  }
+
+  protected get parameterOption(): FormatOption | null {
+    const tournament = this.tournament();
+    const params = this.formatParams();
+    if (!tournament || !params) return null;
+    return computeFormatOption(
+      this.teamCount(),
+      {
+        ...tournament.schedule,
+        matchDurationMin: this.matchDuration(),
+        restMin: this.restDuration(),
+      },
+      params,
+    );
+  }
+
+  protected get parameterErrors(): readonly string[] {
+    const params = this.formatParams();
+    if (!params) return [];
+    return validateFormatParams(this.teamCount(), params).map((error) =>
+      this.message(error.messageKey, error.params),
+    );
+  }
+
+  protected get groupAlternatives(): readonly number[] {
+    return getGroupCountAlternatives(this.teamCount());
+  }
+
+  protected groupSizeText(groupCount: number): string {
+    return getGroupSizes(this.teamCount(), groupCount).join('-');
   }
 
   protected formatLabel(format: FormatId): string {
@@ -95,7 +187,8 @@ export class FormatComponent implements OnInit {
     if (!params) return '';
     if (params.format === 'ROUND_ROBIN') return `Vueltas: ${params.rounds}`;
     if (params.format === 'SWISS') return `Rondas: ${params.rounds}`;
-    if (params.format === 'DOUBLE_ELIMINATION') return `Final con reinicio: ${params.grandFinalReset ? 'sí' : 'no'}`;
+    if (params.format === 'DOUBLE_ELIMINATION')
+      return `Final con reinicio: ${params.grandFinalReset ? 'sí' : 'no'}`;
     if (params.format === 'GROUPS_KNOCKOUT') {
       return `Grupos: ${params.groupCount}; clasificados por grupo: ${params.qualifiersPerGroup}; 3er puesto: ${params.thirdPlaceMatch ? 'sí' : 'no'}`;
     }
@@ -121,13 +214,15 @@ export class FormatComponent implements OnInit {
 
   protected async save(): Promise<void> {
     const tournament = this.tournament();
-    const format = this.options.find((option) => option.format === this.selected() && option.viable);
-    if (!tournament || !format?.suggestedParams) return;
+    const params = this.formatParams();
+    if (!tournament || !params || validateFormatParams(this.teamCount(), params).length > 0) return;
+    const format = this.options.find((option) => option.format === params.format && option.viable);
+    if (!format) return;
     this.isSaving.set(true);
     try {
-      await tournamentRepository.updateFormat(format.suggestedParams);
+      await tournamentRepository.updateFormat(params);
       this.statusMessage.set(this.strings.saved);
-      this.tournament.set({ ...tournament, formatParams: format.suggestedParams });
+      this.tournament.set({ ...tournament, formatParams: params });
     } catch {
       showErrorPopup(this.strings.saveFailed);
     } finally {
@@ -145,7 +240,11 @@ export class FormatComponent implements OnInit {
 
   private rebuildComparison(): void {
     const viable = this.options.filter((option) => option.viable).map((option) => option.format);
-    this.compared.set(this.compared().filter((format) => viable.includes(format)).slice(0, 3));
+    this.compared.set(
+      this.compared()
+        .filter((format) => viable.includes(format))
+        .slice(0, 3),
+    );
   }
 
   private message(key: string, params?: Readonly<Record<string, string | number>>): string {

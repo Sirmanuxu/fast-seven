@@ -9,14 +9,32 @@
   }
 
   <section class="controls">
-    <label>{{ strings.teamCount }}
-      <input type="number" min="0" [value]="teamCount()" (input)="setTeamCount($any($event.target).value)" />
+    <label
+      >{{ strings.teamCount }}
+      <input
+        type="number"
+        min="0"
+        [value]="teamCount()"
+        (input)="setTeamCount($any($event.target).value)"
+      />
     </label>
-    <label>{{ strings.matchDuration }}
-      <input type="number" min="0" [value]="matchDuration()" (input)="setMatchDuration($any($event.target).value)" />
+    <label
+      >{{ strings.matchDuration }}
+      <input
+        type="number"
+        min="0"
+        [value]="matchDuration()"
+        (input)="setMatchDuration($any($event.target).value)"
+      />
     </label>
-    <label>{{ strings.restDuration }}
-      <input type="number" min="0" [value]="restDuration()" (input)="setRestDuration($any($event.target).value)" />
+    <label
+      >{{ strings.restDuration }}
+      <input
+        type="number"
+        min="0"
+        [value]="restDuration()"
+        (input)="setRestDuration($any($event.target).value)"
+      />
     </label>
   </section>
 
@@ -24,7 +42,12 @@
     <h2>{{ strings.compare }}</h2>
     @for (option of options; track option.format) {
       <label class="compare-option">
-        <input type="checkbox" [checked]="compared().includes(option.format)" [disabled]="!option.viable && !compared().includes(option.format)" (change)="toggleComparison(option.format)" />
+        <input
+          type="checkbox"
+          [checked]="compared().includes(option.format)"
+          [disabled]="!option.viable && !compared().includes(option.format)"
+          (change)="toggleComparison(option.format)"
+        />
         {{ formatLabel(option.format) }}
       </label>
     }
@@ -32,7 +55,11 @@
 
   <div class="cards">
     @for (option of options; track option.format) {
-      <article class="card" [class.disabled]="!option.viable" [class.selected]="selected() === option.format">
+      <article
+        class="card"
+        [class.disabled]="!option.viable"
+        [class.selected]="selected() === option.format"
+      >
         <header>
           <h2>{{ formatLabel(option.format) }}</h2>
           @if (selected() === option.format) {
@@ -41,12 +68,26 @@
         </header>
         <p>{{ strings.descriptions[option.format] }}</p>
         @if (option.viable) {
-          <p><strong>{{ strings.params }}:</strong> {{ paramsText(option.suggestedParams) }}</p>
+          <p>
+            <strong>{{ strings.params }}:</strong> {{ paramsText(option.suggestedParams) }}
+          </p>
           <dl>
-            <div><dt>{{ strings.totalMatches }}</dt><dd>{{ option.totalMatches }}</dd></div>
-            <div><dt>{{ strings.minMatchesPerTeam }}</dt><dd>{{ option.minMatchesPerTeam }}</dd></div>
-            <div><dt>{{ strings.maxMatchesPerTeam }}</dt><dd>{{ option.maxMatchesPerTeam }}</dd></div>
-            <div><dt>{{ strings.estimatedDuration }}</dt><dd>{{ formatDuration(option.estimatedDurationMin) }}</dd></div>
+            <div>
+              <dt>{{ strings.totalMatches }}</dt>
+              <dd>{{ option.totalMatches }}</dd>
+            </div>
+            <div>
+              <dt>{{ strings.minMatchesPerTeam }}</dt>
+              <dd>{{ option.minMatchesPerTeam }}</dd>
+            </div>
+            <div>
+              <dt>{{ strings.maxMatchesPerTeam }}</dt>
+              <dd>{{ option.maxMatchesPerTeam }}</dd>
+            </div>
+            <div>
+              <dt>{{ strings.estimatedDuration }}</dt>
+              <dd>{{ formatDuration(option.estimatedDurationMin) }}</dd>
+            </div>
           </dl>
           @for (warning of option.warnings; track warning.code) {
             <p class="warning">{{ warningText(warning.code, option) }}</p>
@@ -78,5 +119,136 @@
     </section>
   }
 
-  <button type="button" (click)="save()" [disabled]="isSaving() || !selected()">{{ strings.save }}</button>
+  @if (parameterOption; as option) {
+    <section class="parameters">
+      <h2>{{ strings.parameters }}</h2>
+      @if (formatParams(); as params) {
+        @if (params.format === 'ROUND_ROBIN') {
+          <label>
+            {{ strings.rounds }}
+            <select [value]="params.rounds" (change)="setRoundCount($any($event.target).value)">
+              <option [value]="1">1</option>
+              <option [value]="2">2</option>
+            </select>
+            <small>{{ strings.roundsDescription }}</small>
+          </label>
+        }
+
+        @if (params.format === 'SWISS') {
+          <label>
+            {{ strings.rounds }}
+            <input
+              type="number"
+              min="1"
+              [max]="teamCount() - 1"
+              [value]="params.rounds"
+              (input)="setRoundCount($any($event.target).value)"
+            />
+            <small>{{ strings.swissRoundsDescription }}</small>
+          </label>
+        }
+
+        @if (params.format === 'DOUBLE_ELIMINATION') {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="params.grandFinalReset"
+              (change)="setGrandFinalReset($any($event.target).checked)"
+            />
+            {{ strings.grandFinalReset }}
+            <small>{{ strings.grandFinalResetDescription }}</small>
+          </label>
+        }
+
+        @if (
+          params.format === 'GROUPS_KNOCKOUT' ||
+          params.format === 'GROUPS_CUPS' ||
+          params.format === 'GROUPS_POSITION_PLAYOFFS'
+        ) {
+          <label>
+            {{ strings.groupCount }}
+            <select [value]="params.groupCount" (change)="setGroupCount($any($event.target).value)">
+              @for (count of groupAlternatives; track count) {
+                <option [value]="count">{{ count }} grupos ({{ groupSizeText(count) }})</option>
+              }
+            </select>
+            <small>{{ strings.groupCountDescription }}</small>
+          </label>
+          <p>{{ strings.groupDistribution }}: {{ groupSizeText(params.groupCount) }}</p>
+        }
+
+        @if (params.format === 'GROUPS_KNOCKOUT') {
+          <label>
+            {{ strings.qualifiersPerGroup }}
+            <input
+              type="number"
+              min="0"
+              [value]="params.qualifiersPerGroup"
+              (input)="setQualifiers($any($event.target).value)"
+            />
+            <small>{{ strings.qualifiersDescription }}</small>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              [checked]="params.thirdPlaceMatch"
+              (change)="setThirdPlace($any($event.target).checked)"
+            />
+            {{ strings.thirdPlaceMatch }}
+            <small>{{ strings.thirdPlaceDescription }}</small>
+          </label>
+        }
+
+        @if (params.format === 'GROUPS_CUPS' || params.format === 'KNOCKOUT') {
+          <label>
+            <input
+              type="checkbox"
+              [checked]="params.thirdPlaceMatch"
+              (change)="setThirdPlace($any($event.target).checked)"
+            />
+            {{ strings.thirdPlaceMatch }}
+            <small>{{ strings.thirdPlaceDescription }}</small>
+          </label>
+        }
+      }
+
+      <dl>
+        <div>
+          <dt>{{ strings.totalMatches }}</dt>
+          <dd>{{ option.totalMatches }}</dd>
+        </div>
+        <div>
+          <dt>{{ strings.minMatchesPerTeam }}</dt>
+          <dd>{{ option.minMatchesPerTeam }}</dd>
+        </div>
+        <div>
+          <dt>{{ strings.estimatedDuration }}</dt>
+          <dd>{{ formatDuration(option.estimatedDurationMin) }}</dd>
+        </div>
+      </dl>
+
+      @for (warning of option.warnings; track warning.code) {
+        @if (
+          warning.code !== 'TEAM_COUNT_TOO_LOW' &&
+          warning.code !== 'TOO_MANY_GROUPS' &&
+          warning.code !== 'QUALIFIERS_ZERO' &&
+          warning.code !== 'QUALIFIERS_TOO_HIGH' &&
+          warning.code !== 'SWISS_ROUNDS_OUT_OF_RANGE'
+        ) {
+          <p class="warning">{{ warningText(warning.code, option) }}</p>
+        }
+      }
+      @for (error of parameterErrors; track error) {
+        <p class="error">{{ error }}</p>
+      }
+    </section>
+  }
+
+  <button
+    type="button"
+    (click)="save()"
+    [disabled]="isSaving() || !selected() || parameterErrors.length > 0"
+  >
+    {{ strings.save }}
+  </button>
 </main>

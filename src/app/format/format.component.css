@@ -94,3 +94,22 @@ dd {
 .disabled-reason {
   color: #777;
 }
+
+.parameters {
+  display: grid;
+  gap: 1rem;
+}
+
+.parameters label {
+  max-width: 34rem;
+}
+
+.parameters small {
+  color: #555;
+}
+
+.error {
+  padding: 0.75rem;
+  background: #ffe2e2;
+  color: #7f1d1d;
+}

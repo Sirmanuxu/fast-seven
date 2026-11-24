@@ -22,6 +22,20 @@ interface FormatStrings {
   readonly warnings: string;
   readonly notViable: string;
   readonly params: string;
+  readonly parameters: string;
+  readonly rounds: string;
+  readonly roundsDescription: string;
+  readonly swissRoundsDescription: string;
+  readonly groupCount: string;
+  readonly groupCountDescription: string;
+  readonly groupDistribution: string;
+  readonly unevenGroupsRule: string;
+  readonly qualifiersPerGroup: string;
+  readonly qualifiersDescription: string;
+  readonly thirdPlaceMatch: string;
+  readonly thirdPlaceDescription: string;
+  readonly grandFinalReset: string;
+  readonly grandFinalResetDescription: string;
   readonly descriptions: Readonly<Record<FormatId, string>>;
   readonly labels: Readonly<Record<FormatId, string>>;
 }
@@ -47,6 +61,23 @@ export const FORMAT_STRINGS: FormatStrings = {
   warnings: 'Advertencias',
   notViable: 'No disponible',
   params: 'Parámetros sugeridos',
+  parameters: 'Parámetros del formato',
+  rounds: 'Vueltas',
+  roundsDescription: 'Cantidad de veces que cada equipo juega contra cada rival.',
+  swissRoundsDescription:
+    'Entre 1 y n-1 rondas. Recomendá al menos log₂(n) para definir un campeón con claridad.',
+  groupCount: 'Cantidad de grupos',
+  groupCountDescription:
+    'Elegí el reparto. Los equipos se distribuyen de manera 4-4-3 o 6-5, según corresponda.',
+  groupDistribution: 'Equipos por grupo',
+  unevenGroupsRule:
+    'Los grupos quedan desparejos; al comparar posiciones, se descartan los partidos contra el último equipo de los grupos más grandes.',
+  qualifiersPerGroup: 'Clasificados por grupo',
+  qualifiersDescription: 'No puede superar el tamaño del grupo más chico.',
+  thirdPlaceMatch: 'Partido por el tercer puesto',
+  thirdPlaceDescription: 'Agrega una definición de tercer puesto al formato.',
+  grandFinalReset: 'Final con reinicio',
+  grandFinalResetDescription: 'Si gana el campeón de perdedores, se juega una segunda final.',
   ROUND_ROBIN: 'Todos contra todos',
   GROUPS_KNOCKOUT: 'Grupos + eliminación directa',
   GROUPS_CUPS: 'Grupos + copas',
@@ -76,8 +107,17 @@ export const FORMAT_STRINGS: FormatStrings = {
   'format.swissNeedsFourTeams': 'El suizo necesita al menos 4 equipos.',
   'format.doubleEliminationNeedsThreeTeams': 'La doble eliminación necesita al menos 3 equipos.',
   'format.groupsNeedsFourTeams': 'Los formatos con grupos necesitan al menos 4 equipos.',
-  'format.unevenGroups': 'Los grupos quedan desparejos; la comparación entre grupos descarta partidos según la regla definida.',
-  'format.knockoutByes': 'La llave tendrá {count} bye(s).',
-  'format.doubleEliminationByes': 'La llave de ganadores tendrá {count} bye(s).',
+  'format.unevenGroups':
+    'Los grupos quedan desparejos; la comparación entre grupos descarta partidos según la regla definida.',
+  'format.knockoutByes':
+    'La llave tendrá {count} bye(s); los recibirán los equipos mejor sembrados.',
+  'format.doubleEliminationByes':
+    'La llave de ganadores tendrá {count} bye(s); los recibirán los equipos mejor sembrados.',
   'format.fewSwissRounds': 'Hay pocas rondas para definir un campeón con claridad.',
+  'format.validationTeamCount': 'Se necesitan al menos 2 equipos.',
+  'format.validationTooManyGroups': 'No puede haber más grupos que la mitad de los equipos.',
+  'format.validationQualifiersZero': 'Debe haber al menos un clasificado por grupo.',
+  'format.validationQualifiersTooHigh':
+    'Los clasificados no pueden superar el grupo más chico ({size} equipos).',
+  'format.validationSwissRounds': 'Las rondas suizas deben estar entre 1 y n-1.',
 };

@@ -1,4 +1,12 @@
-import { ComputeFormatOptions, FormatId, FormatOption, FormatParams, Warning } from './model';
+import {
+  ComputeFormatOptions,
+  DomainError,
+  FormatId,
+  FormatOption,
+  FormatParams,
+  ScheduleConfig,
+  Warning,
+} from './model';
 
 const FORMAT_IDS: readonly FormatId[] = [
   'ROUND_ROBIN',
@@ -19,15 +27,20 @@ const nextPowerOfTwo = (value: number): number => {
 const groupSizes = (teamCount: number, groupCount: number): readonly number[] => {
   const baseSize = Math.floor(teamCount / groupCount);
   const largerGroupCount = teamCount % groupCount;
-  return Array.from({ length: groupCount }, (_, index) =>
-    baseSize + (index < largerGroupCount ? 1 : 0),
+  return Array.from(
+    { length: groupCount },
+    (_, index) => baseSize + (index < largerGroupCount ? 1 : 0),
   );
 };
 
 const groupMatches = (sizes: readonly number[]): number =>
   sizes.reduce((total, size) => total + (size * (size - 1)) / 2, 0);
 
-const warning = (code: string, messageKey: string, params?: Readonly<Record<string, string | number>>): Warning => ({
+const warning = (
+  code: string,
+  messageKey: string,
+  params?: Readonly<Record<string, string | number>>,
+): Warning => ({
   code,
   messageKey,
   ...(params ? { params } : {}),
@@ -36,7 +49,8 @@ const warning = (code: string, messageKey: string, params?: Readonly<Record<stri
 const invalidReason = (format: FormatId, teamCount: number): string | null => {
   if (teamCount < 2) return 'format.notEnoughTeams';
   if (format === 'SWISS' && teamCount < 4) return 'format.swissNeedsFourTeams';
-  if (format === 'DOUBLE_ELIMINATION' && teamCount < 3) return 'format.doubleEliminationNeedsThreeTeams';
+  if (format === 'DOUBLE_ELIMINATION' && teamCount < 3)
+    return 'format.doubleEliminationNeedsThreeTeams';
   if (
     (format === 'GROUPS_KNOCKOUT' ||
       format === 'GROUPS_CUPS' ||
@@ -80,7 +94,7 @@ const makeSuggestedParams = (format: FormatId, teamCount: number): FormatParams 
   }
 };
 
-const calculateTotals = (
+export const calculateTotals = (
   params: FormatParams,
   teamCount: number,
 ): {
@@ -106,7 +120,11 @@ const calculateTotals = (
         maxMatchesPerTeam: bracketRounds,
         warnings:
           teamCount !== nextPowerOfTwo(teamCount)
-            ? [warning('KNOCKOUT_BYES', 'format.knockoutByes', { count: nextPowerOfTwo(teamCount) - teamCount })]
+            ? [
+                warning('KNOCKOUT_BYES', 'format.knockoutByes', {
+                  count: nextPowerOfTwo(teamCount) - teamCount,
+                }),
+              ]
             : [],
       };
     }
@@ -114,12 +132,13 @@ const calculateTotals = (
       const sizes = groupSizes(teamCount, params.groupCount);
       const qualified = params.groupCount * params.qualifiersPerGroup;
       const bracketSize = nextPowerOfTwo(qualified);
-      const totalMatches =
-        groupMatches(sizes) + qualified - 1 + (params.thirdPlaceMatch ? 1 : 0);
+      const totalMatches = groupMatches(sizes) + qualified - 1 + (params.thirdPlaceMatch ? 1 : 0);
       const warnings: Warning[] = [];
       if (new Set(sizes).size > 1) warnings.push(warning('UNEVEN_GROUPS', 'format.unevenGroups'));
       if (bracketSize > qualified) {
-        warnings.push(warning('KNOCKOUT_BYES', 'format.knockoutByes', { count: bracketSize - qualified }));
+        warnings.push(
+          warning('KNOCKOUT_BYES', 'format.knockoutByes', { count: bracketSize - qualified }),
+        );
       }
       return {
         totalMatches,
@@ -134,7 +153,9 @@ const calculateTotals = (
       const warnings: Warning[] = [];
       if (new Set(sizes).size > 1) warnings.push(warning('UNEVEN_GROUPS', 'format.unevenGroups'));
       return {
-        totalMatches: groupMatches(sizes) + cupCount * (params.groupCount - 1) +
+        totalMatches:
+          groupMatches(sizes) +
+          cupCount * (params.groupCount - 1) +
           (params.thirdPlaceMatch ? cupCount : 0),
         minMatchesPerTeam: Math.min(...sizes) - 1 + 1,
         maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)),
@@ -144,11 +165,13 @@ const calculateTotals = (
     case 'GROUPS_POSITION_PLAYOFFS': {
       const sizes = groupSizes(teamCount, params.groupCount);
       const playoffMatches = Math.max(...sizes) * (nextPowerOfTwo(params.groupCount) - 1);
-      const warnings = new Set(sizes).size > 1 ? [warning('UNEVEN_GROUPS', 'format.unevenGroups')] : [];
+      const warnings =
+        new Set(sizes).size > 1 ? [warning('UNEVEN_GROUPS', 'format.unevenGroups')] : [];
       return {
         totalMatches: groupMatches(sizes) + playoffMatches,
         minMatchesPerTeam: Math.min(...sizes),
-        maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)) + 1,
+        maxMatchesPerTeam:
+          Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)) + 1,
         warnings,
       };
     }
@@ -173,9 +196,11 @@ const calculateTotals = (
           2 * Math.log2(nextPowerOfTwo(teamCount)) + (params.grandFinalReset ? 1 : 0),
         warnings:
           teamCount !== nextPowerOfTwo(teamCount)
-            ? [warning('DOUBLE_ELIMINATION_BYES', 'format.doubleEliminationByes', {
-                count: nextPowerOfTwo(teamCount) - teamCount,
-              })]
+            ? [
+                warning('DOUBLE_ELIMINATION_BYES', 'format.doubleEliminationByes', {
+                  count: nextPowerOfTwo(teamCount) - teamCount,
+                }),
+              ]
             : [],
       };
   }
@@ -201,3 +226,102 @@ export const computeFormatOptions: ComputeFormatOptions = (teamCount, schedule) 
       warnings: totals.warnings,
     } satisfies FormatOption;
   });
+
+export const getGroupSizes = (teamCount: number, groupCount: number): readonly number[] =>
+  teamCount > 0 && groupCount > 0 ? groupSizes(teamCount, groupCount) : [];
+
+export const getGroupCountAlternatives = (teamCount: number): readonly number[] => {
+  if (teamCount < 4) return [];
+  const suggested = suggestedGroupCount(teamCount);
+  const alternatives = [suggested];
+  if (suggested > 2) alternatives.push(2);
+  for (let groupCount = 2; groupCount <= Math.floor(teamCount / 2); groupCount += 1) {
+    if (!alternatives.includes(groupCount)) alternatives.push(groupCount);
+  }
+  return alternatives
+    .sort((left, right) => left - right)
+    .sort((left, right) => (left === suggested ? -1 : right === suggested ? 1 : left - right));
+};
+
+export const validateFormatParams = (
+  teamCount: number,
+  params: FormatParams,
+): readonly DomainError[] => {
+  const errors: DomainError[] = [];
+  if (teamCount < 2) {
+    errors.push({
+      code: 'TEAM_COUNT_TOO_LOW',
+      messageKey: 'format.validationTeamCount',
+    });
+  }
+
+  if (
+    params.format === 'GROUPS_KNOCKOUT' ||
+    params.format === 'GROUPS_CUPS' ||
+    params.format === 'GROUPS_POSITION_PLAYOFFS'
+  ) {
+    if (params.groupCount > Math.floor(teamCount / 2)) {
+      errors.push({
+        code: 'TOO_MANY_GROUPS',
+        messageKey: 'format.validationTooManyGroups',
+      });
+    }
+  }
+
+  if (params.format === 'GROUPS_KNOCKOUT') {
+    if (params.qualifiersPerGroup <= 0) {
+      errors.push({
+        code: 'QUALIFIERS_ZERO',
+        messageKey: 'format.validationQualifiersZero',
+      });
+    } else if (teamCount >= 2) {
+      const smallestGroup = Math.min(...getGroupSizes(teamCount, params.groupCount));
+      if (params.qualifiersPerGroup > smallestGroup) {
+        errors.push({
+          code: 'QUALIFIERS_TOO_HIGH',
+          messageKey: 'format.validationQualifiersTooHigh',
+          params: { size: smallestGroup },
+        });
+      }
+    }
+  }
+
+  if (params.format === 'SWISS') {
+    if (params.rounds < 1 || params.rounds >= teamCount) {
+      errors.push({
+        code: 'SWISS_ROUNDS_OUT_OF_RANGE',
+        messageKey: 'format.validationSwissRounds',
+      });
+    }
+  }
+
+  return errors;
+};
+
+export const computeFormatOption = (
+  teamCount: number,
+  schedule: ScheduleConfig,
+  params: FormatParams,
+): FormatOption => {
+  const reason = invalidReason(params.format, teamCount);
+  const validationErrors = validateFormatParams(teamCount, params);
+  const validationWarnings: Warning[] = validationErrors.map((error) => ({
+    code: error.code,
+    messageKey: error.messageKey,
+    ...(error.params ? { params: error.params } : {}),
+  }));
+  const totals = calculateTotals(params, teamCount);
+
+  return {
+    format: params.format,
+    viable: reason === null && validationErrors.length === 0,
+    notViableReasonKey: reason,
+    suggestedParams: params,
+    totalMatches: totals.totalMatches,
+    minMatchesPerTeam: totals.minMatchesPerTeam,
+    maxMatchesPerTeam: totals.maxMatchesPerTeam,
+    estimatedDurationMin:
+      totals.totalMatches * Math.max(0, schedule.matchDurationMin + schedule.restMin),
+    warnings: [...totals.warnings, ...validationWarnings],
+  };
+};

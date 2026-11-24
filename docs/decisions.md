@@ -1,5 +1,17 @@
 # Decision log
 
+## 2026-11-24 - HU-21 - Format parameter validation
+
+- **Decision:** Compute custom format totals and validation in pure domain functions, and keep the
+  selected parameters in component state until an explicit save.
+- **Reason:** HU-21 requires live recalculation and blocking validation without changing the stored
+  tournament format on every field edit. This preserves existing persistence behavior and keeps
+  business rules outside the Angular component.
+- **Decision:** Describe seeded bye recipients as the best-seeded teams rather than inventing names
+  for teams that have not been drawn or assigned.
+- **Reason:** The format assistant only has the team count, not the final seeded team identities;
+  using bracket seed order is the deterministic rule and avoids presenting unconfirmed names.
+
 ## 2026-11-24 - HU-20 - Format assistant
 
 - **Decision:** Implement the format catalog as a pure calculator and keep the selected suggested
