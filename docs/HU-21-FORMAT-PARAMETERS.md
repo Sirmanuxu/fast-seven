@@ -2,7 +2,7 @@
 
 ## Implementado
 
-- [x] Cada formato aplica sus parámetros editables y recalcula partidos totales, mínimos por equipo y duración.
+- [x] Cada formato aplica sus parámetros editables y recalcula partidos totales, mínimos y máximos por equipo y duración.
 - [x] Los formatos con grupos ofrecen el reparto sugerido y alternativas válidas.
 - [x] El reparto 11 equipos / 3 grupos muestra 4-4-3 y ofrece alternativas como 6-5.
 - [x] Los grupos desparejos muestran la explicación de comparación según HU-18.
