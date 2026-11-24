@@ -33,7 +33,10 @@ export interface RoundRobinFixture {
   readonly matches: readonly Match[];
 }
 
-function error(code: string, params?: Readonly<Record<string, string | number>>): Result<never, DomainError> {
+function error(
+  code: string,
+  params?: Readonly<Record<string, string | number>>,
+): Result<never, DomainError> {
   return { ok: false, error: { code, messageKey: `roundRobin.${code}`, params } };
 }
 
@@ -52,11 +55,7 @@ function oneLapPairs(teamIds: readonly Id[]): readonly (readonly (Id | null)[])[
       pairs.push(rotation[pairIndex], rotation[rotation.length - 1 - pairIndex]);
     }
     rounds.push(pairs);
-    rotation = [
-      rotation[0],
-      rotation[rotation.length - 1],
-      ...rotation.slice(1, -1),
-    ];
+    rotation = [rotation[0], rotation[rotation.length - 1], ...rotation.slice(1, -1)];
   }
 
   return rounds;
@@ -80,31 +79,106 @@ function orientPairs(
   const teamIndex = new Map(teamIds.map((teamId, index) => [teamId, index]));
   const exactPatterns: Readonly<Record<number, readonly (readonly [number, number])[]>> = {
     2: [[0, 1]],
-    3: [[1, 2], [2, 0], [0, 1]],
-    4: [[0, 3], [1, 2], [0, 2], [3, 1], [1, 0], [2, 3]],
+    3: [
+      [1, 2],
+      [2, 0],
+      [0, 1],
+    ],
+    4: [
+      [0, 3],
+      [1, 2],
+      [0, 2],
+      [3, 1],
+      [1, 0],
+      [2, 3],
+    ],
     5: [
-      [1, 4], [2, 3], [0, 4], [1, 2], [3, 0], [4, 2], [2, 0], [3, 1], [0, 1], [4, 3],
+      [1, 4],
+      [2, 3],
+      [0, 4],
+      [1, 2],
+      [3, 0],
+      [4, 2],
+      [2, 0],
+      [3, 1],
+      [0, 1],
+      [4, 3],
     ],
     6: [
-      [0, 5], [1, 4], [2, 3], [0, 4], [5, 3], [1, 2], [0, 3], [4, 2], [5, 1],
-      [2, 0], [3, 1], [4, 5], [1, 0], [2, 5], [3, 4],
+      [0, 5],
+      [1, 4],
+      [2, 3],
+      [0, 4],
+      [5, 3],
+      [1, 2],
+      [0, 3],
+      [4, 2],
+      [5, 1],
+      [2, 0],
+      [3, 1],
+      [4, 5],
+      [1, 0],
+      [2, 5],
+      [3, 4],
     ],
     7: [
-      [1, 6], [2, 5], [3, 4], [0, 6], [1, 4], [2, 3], [0, 5], [6, 4], [1, 2],
-      [4, 0], [5, 3], [6, 2], [3, 0], [4, 2], [5, 1], [2, 0], [3, 1], [5, 6],
-      [0, 1], [6, 3], [4, 5],
+      [1, 6],
+      [2, 5],
+      [3, 4],
+      [0, 6],
+      [1, 4],
+      [2, 3],
+      [0, 5],
+      [6, 4],
+      [1, 2],
+      [4, 0],
+      [5, 3],
+      [6, 2],
+      [3, 0],
+      [4, 2],
+      [5, 1],
+      [2, 0],
+      [3, 1],
+      [5, 6],
+      [0, 1],
+      [6, 3],
+      [4, 5],
     ],
     8: [
-      [0, 7], [1, 6], [2, 5], [3, 4], [0, 6], [7, 5], [1, 4], [2, 3], [0, 5],
-      [6, 4], [7, 3], [1, 2], [0, 4], [5, 3], [6, 2], [7, 1], [3, 0], [4, 2],
-      [5, 1], [6, 7], [2, 0], [3, 1], [4, 7], [5, 6], [1, 0], [2, 7], [3, 6],
+      [0, 7],
+      [1, 6],
+      [2, 5],
+      [3, 4],
+      [0, 6],
+      [7, 5],
+      [1, 4],
+      [2, 3],
+      [0, 5],
+      [6, 4],
+      [7, 3],
+      [1, 2],
+      [0, 4],
+      [5, 3],
+      [6, 2],
+      [7, 1],
+      [3, 0],
+      [4, 2],
+      [5, 1],
+      [6, 7],
+      [2, 0],
+      [3, 1],
+      [4, 7],
+      [5, 6],
+      [1, 0],
+      [2, 7],
+      [3, 6],
       [4, 5],
     ],
   };
   const exactPattern = exactPatterns[teamIds.length];
   if (exactPattern) {
-    const orientation = exactPattern.map(([homeIndex, awayIndex]) =>
-      [teamIds[homeIndex], teamIds[awayIndex]] as [Id, Id],
+    const orientation = exactPattern.map(
+      ([homeIndex, awayIndex]) => [teamIds[homeIndex], teamIds[awayIndex]] as [Id, Id],
     );
     const byRound: [Id, Id][][] = roundPairs.map(() => []);
     let matchIndex = 0;
@@ -118,14 +192,11 @@ function orientPairs(
     return byRound;
   }
 
-  const floorTarget =
-    teamIds.length % 2 === 0 ? teamIds.length / 2 - 1 : (teamIds.length - 1) / 2;
+  const floorTarget = teamIds.length % 2 === 0 ? teamIds.length / 2 - 1 : (teamIds.length - 1) / 2;
   const ceilTarget = teamIds.length % 2 === 0 ? floorTarget + 1 : floorTarget;
   const matches = roundPairs.flat();
   const cost = (counts: readonly number[]): readonly [number, number] => {
-    const maxDifference = Math.max(
-      ...counts.map((count) => Math.abs(count - floorTarget)),
-    );
+    const maxDifference = Math.max(...counts.map((count) => Math.abs(count - floorTarget)));
     const sumSquares = counts.reduce(
       (total, count) => total + (count - floorTarget) * (count - floorTarget),
       0,
@@ -247,13 +318,15 @@ export function generateRoundRobinMatches(
 
   const matches: Match[] = [];
   let order = 1;
-  const firstLapMatchRefs: { readonly round: number; readonly home: MatchRef; readonly away: MatchRef }[] =
-    [];
+  const firstLapMatchRefs: {
+    readonly round: number;
+    readonly home: MatchRef;
+    readonly away: MatchRef;
+  }[] = [];
 
   for (let roundIndex = 0; roundIndex < rounds.length; roundIndex += 1) {
     for (const [homeTeamId, awayTeamId] of oriented[roundIndex]) {
-      const matchId =
-        `${input.matchIdPrefix ?? input.stageId}-lap-1-round-${roundIndex + 1}-match-${order}`;
+      const matchId = `${input.matchIdPrefix ?? input.stageId}-lap-1-round-${roundIndex + 1}-match-${order}`;
       const home = teamRef(homeTeamId);
       const away = teamRef(awayTeamId);
       matches.push({
@@ -281,8 +354,7 @@ export function generateRoundRobinMatches(
     for (let roundIndex = 0; roundIndex < rounds.length; roundIndex += 1) {
       const refs = firstLapMatchRefs.filter((entry) => entry.round === roundIndex + 1);
       for (const ref of refs) {
-        const matchId =
-          `${input.matchIdPrefix ?? input.stageId}-lap-2-round-${roundIndex + 1}-match-${order}`;
+        const matchId = `${input.matchIdPrefix ?? input.stageId}-lap-2-round-${roundIndex + 1}-match-${order}`;
         matches.push({
           id: matchId,
           stageId: input.stageId,
@@ -334,7 +406,7 @@ export function generateRoundRobinFixture(
   return { ok: true, value: { stage, group, matches: matches.value } };
 }
 
-export const generateFixture: GenerateFixture = (input) => {
+export const generateRoundRobinFixtureContract: GenerateFixture = (input) => {
   if (input.params.format !== 'ROUND_ROBIN') {
     return error('unsupportedFormat');
   }
@@ -357,3 +429,5 @@ export const generateFixture: GenerateFixture = (input) => {
     },
   };
 };
+
+export const generateFixture: GenerateFixture = generateRoundRobinFixtureContract;

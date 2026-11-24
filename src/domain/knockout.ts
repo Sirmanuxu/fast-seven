@@ -264,7 +264,7 @@ export function generateKnockoutFixture(
   };
 }
 
-export const generateFixture: GenerateFixture = (input) => {
+export const generateKnockoutFixtureContract: GenerateFixture = (input) => {
   if (input.params.format !== 'KNOCKOUT') {
     return error('unsupportedFormat');
   }
@@ -311,3 +311,5 @@ export const generateFixture: GenerateFixture = (input) => {
     },
   };
 };
+
+export const generateFixture: GenerateFixture = generateKnockoutFixtureContract;

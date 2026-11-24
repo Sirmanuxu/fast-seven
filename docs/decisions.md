@@ -1,5 +1,18 @@
 # Decision log
 
+## 2026-11-24 - HU-24 - Knockout bracket generation
+
+- **Decision:** Generate the first-round slot order recursively by expanding every seed in the
+  previous bracket into seed `s` and seed `P + 1 - s`, producing the standard 8-slot order
+  `[1, 8, 4, 5, 2, 7, 3, 6]`.
+- **Reason:** This ordering gives seeds 1 and 2 opposite halves and distributes the top four
+  seeds into separate quarters while remaining deterministic for powers of two.
+- **Decision:** Represent best-seed byes as `BYE` slot references and omit the corresponding
+  first-round match, while carrying the team directly into the next round through a `TEAM`
+  or `WINNER_OF` reference.
+- **Reason:** Bracket byes must not inflate the playable match count. Direct slot resolution also
+  makes the generated matches reusable by the later bracket-resolution story.
+
 ## 2026-11-24 - HU-23 - Round-robin fixture balance
 
 - **Decision:** Generate one-lap circles with deterministic team order and use precomputed

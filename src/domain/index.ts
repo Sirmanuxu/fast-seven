@@ -12,5 +12,16 @@ export * from './compare-across-groups';
 export * from './scorers';
 export * from './format-options';
 export * from './group-draw';
-export * from './round-robin';
-export * from './knockout';
+export {
+  generateRoundRobinMatches,
+  generateRoundRobinFixture,
+  generateRoundRobinFixtureContract,
+} from './round-robin';
+export {
+  generateKnockoutMatches,
+  generateKnockoutFixture,
+  generateKnockoutFixtureContract,
+  getKnockoutBracketSize,
+  getStandardSeedOrder,
+} from './knockout';
+export * from './fixture';

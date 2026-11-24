@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  generateFixture,
   generateKnockoutFixture,
   generateKnockoutMatches,
   getKnockoutBracketSize,
   getStandardSeedOrder,
 } from './knockout';
+import { generateFixture } from './fixture';
 import { createSeededRng } from './rng';
 import { MatchRef, Team } from './model';
 
