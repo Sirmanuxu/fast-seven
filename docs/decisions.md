@@ -1,5 +1,25 @@
 # Decision log
 
+## 2026-11-24 - HU-22 - Seeded group draw
+
+- **Decision:** Distribute seeded teams in deterministic rounds, assigning one to each group
+  before starting the next round, then shuffle and place unseeded teams in the remaining slots.
+- **Reason:** This directly implements section 2.8 while preserving configured group sizes and
+  making the persisted seed sufficient to reproduce the result.
+- **Decision:** Manual moves are accepted only when the configured size of every group remains
+  valid; groups with different capacities therefore require a later swap rather than silently
+  becoming uneven.
+- **Reason:** A move must not invalidate the format, and rejecting a one-way move prevents a
+  preview from persisting a group distribution that contradicts HU-21.
+
+## 2026-11-24 - HU-22 - Manual group adjustment correction
+
+- **Decision:** Implement a manual adjustment as an explicit team-for-team swap between the
+  selected source and destination groups.
+- **Reason:** Every group is already at its configured capacity after the draw, so a one-way move
+  could never succeed. A swap permits the organizer to rebalance teams while preserving valid
+  group sizes.
+
 ## 2026-11-24 - HU-21 - Format parameter validation
 
 - **Decision:** Compute custom format totals and validation in pure domain functions, and keep the
