@@ -7,7 +7,14 @@ import {
   getGroupSizes,
   validateFormatParams,
 } from '../../domain/format-options';
-import { FormatId, FormatOption, FormatParams, Tournament } from '../../domain/model';
+import {
+  createGroupDrawPlan,
+  groupsFromPlan,
+  moveTeamBetweenGroups,
+  GroupDrawPlan,
+} from '../../domain/group-draw';
+import { FormatId, FormatOption, FormatParams, Group, Team, Tournament } from '../../domain/model';
+import { createSeededRng } from '../../domain/rng';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { FORMAT_STRINGS } from '../../i18n/format-strings';
 import { showErrorPopup } from '../error-popup';
@@ -28,6 +35,15 @@ export class FormatComponent implements OnInit {
   protected readonly compared = signal<readonly FormatId[]>([]);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly isSaving = signal(false);
+  protected readonly teams = signal<readonly Team[]>([]);
+  protected readonly drawnGroups = signal<readonly Group[]>([]);
+  protected readonly groupDrawPlan = signal<GroupDrawPlan | null>(null);
+  protected readonly groupDrawBusy = signal(false);
+  protected readonly groupStageId = signal<string | null>(null);
+  protected readonly selectedMoveTeamId = signal('');
+  protected readonly selectedSwapTeamId = signal('');
+  protected readonly selectedMoveFrom = signal(0);
+  protected readonly selectedMoveTo = signal(0);
 
   private readonly router = inject(Router);
 
@@ -54,6 +70,9 @@ export class FormatComponent implements OnInit {
     }
     this.tournament.set(tournament);
     this.teamCount.set(await this.getTeamCount());
+    this.teams.set(await tournamentRepository.getTeams());
+    this.drawnGroups.set(await tournamentRepository.getGroups());
+    this.groupStageId.set(this.drawnGroups()[0]?.stageId ?? null);
     this.matchDuration.set(tournament.schedule.matchDurationMin);
     this.restDuration.set(tournament.schedule.restMin);
     this.selected.set(tournament.formatParams?.format ?? null);
@@ -181,6 +200,153 @@ export class FormatComponent implements OnInit {
 
   protected reasonText(option: FormatOption): string {
     return option.notViableReasonKey ? this.message(option.notViableReasonKey) : '';
+  }
+
+  protected get groupDrawEnabled(): boolean {
+    const format = this.formatParams()?.format;
+    return (
+      format === 'GROUPS_KNOCKOUT' ||
+      format === 'GROUPS_CUPS' ||
+      format === 'GROUPS_POSITION_PLAYOFFS'
+    );
+  }
+
+  protected get canDrawGroups(): boolean {
+    const status = this.tournament()?.status;
+    return status === 'SETUP' || status === 'FIXTURE_GENERATED';
+  }
+
+  protected groupTeamName(teamId: string): string {
+    return this.teams().find((team) => team.id === teamId)?.name ?? teamId;
+  }
+
+  protected groupName(index: number): string {
+    return String.fromCharCode(65 + index);
+  }
+
+  protected groupExplanation(plan: GroupDrawPlan): string {
+    const seeded = plan.explanation.seededTeamIds.map((id) => this.groupTeamName(id)).join(', ');
+    const uneven = plan.explanation.uneven
+      ? ` ${this.strings.groupUnevenExplanation.replace(
+          '{groups}',
+          plan.groupSizes.map((size, index) => `${this.groupName(index)}: ${size}`).join(', '),
+        )}`
+      : '';
+    return `${this.strings.groupSeedExplanation}: ${seeded || this.strings.groupNoSeeds}.${uneven}`;
+  }
+
+  protected async previewGroupDraw(): Promise<void> {
+    this.groupDrawPlan.set(null);
+    if (!this.groupDrawEnabled || !this.canDrawGroups) {
+      showErrorPopup(this.strings.groupDrawDisabled);
+      return;
+    }
+    const params = this.formatParams();
+    if (!params || !('groupCount' in params)) {
+      showErrorPopup(this.strings.groupDrawInvalid);
+      return;
+    }
+    const seed = crypto.randomUUID();
+    const result = createGroupDrawPlan({
+      teams: this.teams(),
+      groupCount: params.groupCount,
+      drawId: crypto.randomUUID(),
+      seed,
+      createdAt: new Date().toISOString(),
+      rng: createSeededRng(seed),
+    });
+    if (!result.ok) {
+      showErrorPopup(this.strings.groupDrawInvalid);
+      return;
+    }
+    this.groupDrawPlan.set(result.value);
+    this.selectedMoveFrom.set(0);
+    this.selectedMoveTo.set(result.value.groupTeamIds.length > 1 ? 1 : 0);
+    this.selectedMoveTeamId.set('');
+    this.selectedSwapTeamId.set('');
+  }
+
+  protected movePreviewTeam(): void {
+    const plan = this.groupDrawPlan();
+    const teamId = this.selectedMoveTeamId();
+    const swapTeamId = this.selectedSwapTeamId();
+    if (!plan || !teamId || !swapTeamId) return;
+    const result = moveTeamBetweenGroups(plan.groupTeamIds, plan.groupSizes, {
+      teamId,
+      swapTeamId,
+      fromGroup: this.selectedMoveFrom(),
+      toGroup: this.selectedMoveTo(),
+    });
+    if (!result.ok) {
+      showErrorPopup(this.strings.groupMoveInvalid);
+      return;
+    }
+    this.groupDrawPlan.set({
+      ...plan,
+      groupTeamIds: result.value,
+      draw: { ...plan.draw, payload: { kind: 'GROUPS', groups: result.value } },
+    });
+    this.selectedMoveTeamId.set('');
+    this.selectedSwapTeamId.set('');
+  }
+
+  protected moveTeamOptions(groupIndex: number): readonly string[] {
+    return this.groupDrawPlan()?.groupTeamIds[groupIndex] ?? [];
+  }
+
+  protected setMoveFrom(value: string): void {
+    const fromGroup = Number(value);
+    this.selectedMoveFrom.set(fromGroup);
+    if (fromGroup === this.selectedMoveTo()) {
+      this.selectedMoveTo.set((fromGroup + 1) % (this.groupDrawPlan()?.groupTeamIds.length ?? 1));
+    }
+    this.selectedMoveTeamId.set('');
+    this.selectedSwapTeamId.set('');
+  }
+
+  protected setMoveTo(value: string): void {
+    const toGroup = Number(value);
+    this.selectedMoveTo.set(toGroup);
+    if (toGroup === this.selectedMoveFrom()) {
+      this.selectedMoveFrom.set((toGroup + 1) % (this.groupDrawPlan()?.groupTeamIds.length ?? 1));
+      this.selectedMoveTeamId.set('');
+    }
+    this.selectedSwapTeamId.set('');
+  }
+
+  protected async confirmGroupDraw(): Promise<void> {
+    const plan = this.groupDrawPlan();
+    const tournament = this.tournament();
+    if (!plan || !tournament || this.groupDrawBusy()) return;
+    this.groupDrawBusy.set(true);
+    try {
+      const stageId = this.groupStageId() ?? crypto.randomUUID();
+      const existingGroupIds = this.drawnGroups().map((group) => group.id);
+      const groupIds =
+        existingGroupIds.length === plan.groupTeamIds.length
+          ? existingGroupIds
+          : plan.groupTeamIds.map(() => crypto.randomUUID());
+      await tournamentRepository.saveGroupDraw({
+        stage: {
+          id: stageId,
+          type: 'GROUPS',
+          name: 'Grupos',
+          order: 1,
+          cup: null,
+        },
+        groups: groupsFromPlan(stageId, plan.groupTeamIds, groupIds),
+        draw: plan.draw,
+      });
+      this.groupStageId.set(stageId);
+      this.drawnGroups.set(groupsFromPlan(stageId, plan.groupTeamIds, groupIds));
+      this.groupDrawPlan.set(null);
+      this.statusMessage.set(this.strings.groupDrawSaved);
+    } catch (error) {
+      console.error('Group draw failed', error);
+      showErrorPopup(this.strings.groupDrawFailed);
+    } finally {
+      this.groupDrawBusy.set(false);
+    }
   }
 
   protected paramsText(params: FormatParams | null): string {

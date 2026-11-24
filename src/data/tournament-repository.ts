@@ -5,11 +5,13 @@ import {
   CategoryStage,
   Draw,
   Gender,
+  Group,
   Match,
   MatchEvent,
   Player,
   RosterLimits,
   ScheduleConfig,
+  Stage,
   Team,
   Tournament,
   TournamentRules,
@@ -202,6 +204,41 @@ export class TournamentRepository {
     await tournamentDatabase.transaction('rw', tournamentDatabase.draws, async () => {
       await tournamentDatabase.draws.put(draw);
     });
+  }
+
+  async getGroups(): Promise<readonly Group[]> {
+    return tournamentDatabase.groups.toArray();
+  }
+
+  async saveGroupDraw(input: {
+    readonly stage: Stage;
+    readonly groups: readonly Group[];
+    readonly draw: Draw;
+  }): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.stages,
+      tournamentDatabase.groups,
+      tournamentDatabase.draws,
+      tournamentDatabase.tournament,
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) {
+          throw new Error('No tournament is available');
+        }
+        if (tournament.status !== 'SETUP' && tournament.status !== 'FIXTURE_GENERATED') {
+          throw new Error('Group draws are disabled after the tournament starts');
+        }
+
+        await tournamentDatabase.stages.put(input.stage);
+        await tournamentDatabase.groups.where('stageId').equals(input.stage.id).delete();
+        await tournamentDatabase.groups.bulkPut([...input.groups]);
+        await tournamentDatabase.draws.put(input.draw);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: new Date().toISOString(),
+        });
+      },
+    );
   }
 
   async applyTeamDraw(input: ApplyTeamDrawInput): Promise<void> {

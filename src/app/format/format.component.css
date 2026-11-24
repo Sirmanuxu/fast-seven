@@ -100,6 +100,28 @@ dd {
   gap: 1rem;
 }
 
+.group-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
+
+.group-preview article {
+  border: 1px solid #bbb;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.group-preview h3 {
+  margin-top: 0;
+}
+
+.group-draw fieldset {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
 .parameters label {
   max-width: 34rem;
 }

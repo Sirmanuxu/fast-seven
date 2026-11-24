@@ -36,6 +36,26 @@ interface FormatStrings {
   readonly thirdPlaceDescription: string;
   readonly grandFinalReset: string;
   readonly grandFinalResetDescription: string;
+  readonly groupDrawTitle: string;
+  readonly groupDrawDescription: string;
+  readonly groupDrawButton: string;
+  readonly groupDrawRepeat: string;
+  readonly groupDrawConfirm: string;
+  readonly groupDrawDisabled: string;
+  readonly groupDrawInvalid: string;
+  readonly groupDrawFailed: string;
+  readonly groupDrawSaved: string;
+  readonly groupSeedExplanation: string;
+  readonly groupNoSeeds: string;
+  readonly groupUnevenExplanation: string;
+  readonly groupMoveTitle: string;
+  readonly groupMoveTeam: string;
+  readonly groupMoveFrom: string;
+  readonly groupMoveTo: string;
+  readonly groupMoveSwap: string;
+  readonly groupMoveButton: string;
+  readonly groupMoveInvalid: string;
+  readonly groupDrawCurrent: string;
   readonly descriptions: Readonly<Record<FormatId, string>>;
   readonly labels: Readonly<Record<FormatId, string>>;
 }
@@ -78,6 +98,27 @@ export const FORMAT_STRINGS: FormatStrings = {
   thirdPlaceDescription: 'Agrega una definición de tercer puesto al formato.',
   grandFinalReset: 'Final con reinicio',
   grandFinalResetDescription: 'Si gana el campeón de perdedores, se juega una segunda final.',
+  groupDrawTitle: 'Sorteo de grupos',
+  groupDrawDescription:
+    'Las cabezas de serie se reparten por tandas y el resto de los equipos se sortea respetando el tamaño de cada grupo.',
+  groupDrawButton: 'Sortear grupos',
+  groupDrawRepeat: 'Repetir sorteo',
+  groupDrawConfirm: 'Confirmar grupos',
+  groupDrawDisabled: 'El sorteo solo está disponible antes de iniciar el torneo.',
+  groupDrawInvalid: 'No se puede sortear con la configuración actual.',
+  groupDrawFailed: 'No se pudo guardar el sorteo de grupos.',
+  groupDrawSaved: 'Sorteo de grupos guardado.',
+  groupSeedExplanation: 'Cabezas de serie',
+  groupNoSeeds: 'ninguna',
+  groupUnevenExplanation: 'Grupos desparejos: {groups}.',
+  groupMoveTitle: 'Ajuste manual',
+  groupMoveTeam: 'Equipo',
+  groupMoveFrom: 'Desde',
+  groupMoveTo: 'Hacia',
+  groupMoveSwap: 'Equipo que intercambia lugar',
+  groupMoveButton: 'Mover equipo',
+  groupMoveInvalid: 'Elegí un equipo de cada grupo para intercambiar sus lugares.',
+  groupDrawCurrent: 'Grupos confirmados',
   ROUND_ROBIN: 'Todos contra todos',
   GROUPS_KNOCKOUT: 'Grupos + eliminación directa',
   GROUPS_CUPS: 'Grupos + copas',

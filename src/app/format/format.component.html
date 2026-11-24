@@ -248,6 +248,111 @@
     </section>
   }
 
+  @if (groupDrawEnabled) {
+    <section class="group-draw">
+      <h2>{{ strings.groupDrawTitle }}</h2>
+      @if (!canDrawGroups) {
+        <p role="status">{{ strings.groupDrawDisabled }}</p>
+      } @else {
+        <p>{{ strings.groupDrawDescription }}</p>
+        <button type="button" (click)="previewGroupDraw()">
+          {{ groupDrawPlan() ? strings.groupDrawRepeat : strings.groupDrawButton }}
+        </button>
+      }
+
+      @if (groupDrawPlan(); as plan) {
+        <p role="status">{{ groupExplanation(plan) }}</p>
+        <div class="group-preview">
+          @for (group of plan.groupTeamIds; track $index) {
+            <article>
+              <h3>Grupo {{ groupName($index) }}</h3>
+              <ul>
+                @for (teamId of group; track teamId) {
+                  <li>{{ groupTeamName(teamId) }}</li>
+                }
+              </ul>
+            </article>
+          }
+        </div>
+        <fieldset>
+          <legend>{{ strings.groupMoveTitle }}</legend>
+          <label>
+            {{ strings.groupMoveTeam }}
+            <select
+              [value]="selectedMoveTeamId()"
+              (change)="selectedMoveTeamId.set($any($event.target).value)"
+            >
+              <option value="">—</option>
+              @for (teamId of moveTeamOptions(selectedMoveFrom()); track teamId) {
+                <option [value]="teamId">{{ groupTeamName(teamId) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            {{ strings.groupMoveFrom }}
+            <select [value]="selectedMoveFrom()" (change)="setMoveFrom($any($event.target).value)">
+              @for (group of plan.groupTeamIds; track $index) {
+                <option [value]="$index">Grupo {{ groupName($index) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            {{ strings.groupMoveTo }}
+            <select [value]="selectedMoveTo()" (change)="setMoveTo($any($event.target).value)">
+              @for (group of plan.groupTeamIds; track $index) {
+                <option [value]="$index">Grupo {{ groupName($index) }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            {{ strings.groupMoveSwap }}
+            <select
+              [value]="selectedSwapTeamId()"
+              (change)="selectedSwapTeamId.set($any($event.target).value)"
+            >
+              <option value="">—</option>
+              @for (teamId of moveTeamOptions(selectedMoveTo()); track teamId) {
+                <option [value]="teamId">{{ groupTeamName(teamId) }}</option>
+              }
+            </select>
+          </label>
+          <button
+            type="button"
+            (click)="movePreviewTeam()"
+            [disabled]="
+              !selectedMoveTeamId() ||
+              !selectedSwapTeamId() ||
+              selectedMoveFrom() === selectedMoveTo()
+            "
+          >
+            {{ strings.groupMoveButton }}
+          </button>
+        </fieldset>
+        <button type="button" (click)="confirmGroupDraw()" [disabled]="groupDrawBusy()">
+          {{ strings.groupDrawConfirm }}
+        </button>
+      }
+    </section>
+  }
+
+  @if (drawnGroups().length > 0 && !groupDrawPlan()) {
+    <section class="drawn-groups">
+      <h2>{{ strings.groupDrawCurrent }}</h2>
+      <div class="group-preview">
+        @for (group of drawnGroups(); track group.id) {
+          <article>
+            <h3>Grupo {{ group.name }}</h3>
+            <ul>
+              @for (teamId of group.teamIds; track teamId) {
+                <li>{{ groupTeamName(teamId) }}</li>
+              }
+            </ul>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
   <button
     type="button"
     (click)="save()"
