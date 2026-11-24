@@ -1,0 +1,76 @@
+<main>
+  <header>
+    <button type="button" (click)="goBack()">{{ strings.back }}</button>
+    <h1>{{ strings.title }}</h1>
+  </header>
+
+  @if (statusMessage(); as status) {
+    <p role="status">{{ status }}</p>
+  }
+
+  <section class="controls">
+    <label>{{ strings.teamCount }}
+      <input type="number" min="0" [value]="teamCount()" (input)="setTeamCount($any($event.target).value)" />
+    </label>
+    <label>{{ strings.matchDuration }}
+      <input type="number" min="0" [value]="matchDuration()" (input)="setMatchDuration($any($event.target).value)" />
+    </label>
+  </section>
+
+  <section class="comparison">
+    <h2>{{ strings.compare }}</h2>
+    @for (option of options; track option.format) {
+      <label class="compare-option">
+        <input type="checkbox" [checked]="compared().includes(option.format)" [disabled]="!option.viable && !compared().includes(option.format)" (change)="toggleComparison(option.format)" />
+        {{ formatLabel(option.format) }}
+      </label>
+    }
+  </section>
+
+  <div class="cards">
+    @for (option of options; track option.format) {
+      <article class="card" [class.disabled]="!option.viable" [class.selected]="selected() === option.format">
+        <header>
+          <h2>{{ formatLabel(option.format) }}</h2>
+          @if (selected() === option.format) {
+            <span>{{ strings.selected }}</span>
+          }
+        </header>
+        <p>{{ strings.descriptions[option.format] }}</p>
+        @if (option.viable) {
+          <p><strong>{{ strings.params }}:</strong> {{ paramsText(option.suggestedParams) }}</p>
+          <dl>
+            <div><dt>{{ strings.totalMatches }}</dt><dd>{{ option.totalMatches }}</dd></div>
+            <div><dt>{{ strings.minMatchesPerTeam }}</dt><dd>{{ option.minMatchesPerTeam }}</dd></div>
+            <div><dt>{{ strings.estimatedDuration }}</dt><dd>{{ option.estimatedDurationMin }} {{ strings.minutes }}</dd></div>
+          </dl>
+          @for (warning of option.warnings; track warning.code) {
+            <p class="warning">{{ warningText(warning.code, option) }}</p>
+          }
+          <button type="button" (click)="choose(option)">{{ strings.select }}</button>
+        } @else {
+          <p class="disabled-reason">{{ strings.notViable }}: {{ reasonText(option) }}</p>
+        }
+      </article>
+    }
+  </div>
+
+  @if (compared().length > 0) {
+    <section class="comparison-results">
+      <h2>{{ strings.compare }}</h2>
+      <div class="comparison-grid">
+        @for (format of compared(); track format) {
+          @if (findOption(format); as option) {
+            <div>
+              <h3>{{ formatLabel(format) }}</h3>
+              <p>{{ option.totalMatches }} {{ strings.totalMatches.toLowerCase() }}</p>
+              <p>{{ option.estimatedDurationMin }} {{ strings.minutes }}</p>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  }
+
+  <button type="button" (click)="save()" [disabled]="isSaving() || !selected()">{{ strings.save }}</button>
+</main>

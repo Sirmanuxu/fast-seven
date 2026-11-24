@@ -1,5 +1,16 @@
 # Decision log
 
+## 2026-11-24 - HU-20 - Format assistant
+
+- **Decision:** Implement the format catalog as a pure calculator and keep the selected suggested
+  parameters separate from fixture generation.
+- **Reason:** HU-20 only chooses the tournament format; fixture generation belongs to HU-23 and
+  later stories. This keeps the selection reversible and makes all totals deterministic.
+- **Decision:** Count only playable matches in elimination totals, so byes do not inflate the
+  estimate.
+- **Reason:** The reference cases define an elimination bracket with `n` participants as `n - 1`
+  matches even when the bracket is padded to a power of two.
+
 ## 2026-11-24 - HU-19 - Goal scorers domain scope
 
 - **Decision:** Implement the scorer ranking as a pure derived function and defer the goleadores

@@ -14,6 +14,7 @@ import {
   Tournament,
   TournamentRules,
   TournamentSnapshot,
+  FormatParams,
 } from '../domain/model';
 import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
 import { canCreateOrDeleteTeam, getDefaultTeamColorPair, normalizeTeamName } from '../domain/team';
@@ -155,6 +156,22 @@ export class TournamentRepository {
         date: input.date,
         rules: input.rules,
         schedule: input.schedule,
+        updatedAt: new Date().toISOString(),
+      });
+    });
+  }
+
+  async updateFormat(formatParams: FormatParams): Promise<void> {
+    await tournamentDatabase.transaction('rw', tournamentDatabase.tournament, async () => {
+      const tournament = await this.getTournament();
+      if (!tournament) {
+        throw new Error('No tournament is available');
+      }
+      if (tournament.status === 'RUNNING' || tournament.status === 'FINISHED') {
+        throw new Error('Format cannot be changed after the tournament starts');
+      }
+      await tournamentDatabase.tournament.update(tournament.id, {
+        formatParams,
         updatedAt: new Date().toISOString(),
       });
     });
