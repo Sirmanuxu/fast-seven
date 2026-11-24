@@ -8,3 +8,4 @@ export * from './capacity';
 export * from './team-draw';
 export * from './match-events';
 export * from './standings';
+export * from './compare-across-groups';
