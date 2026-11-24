@@ -560,6 +560,7 @@ export interface FormatOption {
   readonly suggestedParams: FormatParams | null;
   readonly totalMatches: number;
   readonly minMatchesPerTeam: number;
+  readonly maxMatchesPerTeam: number;
   readonly estimatedDurationMin: number;
   readonly warnings: readonly Warning[];
 }

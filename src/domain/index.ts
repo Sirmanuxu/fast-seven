@@ -10,3 +10,4 @@ export * from './match-events';
 export * from './standings';
 export * from './compare-across-groups';
 export * from './scorers';
+export * from './format-options';
