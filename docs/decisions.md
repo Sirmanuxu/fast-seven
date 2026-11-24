@@ -1,5 +1,15 @@
 # Decision log
 
+## 2026-11-24 - HU-19 - Goal scorers domain scope
+
+- **Decision:** Implement the scorer ranking as a pure derived function and defer the goleadores
+  screen until fixture and match-control flows exist.
+- **Reason:** `ComputeScorers` is already part of the domain contract, while the current
+  application has no match data screen from which to populate a useful table.
+- **Decision:** Count unattributed tries independently from player filters.
+- **Reason:** An event without an author has no reliable category or gender, so filtering it would
+  silently discard data that the acceptance criteria require to be reported.
+
 ## 2026-11-23 - HU-17 - Tiebreak resolution
 
 - **Decision:** Resolve tied standings recursively from the configured criterion sequence, using
