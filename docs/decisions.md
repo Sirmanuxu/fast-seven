@@ -461,3 +461,19 @@
   computation, and defer the fixture screen controls until HU-31 creates the fixture view.
 - **Reason:** The repository has no fixture route or screen yet; keeping both scheduling modes
   explicit lets the future view reset to a suggestion without overwriting manual order on refresh.
+
+## 2026-11-25 - HU-31 - Fixture generation and view
+
+- **Decision:** Convert fixture generator placeholder IDs to UUIDs at the application persistence
+  boundary and remap all stage, group, match, draw and bracket references together.
+- **Reason:** The model contract requires UUID entity IDs, while changing the pure domain generators
+  or `model.ts` would expand this story's scope and violate the existing type contract.
+- **Decision:** Regeneration uses a fresh persisted seed and drops fixture-associated draws, while
+  preserving team-assignment draws. Format changes and fixture replacement also clear scheduled
+  breaks that reference deleted match IDs.
+- **Reason:** Reusing old bracket or group draws would make a confirmed regeneration appear new
+  while retaining stale randomness; breaks must not point at entities that no longer exist.
+- **Decision:** Define short rest as less than the configured `restMin`, and do not claim a team
+  meets that target when tentative times cannot be calculated.
+- **Reason:** This uses the tournament's explicit rest setting and avoids false reassurance when
+  there is no configured start time.

@@ -23,8 +23,7 @@
 - [x] Order changes are persisted atomically as order-only updates and revalidated against current
       database state.
 - [x] Suggested order can be restored without moving matches across locked boundaries.
-- [ ] Fixture screen buttons and visible consecutive-match warning are not rendered yet; the
-      repository does not have a fixture screen, so these controls are to be integrated with the
+- [x] Fixture screen buttons and the visible consecutive-match warning are integrated into the
       fixture view in HU-31.
 
 ## Verification
