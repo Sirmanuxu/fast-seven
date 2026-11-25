@@ -445,3 +445,19 @@
 - **Reason:** The current resolver marks conditional matches non-playable and the model has no
   separate derived flag distinguishing a needed reset from an unneeded one. Revisit this when
   double-elimination generation is implemented.
+
+## 2026-11-25 - HU-30 - Reorder pending matches
+
+- **Decision:** Expose adjacent up/down moves and suggested-order reset as pure domain operations.
+  Only pending, non-phantom, non-conditional matches can move; finished and in-progress matches
+  remain fixed boundaries, and a move that creates a winner/loser dependency violation is rejected.
+- **Reason:** The fixture has one persisted `order` sequence, so adjacent moves are easy to reverse
+  and preserve every other match's order while enforcing the referee and bracket constraints.
+- **Decision:** Persist batches of order-only changes with one Dexie transaction and re-check
+  current match statuses and order uniqueness inside that transaction.
+- **Reason:** The panel may have stale state by the time it saves; transaction-time validation
+  prevents writing a move after a match has started or finished.
+- **Decision:** Keep suggested schedule computation separate from persisted-order schedule
+  computation, and defer the fixture screen controls until HU-31 creates the fixture view.
+- **Reason:** The repository has no fixture route or screen yet; keeping both scheduling modes
+  explicit lets the future view reset to a suggestion without overwriting manual order on refresh.
