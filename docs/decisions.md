@@ -427,3 +427,21 @@
 - **Decision:** Increment the patch version before every commit and update `package.json`,
   `package-lock.json` and `src/index.html` together.
 - **Reason:** It prevents the visible application badge from lagging behind the committed code.
+
+## 2026-11-25 - HU-29 - Tentative schedule
+
+- **Decision:** Order pending matches by phase and round, then preserve winner/loser dependencies.
+  Optimize each contiguous round block by minimizing consecutive appearances first and maximizing
+  the minimum and total match gaps second; use exhaustive search for blocks up to eight matches
+  and a greedy heuristic for larger blocks.
+- **Reason:** This gives exact court ordering for the reference cases while bounding computation
+  for larger tournaments, and it keeps bracket matches in dependency-safe order.
+- **Decision:** Calculate UTC timestamps with pure civil-date arithmetic rather than browser date
+  APIs, and represent future Swiss rounds as synthetic schedule-only entries.
+- **Reason:** Domain code must remain environment-independent, and future Swiss pairings do not
+  exist in the persisted fixture.
+- **Decision:** Treat pending matches marked `isConditional` as not schedulable, while allowing a
+  finished conditional match to establish the next schedule base.
+- **Reason:** The current resolver marks conditional matches non-playable and the model has no
+  separate derived flag distinguishing a needed reset from an unneeded one. Revisit this when
+  double-elimination generation is implemented.
