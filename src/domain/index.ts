@@ -27,3 +27,4 @@ export {
 export * from './fixture';
 export * from './groups-knockout';
 export * from './groups-cups';
+export * from './groups-position-playoffs';

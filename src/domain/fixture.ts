@@ -3,6 +3,7 @@ import { generateKnockoutFixtureContract } from './knockout';
 import { generateRoundRobinFixtureContract } from './round-robin';
 import { generateGroupsKnockoutFixtureContract } from './groups-knockout';
 import { generateGroupsCupsFixtureContract } from './groups-cups';
+import { generateGroupsPositionPlayoffsFixtureContract } from './groups-position-playoffs';
 
 export const generateFixture: GenerateFixture = (input) => {
   const params: FormatParams = input.params;
@@ -17,6 +18,9 @@ export const generateFixture: GenerateFixture = (input) => {
   }
   if (params.format === 'GROUPS_CUPS') {
     return generateGroupsCupsFixtureContract(input);
+  }
+  if (params.format === 'GROUPS_POSITION_PLAYOFFS') {
+    return generateGroupsPositionPlayoffsFixtureContract(input);
   }
   return {
     ok: false,

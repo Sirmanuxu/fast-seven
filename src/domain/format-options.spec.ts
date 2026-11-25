@@ -82,7 +82,7 @@ describe('computeFormatOptions', () => {
     expect(option(8, 'GROUPS_POSITION_PLAYOFFS')).toMatchObject({
       totalMatches: 16,
       minMatchesPerTeam: 4,
-      maxMatchesPerTeam: 5,
+      maxMatchesPerTeam: 4,
     });
     expect(option(8, 'SWISS')).toMatchObject({
       totalMatches: 12,
@@ -93,6 +93,13 @@ describe('computeFormatOptions', () => {
       totalMatches: 16,
       minMatchesPerTeam: 3,
       maxMatchesPerTeam: 4,
+    });
+    expect(
+      computeFormatOption(11, schedule, { format: 'GROUPS_POSITION_PLAYOFFS', groupCount: 3 }),
+    ).toMatchObject({
+      totalMatches: 25,
+      minMatchesPerTeam: 4,
+      maxMatchesPerTeam: 5,
     });
     expect(option(4, 'DOUBLE_ELIMINATION')).toMatchObject({
       totalMatches: 6,
