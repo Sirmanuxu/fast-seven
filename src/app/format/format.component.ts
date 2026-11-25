@@ -396,7 +396,10 @@ export class FormatComponent implements OnInit {
     }
     this.isSaving.set(true);
     try {
-      await tournamentRepository.updateFormat(params);
+      await tournamentRepository.updateFormat(params, {
+        matchDurationMin: this.matchDuration(),
+        restMin: this.restDuration(),
+      });
       const updatedTournament = await tournamentRepository.getTournament();
       this.tournament.set(updatedTournament);
       this.teams.set(await tournamentRepository.getTeams());

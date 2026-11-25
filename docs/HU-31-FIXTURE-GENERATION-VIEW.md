@@ -8,6 +8,8 @@
   round, shows resolved or pending participants, status, result and tentative start time.
 - Added a summary of match count, minimum matches per team, estimated duration, short-rest teams,
   consecutive appearances and rosters below the configured minimum.
+- Saved match duration and inter-match rest from the format assistant in the tournament schedule,
+  preserving start time and other schedule settings.
 - Integrated HU-30's adjacent up/down controls and suggested-order reset into the fixture view.
 - Regeneration and format changes require confirmation. Fixture replacement is backed up in the
   same Dexie transaction; teams and players remain intact. Schedule breaks pointing to old match

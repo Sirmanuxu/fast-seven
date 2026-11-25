@@ -74,7 +74,7 @@ export const FORMAT_STRINGS: FormatStrings = {
   selected: 'Seleccionado',
   select: 'Elegir formato',
   save: 'Guardar formato',
-  saved: 'Formato guardado. Todavía no se generó el fixture.',
+  saved: 'Formato, duración y descanso guardados.',
   saveFailed: 'No se pudo guardar el formato. Revisá el almacenamiento del navegador.',
   fixtureResetConfirmation:
     'Cambiar el formato va a borrar el fixture y los sorteos asociados. Se conservarán los equipos y jugadores. ¿Querés continuar?',

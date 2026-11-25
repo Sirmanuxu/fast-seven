@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Match, Team, Tournament } from '../domain/model';
+import { FormatParams, Match, Team, Tournament } from '../domain/model';
 import { TournamentRepository } from './tournament-repository';
 import { tournamentDatabase } from './tournament-database';
 
@@ -234,13 +234,51 @@ describe('TournamentRepository.updateFormat', () => {
     };
     vi.spyOn(repository, 'getTournament').mockResolvedValue(existing);
 
-    await repository.updateFormat({ format: 'KNOCKOUT', thirdPlaceMatch: false });
+    await repository.updateFormat(
+      { format: 'KNOCKOUT', thirdPlaceMatch: false },
+      { matchDurationMin: 35, restMin: 7 },
+    );
 
     expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith(
       'tournament',
       expect.objectContaining({
         formatParams: { format: 'KNOCKOUT', thirdPlaceMatch: false },
-        schedule: { ...existing.schedule, breaks: [] },
+        schedule: {
+          ...existing.schedule,
+          matchDurationMin: 35,
+          restMin: 7,
+          breaks: [],
+        },
+      }),
+    );
+  });
+
+  it('persists duration and rest changes without replacing other schedule settings', async () => {
+    const repository = new TournamentRepository();
+    const formatParams: FormatParams = { format: 'ROUND_ROBIN', rounds: 1 };
+    const existing = {
+      ...tournament(),
+      formatParams,
+      schedule: {
+        startTime: '2026-11-25T10:00:00.000Z',
+        matchDurationMin: 20,
+        restMin: 5,
+        breaks: [{ id: 'break', label: 'Pausa', durationMin: 30, beforeMatchId: 'match' }],
+      },
+    };
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(existing);
+
+    await repository.updateFormat(formatParams, { matchDurationMin: 35, restMin: 7 });
+
+    expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith(
+      'tournament',
+      expect.objectContaining({
+        formatParams,
+        schedule: {
+          ...existing.schedule,
+          matchDurationMin: 35,
+          restMin: 7,
+        },
       }),
     );
   });

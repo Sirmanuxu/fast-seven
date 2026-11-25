@@ -261,7 +261,10 @@ export class TournamentRepository {
     });
   }
 
-  async updateFormat(formatParams: FormatParams): Promise<void> {
+  async updateFormat(
+    formatParams: FormatParams,
+    scheduleTiming: Pick<ScheduleConfig, 'matchDurationMin' | 'restMin'>,
+  ): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',
       [
@@ -327,7 +330,11 @@ export class TournamentRepository {
         }
         const updates: Partial<Tournament> = {
           formatParams,
-          ...(formatChanged ? { schedule: { ...tournament.schedule, breaks: [] } } : {}),
+          schedule: {
+            ...tournament.schedule,
+            ...scheduleTiming,
+            ...(formatChanged ? { breaks: [] } : {}),
+          },
           ...(formatChanged && tournament.status === 'FIXTURE_GENERATED'
             ? { status: 'SETUP' }
             : {}),
