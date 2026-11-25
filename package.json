@@ -1,6 +1,6 @@
 {
   "name": "fast-seven",
-  "version": "0.28.1",
+  "version": "0.29.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
