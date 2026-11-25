@@ -27,6 +27,11 @@ export interface MatchSaveInput {
   readonly events: readonly MatchEvent[];
 }
 
+export interface MatchOrderUpdate {
+  readonly matchId: string;
+  readonly order: number;
+}
+
 export interface ConfirmImportTeamResolution {
   readonly incomingName: string;
   readonly existingTeamId: string | null;
@@ -104,6 +109,78 @@ export class TournamentRepository {
         await tournamentDatabase.matches.put(input.match);
         await tournamentDatabase.events.where('matchId').equals(input.match.id).delete();
         await tournamentDatabase.events.bulkPut([...input.events]);
+
+        const tournament = await this.getTournament();
+        if (tournament) {
+          await tournamentDatabase.tournament.update(tournament.id, {
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      },
+    );
+  }
+
+  async updateMatchOrders(orders: readonly MatchOrderUpdate[]): Promise<void> {
+    if (orders.length === 0) return;
+    if (
+      new Set(orders.map((entry) => entry.matchId)).size !== orders.length ||
+      orders.some((entry) => !Number.isInteger(entry.order) || entry.order < 1)
+    ) {
+      throw new Error('Match order updates must have unique ids and positive integer positions');
+    }
+
+    await tournamentDatabase.transaction(
+      'rw',
+      tournamentDatabase.matches,
+      tournamentDatabase.tournament,
+      async () => {
+        const existingMatches = await tournamentDatabase.matches.toArray();
+        const orderById = new Map(existingMatches.map((match) => [match.id, match.order]));
+        const matchesById = new Map(existingMatches.map((match) => [match.id, match]));
+        for (const entry of orders) {
+          const current = matchesById.get(entry.matchId);
+          if (!current) throw new Error(`Match ${entry.matchId} does not exist`);
+          if (
+            current.order !== entry.order &&
+            (current.status !== 'PENDING' || current.isPhantom || current.isConditional)
+          ) {
+            throw new Error(`Match ${entry.matchId} is no longer reorderable`);
+          }
+          orderById.set(entry.matchId, entry.order);
+        }
+        const lockedMatches = existingMatches.filter(
+          (match) => match.status !== 'PENDING' || match.isPhantom || match.isConditional,
+        );
+        const reorderableMatches = existingMatches.filter(
+          (match) => match.status === 'PENDING' && !match.isPhantom && !match.isConditional,
+        );
+        for (const lockedMatch of lockedMatches) {
+          for (const pendingMatch of reorderableMatches) {
+            const previousPendingOrder = pendingMatch.order;
+            const nextPendingOrder = orderById.get(pendingMatch.id) ?? previousPendingOrder;
+            const nextLockedOrder = orderById.get(lockedMatch.id) ?? lockedMatch.order;
+            if (
+              previousPendingOrder > lockedMatch.order &&
+              nextPendingOrder < nextLockedOrder
+            ) {
+              throw new Error(`Match ${pendingMatch.id} cannot be moved before a locked match`);
+            }
+          }
+        }
+        if (new Set(orderById.values()).size !== orderById.size) {
+          throw new Error('Match order updates would create duplicate positions');
+        }
+
+        const changedOrders = orders.filter(
+          (entry) => matchesById.get(entry.matchId)?.order !== entry.order,
+        );
+        if (changedOrders.length === 0) return;
+        await tournamentDatabase.matches.bulkUpdate(
+          changedOrders.map((entry) => ({
+            key: entry.matchId,
+            changes: { order: entry.order },
+          })),
+        );
 
         const tournament = await this.getTournament();
         if (tournament) {

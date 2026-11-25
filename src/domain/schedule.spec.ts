@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateRoundRobinMatches } from './round-robin';
-import { computeSchedule, computeScheduleDetails } from './schedule';
+import { computePersistedSchedule, computeSchedule, computeScheduleDetails } from './schedule';
 import { Match, MatchRef, ScheduleConfig, Team, TournamentSnapshot } from './model';
 
 const startTime = '2026-11-24T10:00:00.000Z';
@@ -286,6 +286,36 @@ describe('tentative schedule', () => {
       Date.UTC(2026, 10, 24, 10, 0),
     );
     expect(details.orderedMatchIds).toEqual(['source', 'dependent']);
+  });
+
+  it('recalculates times from the persisted pending-match order', () => {
+    const teams = [team('A'), team('B'), team('C'), team('D')];
+    const matches = [
+      match(
+        'round-one',
+        2,
+        { kind: 'TEAM', teamId: 'A' },
+        { kind: 'TEAM', teamId: 'B' },
+        { round: 1 },
+      ),
+      match(
+        'round-two',
+        1,
+        { kind: 'TEAM', teamId: 'C' },
+        { kind: 'TEAM', teamId: 'D' },
+        { round: 2 },
+      ),
+    ];
+    const tournamentSnapshot = snapshot(teams, matches);
+
+    expect(
+      computePersistedSchedule(tournamentSnapshot, Date.UTC(2026, 10, 24, 10, 0)).map(
+        (entry) => entry.matchId,
+      ),
+    ).toEqual(['round-two', 'round-one']);
+    expect(
+      computeScheduleDetails(tournamentSnapshot, Date.UTC(2026, 10, 24, 10, 0)).orderedMatchIds,
+    ).toEqual(['round-one', 'round-two']);
   });
 
   it('estimates future Swiss matches without adding them to the tournament fixture', () => {

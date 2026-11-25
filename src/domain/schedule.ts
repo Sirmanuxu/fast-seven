@@ -33,6 +33,8 @@ interface OrderingScore {
   readonly totalGap: number;
 }
 
+export type ScheduleOrderMode = 'SUGGESTED' | 'PERSISTED';
+
 function isLeapYear(year: number): boolean {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
@@ -264,6 +266,7 @@ function orderPendingMatches(
   matches: readonly Match[],
   snapshot: TournamentSnapshot,
   resolved: ReadonlyMap<Id, ResolvedMatch>,
+  orderMode: ScheduleOrderMode,
 ): readonly Match[] {
   const stageOrder = new Map(snapshot.stages.map((stage) => [stage.id, stage.order]));
   const stageTypes = new Map(snapshot.stages.map((stage) => [stage.id, stage.type]));
@@ -277,6 +280,9 @@ function orderPendingMatches(
         match.away.kind !== 'BYE',
     )
     .sort((left, right) => {
+      if (orderMode === 'PERSISTED') {
+        return left.order - right.order || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
+      }
       const leftGroupPhase = stageTypes.get(left.stageId) === 'GROUPS' ? 0 : 1;
       const rightGroupPhase = stageTypes.get(right.stageId) === 'GROUPS' ? 0 : 1;
       return (
@@ -305,6 +311,8 @@ function orderPendingMatches(
     }
     dependencyOrdered.push(remaining.splice(nextIndex, 1)[0]);
   }
+
+  if (orderMode === 'PERSISTED') return dependencyOrdered;
 
   const ordered: Match[] = [];
   let blockStart = 0;
@@ -381,9 +389,10 @@ export function computeScheduleDetails(
   snapshot: TournamentSnapshot,
   now: number,
   resolvedMatches: readonly ResolvedMatch[] = [],
+  orderMode: ScheduleOrderMode = 'SUGGESTED',
 ): ScheduleDetails {
   const resolvedById = new Map(resolvedMatches.map((match) => [match.matchId, match]));
-  const orderedMatches = orderPendingMatches(snapshot.matches, snapshot, resolvedById);
+  const orderedMatches = orderPendingMatches(snapshot.matches, snapshot, resolvedById, orderMode);
   const estimatedMatches: ScheduleMatch[] = [
     ...orderedMatches.map((match) => ({
       matchId: match.id,
@@ -469,3 +478,11 @@ export function computeScheduleDetails(
 
 export const computeSchedule: ComputeSchedule = (snapshot, now) =>
   computeScheduleDetails(snapshot, now).entries;
+
+export function computePersistedSchedule(
+  snapshot: TournamentSnapshot,
+  now: number,
+  resolvedMatches: readonly ResolvedMatch[] = [],
+): readonly ScheduleEntry[] {
+  return computeScheduleDetails(snapshot, now, resolvedMatches, 'PERSISTED').entries;
+}
