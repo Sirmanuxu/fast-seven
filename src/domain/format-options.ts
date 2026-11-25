@@ -152,11 +152,19 @@ export const calculateTotals = (
       const cupCount = Math.max(...sizes);
       const warnings: Warning[] = [];
       if (new Set(sizes).size > 1) warnings.push(warning('UNEVEN_GROUPS', 'format.unevenGroups'));
+      const cupMatches = Array.from(
+        { length: cupCount },
+        (_, index) => sizes.filter((size) => size > index).length,
+      ).reduce(
+        (total, participants) =>
+          total +
+          (participants >= 2
+            ? participants - 1 + (params.thirdPlaceMatch && participants >= 4 ? 1 : 0)
+            : 0),
+        0,
+      );
       return {
-        totalMatches:
-          groupMatches(sizes) +
-          cupCount * (params.groupCount - 1) +
-          (params.thirdPlaceMatch ? cupCount : 0),
+        totalMatches: groupMatches(sizes) + cupMatches,
         minMatchesPerTeam: Math.min(...sizes) - 1 + 1,
         maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)),
         warnings,

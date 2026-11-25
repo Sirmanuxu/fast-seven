@@ -2,6 +2,7 @@ import { FormatParams, GenerateFixture } from './model';
 import { generateKnockoutFixtureContract } from './knockout';
 import { generateRoundRobinFixtureContract } from './round-robin';
 import { generateGroupsKnockoutFixtureContract } from './groups-knockout';
+import { generateGroupsCupsFixtureContract } from './groups-cups';
 
 export const generateFixture: GenerateFixture = (input) => {
   const params: FormatParams = input.params;
@@ -13,6 +14,9 @@ export const generateFixture: GenerateFixture = (input) => {
   }
   if (params.format === 'GROUPS_KNOCKOUT') {
     return generateGroupsKnockoutFixtureContract(input);
+  }
+  if (params.format === 'GROUPS_CUPS') {
+    return generateGroupsCupsFixtureContract(input);
   }
   return {
     ok: false,

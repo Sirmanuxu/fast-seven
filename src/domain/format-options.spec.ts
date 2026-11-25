@@ -62,6 +62,13 @@ describe('computeFormatOptions', () => {
       minMatchesPerTeam: 4,
       maxMatchesPerTeam: 5,
     });
+    expect(
+      computeFormatOption(11, schedule, {
+        format: 'GROUPS_CUPS',
+        groupCount: 3,
+        thirdPlaceMatch: true,
+      }),
+    ).toMatchObject({ totalMatches: 22 });
     expect(option(8, 'KNOCKOUT')).toMatchObject({
       totalMatches: 7,
       minMatchesPerTeam: 1,
