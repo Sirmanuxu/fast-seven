@@ -1,5 +1,20 @@
 # Decision log
 
+## 2026-11-24 - HU-27 - Groups plus position playoffs
+
+- **Decision:** Use round robin for placement levels with up to four participants and seeded
+  knockout for larger levels.
+- **Reason:** This follows the rule proposed in backlog section 2.5 and yields a complete ranking
+  without requiring a bracket larger than necessary for small groups.
+- **Decision:** Keep each position level in its own stage and retain singleton uneven levels with
+  no matches.
+- **Reason:** Stage boundaries preserve level-by-level final placements, while the named empty
+  stage explains a last group-position level that contains only one team.
+- **Decision:** Use `GROUP_POSITION` for direct/small-level matches and `LEVEL_POSITION` for
+  knockout seeds.
+- **Reason:** Direct levels do not need cross-group ranking; larger brackets need HU-18 rankings
+  to determine seeded positions once group results are available.
+
 ## 2026-11-24 - HU-26 - Groups plus cups
 
 - **Decision:** Represent each cup participant with an ordered `LEVEL_POSITION` reference, then
