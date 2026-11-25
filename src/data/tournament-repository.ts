@@ -32,6 +32,14 @@ export interface MatchOrderUpdate {
   readonly order: number;
 }
 
+export interface SaveFixtureInput {
+  readonly formatParams: FormatParams;
+  readonly stages: readonly Stage[];
+  readonly groups: readonly Group[];
+  readonly matches: readonly Match[];
+  readonly draws: readonly Draw[];
+}
+
 export interface ConfirmImportTeamResolution {
   readonly incomingName: string;
   readonly existingTeamId: string | null;
@@ -87,6 +95,22 @@ export class TournamentRepository {
 
   async getTournament(): Promise<Tournament | null> {
     return (await tournamentDatabase.tournament.toCollection().first()) ?? null;
+  }
+
+  async getSnapshot(): Promise<TournamentSnapshot | null> {
+    const [tournament, players, teams, stages, groups, matches, events, draws] = await Promise.all([
+      this.getTournament(),
+      tournamentDatabase.players.toArray(),
+      tournamentDatabase.teams.toArray(),
+      tournamentDatabase.stages.toArray(),
+      tournamentDatabase.groups.toArray(),
+      tournamentDatabase.matches.toArray(),
+      tournamentDatabase.events.toArray(),
+      tournamentDatabase.draws.toArray(),
+    ]);
+    return tournament
+      ? { tournament, players, teams, stages, groups, matches, events, draws }
+      : null;
   }
 
   async createTournament(tournament: Tournament): Promise<void> {
@@ -159,10 +183,7 @@ export class TournamentRepository {
             const previousPendingOrder = pendingMatch.order;
             const nextPendingOrder = orderById.get(pendingMatch.id) ?? previousPendingOrder;
             const nextLockedOrder = orderById.get(lockedMatch.id) ?? lockedMatch.order;
-            if (
-              previousPendingOrder > lockedMatch.order &&
-              nextPendingOrder < nextLockedOrder
-            ) {
+            if (previousPendingOrder > lockedMatch.order && nextPendingOrder < nextLockedOrder) {
               throw new Error(`Match ${pendingMatch.id} cannot be moved before a locked match`);
             }
           }
@@ -241,40 +262,191 @@ export class TournamentRepository {
   }
 
   async updateFormat(formatParams: FormatParams): Promise<void> {
-    await tournamentDatabase.transaction('rw', tournamentDatabase.tournament, async () => {
-      const tournament = await this.getTournament();
-      if (!tournament) {
-        throw new Error('No tournament is available');
-      }
-      if (tournament.status === 'RUNNING' || tournament.status === 'FINISHED') {
-        throw new Error('Format cannot be changed after the tournament starts');
-      }
-      await tournamentDatabase.tournament.update(tournament.id, {
-        formatParams,
-        updatedAt: new Date().toISOString(),
-      });
-    });
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) {
+          throw new Error('No tournament is available');
+        }
+        if (tournament.status === 'RUNNING' || tournament.status === 'FINISHED') {
+          throw new Error('Format cannot be changed after the tournament starts');
+        }
+        const formatChanged =
+          tournament.formatParams !== null &&
+          JSON.stringify(tournament.formatParams) !== JSON.stringify(formatParams);
+        if (formatChanged) {
+          const [stages, groups, matches, events, draws] = await Promise.all([
+            tournamentDatabase.stages.toArray(),
+            tournamentDatabase.groups.toArray(),
+            tournamentDatabase.matches.toArray(),
+            tournamentDatabase.events.toArray(),
+            tournamentDatabase.draws.toArray(),
+          ]);
+          if (
+            tournament.status === 'FIXTURE_GENERATED' ||
+            stages.length > 0 ||
+            groups.length > 0 ||
+            matches.length > 0 ||
+            events.length > 0 ||
+            draws.some((draw) => draw.payload.kind !== 'TEAMS')
+          ) {
+            await this.writeBackup('BEFORE_RESET', {
+              tournament,
+              players: await tournamentDatabase.players.toArray(),
+              teams: await tournamentDatabase.teams.toArray(),
+              stages,
+              groups,
+              matches,
+              events,
+              draws,
+            });
+            await Promise.all([
+              tournamentDatabase.stages.clear(),
+              tournamentDatabase.groups.clear(),
+              tournamentDatabase.matches.clear(),
+              tournamentDatabase.events.clear(),
+              tournamentDatabase.draws.clear(),
+            ]);
+            const teamDraws = draws.filter((draw) => draw.payload.kind === 'TEAMS');
+            if (teamDraws.length > 0) {
+              await tournamentDatabase.draws.bulkPut(teamDraws);
+            }
+          }
+        }
+        const updates: Partial<Tournament> = {
+          formatParams,
+          ...(formatChanged ? { schedule: { ...tournament.schedule, breaks: [] } } : {}),
+          ...(formatChanged && tournament.status === 'FIXTURE_GENERATED'
+            ? { status: 'SETUP' }
+            : {}),
+          updatedAt: new Date().toISOString(),
+        };
+        await tournamentDatabase.tournament.update(tournament.id, updates);
+      },
+    );
   }
 
-  async createBackup(reason: BackupReason, snapshot: TournamentSnapshot): Promise<Backup> {
+  async saveFixture(input: SaveFixtureInput): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'teams',
+        'players',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        if (tournament.status === 'RUNNING' || tournament.status === 'FINISHED') {
+          throw new Error('Fixture cannot be changed after the tournament starts');
+        }
+        if (
+          (await tournamentDatabase.teams.toArray()).filter((team) => team.status === 'ACTIVE')
+            .length < 2
+        ) {
+          throw new Error('At least two active teams are required to generate a fixture');
+        }
+        if (input.matches.length === 0) {
+          throw new Error('The generated fixture contains no matches');
+        }
+
+        if (tournament.status === 'FIXTURE_GENERATED') {
+          const snapshot = await this.readSnapshot(tournament);
+          await this.writeBackup('BEFORE_RESET', snapshot);
+        }
+
+        const existingDraws = await tournamentDatabase.draws.toArray();
+        const preservedDraws =
+          tournament.status === 'FIXTURE_GENERATED'
+            ? existingDraws.filter((draw) => draw.payload.kind === 'TEAMS')
+            : existingDraws;
+        const drawsById = new Map(
+          [...preservedDraws, ...input.draws].map((draw) => [draw.id, draw]),
+        );
+
+        await Promise.all([
+          tournamentDatabase.stages.clear(),
+          tournamentDatabase.groups.clear(),
+          tournamentDatabase.matches.clear(),
+          tournamentDatabase.events.clear(),
+          tournamentDatabase.draws.clear(),
+        ]);
+        if (input.stages.length > 0) {
+          await tournamentDatabase.stages.bulkPut([...input.stages]);
+        }
+        if (input.groups.length > 0) {
+          await tournamentDatabase.groups.bulkPut([...input.groups]);
+        }
+        await tournamentDatabase.matches.bulkPut([...input.matches]);
+        if (drawsById.size > 0) {
+          await tournamentDatabase.draws.bulkPut([...drawsById.values()]);
+        }
+        await tournamentDatabase.tournament.update(tournament.id, {
+          formatParams: input.formatParams,
+          status: 'FIXTURE_GENERATED',
+          ...(tournament.status === 'FIXTURE_GENERATED'
+            ? { schedule: { ...tournament.schedule, breaks: [] } }
+            : {}),
+          updatedAt: new Date().toISOString(),
+        });
+      },
+    );
+  }
+
+  private async readSnapshot(tournament: Tournament): Promise<TournamentSnapshot> {
+    const [players, teams, stages, groups, matches, events, draws] = await Promise.all([
+      tournamentDatabase.players.toArray(),
+      tournamentDatabase.teams.toArray(),
+      tournamentDatabase.stages.toArray(),
+      tournamentDatabase.groups.toArray(),
+      tournamentDatabase.matches.toArray(),
+      tournamentDatabase.events.toArray(),
+      tournamentDatabase.draws.toArray(),
+    ]);
+    return { tournament, players, teams, stages, groups, matches, events, draws };
+  }
+
+  private async writeBackup(reason: BackupReason, snapshot: TournamentSnapshot): Promise<Backup> {
     const backup: Backup = {
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       reason,
       snapshot,
     };
-    await tournamentDatabase.transaction('rw', tournamentDatabase.backups, async () => {
-      await tournamentDatabase.backups.add(backup);
-      const oldIds = await tournamentDatabase.backups
-        .orderBy('createdAt')
-        .reverse()
-        .offset(10)
-        .primaryKeys();
-      if (oldIds.length > 0) {
-        await tournamentDatabase.backups.bulkDelete(oldIds);
-      }
-    });
+    await tournamentDatabase.backups.add(backup);
+    const oldIds = await tournamentDatabase.backups
+      .orderBy('createdAt')
+      .reverse()
+      .offset(10)
+      .primaryKeys();
+    if (oldIds.length > 0) {
+      await tournamentDatabase.backups.bulkDelete(oldIds);
+    }
     return backup;
+  }
+
+  async createBackup(reason: BackupReason, snapshot: TournamentSnapshot): Promise<Backup> {
+    return tournamentDatabase.transaction('rw', tournamentDatabase.backups, () =>
+      this.writeBackup(reason, snapshot),
+    );
   }
 
   async saveDraw(draw: Draw): Promise<void> {

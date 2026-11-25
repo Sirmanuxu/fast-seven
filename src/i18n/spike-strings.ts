@@ -13,6 +13,7 @@ export const SPIKE_STRINGS = {
   projectorWaiting: 'Esperando mensajes del panel',
   saveTest: 'Guardar prueba',
   openProjector: 'Abrir proyector',
+  openFixture: 'Fixture',
   panelTitle: 'Panel de prueba',
   projectorTitle: 'Proyector de prueba',
 } as const;

@@ -15,6 +15,8 @@ interface FormatStrings {
   readonly save: string;
   readonly saved: string;
   readonly saveFailed: string;
+  readonly fixtureResetConfirmation: string;
+  readonly fixtureReset: string;
   readonly totalMatches: string;
   readonly minMatchesPerTeam: string;
   readonly maxMatchesPerTeam: string;
@@ -74,6 +76,9 @@ export const FORMAT_STRINGS: FormatStrings = {
   save: 'Guardar formato',
   saved: 'Formato guardado. Todavía no se generó el fixture.',
   saveFailed: 'No se pudo guardar el formato. Revisá el almacenamiento del navegador.',
+  fixtureResetConfirmation:
+    'Cambiar el formato va a borrar el fixture y los sorteos asociados. Se conservarán los equipos y jugadores. ¿Querés continuar?',
+  fixtureReset: 'Formato actualizado. Generá un fixture nuevo para continuar.',
   totalMatches: 'Partidos totales',
   minMatchesPerTeam: 'Partidos mínimos por equipo',
   maxMatchesPerTeam: 'Partidos máximos por equipo',

@@ -81,6 +81,10 @@ export class PanelComponent implements OnInit {
     void this.router.navigateByUrl('/panel/formato');
   }
 
+  protected openFixture(): void {
+    void this.router.navigateByUrl('/panel/fixture');
+  }
+
   private async loadLastRecord(): Promise<void> {
     const record = await spikeDatabase.spikeRecords.orderBy('createdAt').last();
     this.lastRecord.set(record ?? null);
