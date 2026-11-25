@@ -25,3 +25,4 @@ export {
   getStandardSeedOrder,
 } from './knockout';
 export * from './fixture';
+export * from './groups-knockout';

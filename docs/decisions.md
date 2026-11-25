@@ -1,5 +1,20 @@
 # Decision log
 
+## 2026-11-24 - HU-25 - Groups plus knockout fixture
+
+- **Decision:** Add a dedicated pure-domain groups-knockout generator that composes the round-robin
+  and knockout fixture components, emits bracket slots as `GROUP_POSITION` references and keeps
+  group matches before knockout matches in the global pitch order.
+- **Reason:** This preserves the bracket's dynamic team resolution and lets later result edits
+  recompute qualified teams without storing derived teams in matches.
+- **Decision:** Use cross-group level rankings when supplied; otherwise seed each position level
+  by group order. Interchange first-round slots to avoid pairs from the same group whenever a
+  candidate from a different group is available.
+- **Reason:** The ranking of teams that finish in the same position is an HU-18 result and may
+  only be known after group matches. A best-effort slot exchange implements the HU-25 avoidable
+  cross rule while leaving an explicit impossibility explanation for configurations that cannot
+  separate all same-group pairs.
+
 ## 2026-11-24 - HU-24 - Knockout bracket generation
 
 - **Decision:** Generate the first-round slot order recursively by expanding every seed in the

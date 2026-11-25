@@ -21,6 +21,7 @@ export interface KnockoutMatchesInput {
   readonly rng?: Rng;
   readonly seededTeamIds?: readonly Id[];
   readonly teamOrder?: readonly Id[];
+  readonly slotRefs?: readonly MatchRef[];
 }
 
 export interface KnockoutFixtureInput extends KnockoutMatchesInput {
@@ -118,30 +119,42 @@ function buildTeamOrder(
 export function generateKnockoutMatches(
   input: KnockoutMatchesInput,
 ): Result<readonly Match[], DomainError> {
-  if (input.teamIds.length < 2) {
+  if (input.teamIds.length < 2 && input.slotRefs === undefined) {
     return error('tooFewTeams', { minimum: 2 });
   }
   if (new Set(input.teamIds).size !== input.teamIds.length) {
     return error('duplicateTeams');
   }
 
-  const bracketSize = getKnockoutBracketSize(input.teamIds.length);
+  const bracketSize =
+    input.slotRefs === undefined
+      ? getKnockoutBracketSize(input.teamIds.length)
+      : input.slotRefs.length;
+  if (!Number.isInteger(bracketSize) || bracketSize < 2 || (bracketSize & (bracketSize - 1)) !== 0) {
+    return error('invalidTeamCount');
+  }
   if (bracketSize === 0) {
     return error('invalidTeamCount');
   }
-  const teamOrder = buildTeamOrder(input.teamIds, input.rng, input.seededTeamIds, input.teamOrder);
-  if (
-    teamOrder.length !== input.teamIds.length ||
-    new Set(teamOrder).size !== teamOrder.length ||
-    teamOrder.some((teamId) => !input.teamIds.includes(teamId))
-  ) {
-    return error('invalidTeamOrder');
+  let teamOrder: readonly Id[] = [];
+  if (input.slotRefs === undefined) {
+    teamOrder = buildTeamOrder(input.teamIds, input.rng, input.seededTeamIds, input.teamOrder);
+    if (
+      teamOrder.length !== input.teamIds.length ||
+      new Set(teamOrder).size !== teamOrder.length ||
+      teamOrder.some((teamId) => !input.teamIds.includes(teamId))
+    ) {
+      return error('invalidTeamOrder');
+    }
   }
 
   const seedOrder = getStandardSeedOrder(bracketSize);
-  let slots: MatchRef[] = seedOrder.map((seed) =>
-    seed <= teamOrder.length ? teamRef(teamOrder[seed - 1]) : { kind: 'BYE' },
-  );
+  let slots: MatchRef[] =
+    input.slotRefs !== undefined
+      ? [...input.slotRefs]
+      : seedOrder.map((seed) =>
+          seed <= teamOrder.length ? teamRef(teamOrder[seed - 1]) : { kind: 'BYE' },
+        );
   const stageId = input.stageId ?? 'knockout-stage';
   const prefix = input.matchIdPrefix ?? stageId;
   const roundCount = Math.log2(bracketSize);

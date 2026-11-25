@@ -1,6 +1,7 @@
 import { FormatParams, GenerateFixture } from './model';
 import { generateKnockoutFixtureContract } from './knockout';
 import { generateRoundRobinFixtureContract } from './round-robin';
+import { generateGroupsKnockoutFixtureContract } from './groups-knockout';
 
 export const generateFixture: GenerateFixture = (input) => {
   const params: FormatParams = input.params;
@@ -9,6 +10,9 @@ export const generateFixture: GenerateFixture = (input) => {
   }
   if (params.format === 'KNOCKOUT') {
     return generateKnockoutFixtureContract(input);
+  }
+  if (params.format === 'GROUPS_KNOCKOUT') {
+    return generateGroupsKnockoutFixtureContract(input);
   }
   return {
     ok: false,
