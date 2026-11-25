@@ -1,5 +1,21 @@
 # Decision log
 
+## 2026-11-24 - HU-28 - Resolve match references
+
+- **Decision:** Recompute resolved teams from the complete tournament snapshot and expose
+  unresolved slots as `ResolvedMatch` labels plus an `isPlayable` flag.
+- **Reason:** The model contract defines resolved teams as derived data; a single resolution pass
+  keeps every display consistent and gives match-control code a clear start guard.
+- **Decision:** Keep the existing `ResolveMatches` return shape and add a richer
+  `resolveMatchesWithDraws` helper for callers that must persist newly generated group tiebreak
+  draws.
+- **Reason:** Changing `model.ts` would violate its contract, but dropping new draws would make a
+  group-position resolution unstable after reload.
+- **Decision:** Resolve a cross-group level only after groups containing that position are
+  complete, while reusing the existing `compareAcrossGroups` ranking implementation.
+- **Reason:** Groups with fewer teams cannot contribute to that level, and the shared comparator
+  already applies HU-18's uneven-group comparison rule.
+
 ## 2026-11-24 - HU-27 - Groups plus position playoffs
 
 - **Decision:** Use round robin for placement levels with up to four participants and seeded
