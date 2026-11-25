@@ -1,5 +1,18 @@
 # Decision log
 
+## 2026-11-24 - HU-26 - Groups plus cups
+
+- **Decision:** Represent each cup participant with an ordered `LEVEL_POSITION` reference, then
+  reuse the knockout generator's standard seed order and bye placement.
+- **Reason:** The teams that finish at a given group position are unknown when the fixture is
+  generated. Resolving the cross-group ranking after group results preserves seeding without
+  storing guessed teams in bracket slots.
+- **Decision:** Explain an uneven final playable cup in its stage name and calculate totals from
+  each level's actual participant count.
+- **Reason:** The existing fixture contract has no explanation field, and a one-team cup is not
+  generated; the stage name keeps the accepted explanation with the smaller cup without changing
+  the model contract.
+
 ## 2026-11-24 - HU-25 - Groups plus knockout fixture
 
 - **Decision:** Add a dedicated pure-domain groups-knockout generator that composes the round-robin
