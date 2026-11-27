@@ -80,7 +80,7 @@ function civilFromDays(daysSinceEpoch: number): { readonly year: number; readonl
   return { year, month, day };
 }
 
-function parseIsoDateTime(value: string): number | null {
+export function parseIsoDateTime(value: string): number | null {
   const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$/.exec(value);
   if (!parts) return null;
   const year = Number(parts[1]);

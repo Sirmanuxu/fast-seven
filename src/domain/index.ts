@@ -31,6 +31,7 @@ export * from './groups-cups';
 export * from './groups-position-playoffs';
 export * from './resolve-matches';
 export * from './schedule';
+export * from './projector-context';
 export * from './match-order';
 export * from './start-tournament';
 export * from './match-control';
