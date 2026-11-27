@@ -16,6 +16,9 @@
         <article class="match-detail">
           <div class="live-score" aria-live="polite">
             <strong>{{ matchControlStrings.liveScore }}</strong>
+            @if (matchContextLabel(current.match); as context) {
+              <span class="match-context">{{ context }}</span>
+            }
             @if (liveScore(); as score) {
               <span>{{ current.resolved.homeLabel }} {{ score.home }} - {{ score.away }} {{ current.resolved.awayLabel }}</span>
             }
@@ -205,6 +208,9 @@
       @if (matchControl().next; as next) {
         <article>
           <strong>{{ next.resolved.homeLabel }} - {{ next.resolved.awayLabel }}</strong>
+          @if (matchContextLabel(next.match); as context) {
+            <span class="match-context">{{ context }}</span>
+          }
           @if (tentativeStart(next.match.id); as start) {
             <span>{{ matchControlStrings.tentative }}: {{ start }}</span>
           }

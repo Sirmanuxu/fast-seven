@@ -11,6 +11,7 @@ import { showErrorPopup } from '../error-popup';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
 import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
 import {
+  Match,
   MatchEvent,
   ResolvedMatch,
   TournamentSnapshot,
@@ -289,6 +290,24 @@ export class PanelComponent implements OnInit {
 
   protected eventsForMatch(matchId: string): readonly MatchEvent[] {
     return this.snapshot()?.events.filter((event) => event.matchId === matchId) ?? [];
+  }
+
+  protected matchContextLabel(match: Match): string | null {
+    const snapshot = this.snapshot();
+    if (!snapshot) return null;
+
+    const stage = snapshot.stages.find((candidate) => candidate.id === match.stageId);
+    const group = match.groupId
+      ? snapshot.groups.find((candidate) => candidate.id === match.groupId)
+      : null;
+    const labels = [
+      stage?.name,
+      group
+        ? MATCH_CONTROL_STRINGS.groupLabel.replace('{name}', group.name)
+        : null,
+    ].filter((label): label is string => label !== null && label !== undefined);
+
+    return labels.length > 0 ? labels.join(' · ') : null;
   }
 
   protected playersForTeam(teamId: string, side: 'home' | 'away'): readonly {

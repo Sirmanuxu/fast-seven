@@ -22,6 +22,7 @@ export const MATCH_CONTROL_STRINGS = {
   playerSearch: 'Buscar jugador',
   noPlayersFound: 'No hay jugadores que coincidan con la búsqueda.',
   liveScore: 'Marcador en vivo',
+  groupLabel: 'Grupo {name}',
   eventList: 'Eventos',
   noEvents: 'Todavía no se cargaron eventos.',
   undoEvent: 'Deshacer',

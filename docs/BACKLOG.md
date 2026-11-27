@@ -748,6 +748,7 @@ Criterios de aceptación:
 Criterios de aceptación:
 
 - Pantalla de mesa de control con dos columnas (una por equipo), botones grandes «Try» y «Conversión», selector de jugador con búsqueda por nombre y opción «Sin autor». Marcador en vivo.
+- En el partido en curso y el próximo partido se indica la fase y, cuando corresponda, el grupo.
 - Lista de eventos con deshacer individual.
 - Cada evento se guarda al instante, sin esperar al cierre del partido.
 - Se puede cargar con el partido EN\_JUEGO o al finalizar (partidos cargados después del hecho).
