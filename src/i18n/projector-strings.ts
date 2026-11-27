@@ -11,6 +11,7 @@ export const PROJECTOR_STRINGS = {
   noCurrentMatch: 'No hay un partido en juego',
   noNextMatch: 'Próximo partido: a definir',
   toBeDefined: 'A definir',
+  bye: 'Libre (bye)',
   noResults: 'Todavía no hay resultados',
   scoreUnavailable: 'Marcador no disponible',
   noScorers: 'Todavía no hay goleadores',

@@ -3,6 +3,12 @@ import { Router } from '@angular/router';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { computeFormatOption } from '../../domain/format-options';
 import { generateFixture } from '../../domain/fixture';
+import {
+  previewSwissRound,
+  swissPreviewMatches,
+  SwissPairing,
+  SwissRoundPreview,
+} from '../../domain/swiss';
 import { movePendingMatch, resetSuggestedMatchOrder } from '../../domain/match-order';
 import {
   EditImpact,
@@ -83,6 +89,7 @@ export class FixtureComponent implements OnInit {
   } | null>(null);
   protected readonly editImpact = signal<EditImpact | null>(null);
   protected readonly cascadeBackupId = signal<string | null>(null);
+  protected readonly swissPreview = signal<SwissRoundPreview | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -132,7 +139,15 @@ export class FixtureComponent implements OnInit {
       .sort((left, right) => left.order - right.order)
       .map((stage) => {
         const stageMatches = snapshot.matches
-          .filter((match) => match.stageId === stage.id && !match.isPhantom && !match.isConditional)
+          .filter(
+            (match) =>
+              match.stageId === stage.id &&
+              !match.isConditional &&
+              (!match.isPhantom ||
+                (stage.type === 'SWISS' &&
+                  match.home.kind === 'TEAM' &&
+                  match.away.kind === 'BYE')),
+          )
           .sort((left, right) => left.round - right.round || left.order - right.order);
         const matchesByRound = new Map<number, FixtureMatchRow[]>();
         for (const match of stageMatches) {
@@ -181,6 +196,31 @@ export class FixtureComponent implements OnInit {
       .map((entry) => ({ name: entry.teamName, rest: entry.minimumRestMin }));
   }
 
+  protected get nextSwissRound(): number | null {
+    const snapshot = this.snapshot();
+    const params = snapshot?.tournament.formatParams;
+    const stage = snapshot?.stages.find((entry) => entry.type === 'SWISS');
+    if (!snapshot || params?.format !== 'SWISS' || !stage) return null;
+    const lastRound = snapshot.matches
+      .filter((match) => match.stageId === stage.id)
+      .reduce((maximum, match) => Math.max(maximum, match.round), 0);
+    return lastRound > 0 && lastRound < params.rounds ? lastRound + 1 : null;
+  }
+
+  protected get canPreviewSwissRound(): boolean {
+    const snapshot = this.snapshot();
+    const round = this.nextSwissRound;
+    const stage = snapshot?.stages.find((entry) => entry.type === 'SWISS');
+    if (!snapshot || !round || !stage || snapshot.tournament.status !== 'RUNNING') return false;
+    const previousMatches = snapshot.matches.filter(
+      (match) => match.stageId === stage.id && match.round === round - 1,
+    );
+    return (
+      previousMatches.length > 0 &&
+      previousMatches.every((match) => match.status === 'FINISHED' && match.result !== null)
+    );
+  }
+
   protected statusLabel(status: Match['status']): string {
     if (status === 'IN_PROGRESS') return this.strings.inProgress;
     if (status === 'FINISHED') return this.strings.finished;
@@ -210,6 +250,9 @@ export class FixtureComponent implements OnInit {
   }
 
   protected resultLabel(row: FixtureMatchRow): string | null {
+    if (row.match.isPhantom && row.match.away.kind === 'BYE') {
+      return this.strings.swissByeAwarded;
+    }
     const result = row.match.result;
     if (!result) return null;
     const score = `${row.homeLabel} ${result.homePoints}${this.strings.scoreSeparator}${result.awayPoints} ${row.awayLabel}`;
@@ -647,6 +690,72 @@ export class FixtureComponent implements OnInit {
     }
   }
 
+  protected previewSwissNextRound(): void {
+    const snapshot = this.snapshot();
+    const stage = snapshot?.stages.find((entry) => entry.type === 'SWISS');
+    const round = this.nextSwissRound;
+    if (!snapshot || !stage || !round || !this.canPreviewSwissRound || this.isBusy()) return;
+
+    const result = previewSwissRound({
+      stageId: stage.id,
+      round,
+      teams: this.activeTeams,
+      matches: snapshot.matches,
+      events: snapshot.events,
+      rules: snapshot.tournament.rules,
+      draws: snapshot.draws,
+      rng: createSeededRng(crypto.randomUUID()),
+    });
+    if (!result.ok) {
+      showErrorPopup(this.swissErrorText(result.error.code));
+      return;
+    }
+    this.swissPreview.set(result.value);
+  }
+
+  protected async confirmSwissRound(): Promise<void> {
+    const preview = this.swissPreview();
+    if (!preview || this.isBusy()) return;
+    if (
+      preview.requiresConfirmation &&
+      !window.confirm(this.strings.swissRepeatConfirmation)
+    ) {
+      return;
+    }
+
+    this.isBusy.set(true);
+    try {
+      await tournamentRepository.saveSwissRound({
+        stageId: preview.stageId,
+        round: preview.round,
+        matches: swissPreviewMatches(preview).map((match) => ({
+          ...match,
+          id: crypto.randomUUID(),
+        })),
+        draws: preview.newDraws,
+      });
+      this.swissPreview.set(null);
+      await this.load();
+      this.statusMessage.set(this.strings.swissRoundSaved);
+    } catch (error) {
+      console.error('Swiss round save failed', error);
+      showErrorPopup(this.strings.swissRoundSaveFailed);
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  protected swissPairingExplanation(pairing: SwissPairing): string {
+    const base = this.strings.swissPairingReason
+      .replace('{homePoints}', String(pairing.homeTablePoints))
+      .replace('{awayPoints}', String(pairing.awayTablePoints));
+    return pairing.isRepeat ? `${base} ${this.strings.swissRepeatLabel}` : base;
+  }
+
+  protected swissTeamName(teamId: string): string {
+    return this.snapshot()?.teams.find((team) => team.id === teamId)?.name ?? teamId;
+  }
+
   protected async moveMatch(matchId: string, direction: 'UP' | 'DOWN'): Promise<void> {
     const snapshot = this.snapshot();
     if (!snapshot || !this.canModifyFixture || this.isBusy()) return;
@@ -701,12 +810,18 @@ export class FixtureComponent implements OnInit {
     }
   }
 
+  private swissErrorText(code: string): string {
+    const messages: Readonly<Record<string, string>> = this.strings.swissErrors;
+    return messages[code] ?? this.strings.swissRoundPreviewFailed;
+  }
+
   private async load(): Promise<void> {
     const snapshot = await tournamentRepository.getSnapshot();
     if (!snapshot) {
       await this.router.navigateByUrl('/bienvenida');
       return;
     }
+    this.swissPreview.set(null);
     this.snapshot.set(snapshot);
     const seed =
       snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'fixture-view';
@@ -746,6 +861,7 @@ export class FixtureComponent implements OnInit {
       const outcome = reference.kind === 'WINNER_OF' ? this.strings.winner : this.strings.loser;
       return `${outcome} ${this.strings.match} ${relatedMatch ? relatedMatch.order : this.strings.unresolved}`;
     }
+    if (reference.kind === 'BYE') return this.strings.swissBye;
     return this.strings.unresolved;
   }
 

@@ -228,11 +228,19 @@ export function buildProjectorViewModel(
   const orderById = new Map(schedule.orderedMatchIds.map((id, index) => [id, index]));
 
   const fixture = snapshot.matches
-    .filter((match) => !match.isPhantom && !match.isConditional)
+    .filter(
+      (match) =>
+        !match.isConditional &&
+        (!match.isPhantom ||
+          (snapshot.stages.find((stage) => stage.id === match.stageId)?.type === 'SWISS' &&
+            match.home.kind === 'TEAM' &&
+            match.away.kind === 'BYE')),
+    )
     .map((match): ProjectorMatchCard => {
       const resolved = resolvedById.get(match.id);
       const homeTeam = resolved?.homeTeamId ? (teamCards.get(resolved.homeTeamId) ?? null) : null;
       const awayTeam = resolved?.awayTeamId ? (teamCards.get(resolved.awayTeamId) ?? null) : null;
+      const isSwissBye = match.isPhantom && match.home.kind === 'TEAM' && match.away.kind === 'BYE';
       let score: { readonly home: number; readonly away: number } | null = null;
       if (match.status === 'IN_PROGRESS' && homeTeam && awayTeam) {
         const scoreResult = computeScore(
@@ -241,7 +249,7 @@ export function buildProjectorViewModel(
           awayTeam.team.id,
         );
         if (scoreResult.ok) score = scoreResult.value;
-      } else if (match.result) {
+      } else if (match.result && !isSwissBye) {
         score = { home: match.result.homePoints, away: match.result.awayPoints };
       }
 
@@ -262,7 +270,10 @@ export function buildProjectorViewModel(
         stageName: snapshot.stages.find((stage) => stage.id === match.stageId)?.name ?? '',
         groupName: snapshot.groups.find((group) => group.id === match.groupId)?.name ?? null,
         homeName: resolved?.homeLabel ?? PROJECTOR_STRINGS.toBeDefined,
-        awayName: resolved?.awayLabel ?? PROJECTOR_STRINGS.toBeDefined,
+        awayName:
+          match.away.kind === 'BYE'
+            ? PROJECTOR_STRINGS.bye
+            : (resolved?.awayLabel ?? PROJECTOR_STRINGS.toBeDefined),
         homeTeam,
         awayTeam,
         homeScore: score?.home ?? null,

@@ -756,3 +756,11 @@
 - **Decision:** Raise the initial bundle error budget to 1.08 MB.
 - **Reason:** The HU-52 locking and recovery flow exceeded the 1.06 MB error limit by 3.54 kB;
   retaining the old limit would make the production build fail.
+
+## 2026-11-27 - HU-53 - Swiss round generation
+
+- **Decision:** Persist a Swiss bye as a finished phantom match with one `TEAM` slot and one
+  `BYE` slot, display it in the fixture and projector, and exclude it from match totals and
+  scheduling.
+- **Reason:** This records the awarded bye alongside its round while keeping the reference-case
+  match count at `floor(n / 2)`; existing `ByeRules` determine its standings points and score.

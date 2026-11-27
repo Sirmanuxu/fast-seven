@@ -96,6 +96,42 @@
         </section>
       }
 
+      @if (nextSwissRound; as roundNumber) {
+        <section class="swiss-round">
+          <h2>{{ strings.swissRoundTitle }} {{ roundNumber }}</h2>
+          @if (!canPreviewSwissRound) {
+            <p role="status">{{ strings.swissRoundWaiting }}</p>
+          }
+          <button
+            type="button"
+            (click)="previewSwissNextRound()"
+            [disabled]="isBusy() || !canPreviewSwissRound"
+          >
+            {{ swissPreview() ? strings.swissRegeneratePreview : strings.swissPreviewRound }}
+          </button>
+          @if (swissPreview(); as preview) {
+            <ul>
+              @for (pairing of preview.pairings; track pairing.homeTeamId + pairing.awayTeamId) {
+                <li>
+                  {{ swissTeamName(pairing.homeTeamId) }} -
+                  {{ swissTeamName(pairing.awayTeamId) }}:
+                  {{ swissPairingExplanation(pairing) }}
+                </li>
+              }
+              @if (preview.byeTeamId) {
+                <li>{{ swissTeamName(preview.byeTeamId) }}: {{ strings.swissBye }}</li>
+              }
+            </ul>
+            @if (preview.requiresConfirmation) {
+              <p role="status">{{ strings.swissRepeatWarning }}</p>
+            }
+            <button type="button" (click)="confirmSwissRound()" [disabled]="isBusy()">
+              {{ strings.swissApproveRound }}
+            </button>
+          }
+        </section>
+      }
+
       <section class="fixture">
         <header class="fixture-actions">
           <h2>{{ strings.title }}</h2>

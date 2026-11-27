@@ -1313,6 +1313,106 @@ export class TournamentRepository {
     );
   }
 
+  async saveSwissRound(input: {
+    readonly stageId: string;
+    readonly round: number;
+    readonly matches: readonly Match[];
+    readonly draws: readonly Draw[];
+  }): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        tournamentDatabase.tournament,
+        tournamentDatabase.teams,
+        tournamentDatabase.stages,
+        tournamentDatabase.matches,
+        tournamentDatabase.draws,
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament || tournament.status !== 'RUNNING') {
+          throw new Error('Swiss rounds can only be added while the tournament is running');
+        }
+        if (
+          tournament.formatParams?.format !== 'SWISS' ||
+          input.round > tournament.formatParams.rounds
+        ) {
+          throw new Error('Swiss round is outside the configured tournament format');
+        }
+        const stage = await tournamentDatabase.stages.get(input.stageId);
+        if (stage?.type !== 'SWISS') {
+          throw new Error('Swiss round stage does not exist');
+        }
+        if (
+          input.matches.length === 0 ||
+          input.matches.some(
+            (match) =>
+              match.stageId !== input.stageId ||
+              match.round !== input.round ||
+              match.status === 'IN_PROGRESS',
+          )
+        ) {
+          throw new Error('Swiss round preview is invalid');
+        }
+        const activeTeamIds = (await tournamentDatabase.teams.toArray())
+          .filter((team) => team.status === 'ACTIVE')
+          .map((team) => team.id);
+        const participantIds = input.matches.flatMap((match) =>
+          [match.home, match.away].flatMap((reference) =>
+            reference.kind === 'TEAM' ? [reference.teamId] : [],
+          ),
+        );
+        const byeMatches = input.matches.filter(
+          (match) => match.isPhantom && match.home.kind === 'TEAM' && match.away.kind === 'BYE',
+        );
+        if (
+          activeTeamIds.length < 4 ||
+          participantIds.length !== activeTeamIds.length ||
+          new Set(participantIds).size !== participantIds.length ||
+          activeTeamIds.some((teamId) => !participantIds.includes(teamId)) ||
+          input.matches.filter((match) => !match.isPhantom && !match.isConditional).length !==
+            Math.floor(activeTeamIds.length / 2) ||
+          byeMatches.length !== activeTeamIds.length % 2 ||
+          byeMatches.some((match) => match.status !== 'FINISHED' || match.result === null)
+        ) {
+          throw new Error('Swiss round does not include each active team exactly once');
+        }
+
+        const existingMatches = await tournamentDatabase.matches
+          .where('stageId')
+          .equals(input.stageId)
+          .toArray();
+        const lastRound = existingMatches.reduce(
+          (maximum, match) => Math.max(maximum, match.round),
+          0,
+        );
+        if (input.round !== lastRound + 1 || lastRound === 0) {
+          throw new Error('Swiss round is out of sequence');
+        }
+        if (
+          existingMatches.some(
+            (match) =>
+              match.round === lastRound &&
+              (match.status !== 'FINISHED' || match.result === null),
+          )
+        ) {
+          throw new Error('The previous Swiss round is not complete');
+        }
+        if (existingMatches.some((match) => match.round === input.round)) {
+          throw new Error('Swiss round already exists');
+        }
+
+        await tournamentDatabase.matches.bulkPut([...input.matches]);
+        if (input.draws.length > 0) {
+          await tournamentDatabase.draws.bulkPut([...input.draws]);
+        }
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: new Date().toISOString(),
+        });
+      },
+    );
+  }
+
   async closeTournament(closedAt: string): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',
