@@ -267,6 +267,44 @@ describe('resolve match references', () => {
     });
   });
 
+  it('advances the present team from a walkover to the next bracket match', () => {
+    const walkover = match(
+      'walkover',
+      14,
+      { kind: 'TEAM', teamId: 'A1' },
+      { kind: 'TEAM', teamId: 'A2' },
+      {
+        stageId: 'knockout',
+        status: 'FINISHED',
+        result: {
+          mode: 'WALKOVER',
+          homePoints: 0,
+          awayPoints: 28,
+          definition: 'WALKOVER',
+          winnerTeamId: 'A2',
+        },
+      },
+    );
+    const final = match(
+      'final',
+      15,
+      { kind: 'WINNER_OF', matchId: 'walkover' },
+      { kind: 'TEAM', teamId: 'A3' },
+      { stageId: 'knockout' },
+    );
+
+    const resolved = resolveMatches(
+      snapshot([], [walkover, final]),
+      createSeededRng('walkover-winner'),
+    );
+
+    expect(resolved[1]).toMatchObject({
+      homeTeamId: 'A2',
+      awayTeamId: 'A3',
+      isPlayable: true,
+    });
+  });
+
   it('leaves tied matches without a winner unresolved and labels the source match', () => {
     const tiedMatch = match(
       'tied',

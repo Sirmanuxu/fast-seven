@@ -8,6 +8,7 @@ import {
   MatchResult,
   Team,
   TournamentRules,
+  PRESET_POINTS_4_2_0_BONUS,
 } from './model';
 import { createSeededRng } from './rng';
 
@@ -276,6 +277,53 @@ describe('computeStandings', () => {
         tablePoints: 0,
       }),
     );
+  });
+
+  it('applies the walkover result without bonuses under 4-2-0 scoring', () => {
+    const bonusRules: TournamentRules = {
+      ...rules,
+      points: PRESET_POINTS_4_2_0_BONUS,
+    };
+    const rows = computeStandings({
+      teamIds: ['a', 'b'],
+      matches: [
+        match('wo', 'a', 'b', {
+          mode: 'WALKOVER',
+          homePoints: 0,
+          awayPoints: 28,
+          definition: 'WALKOVER',
+          winnerTeamId: 'b',
+        }),
+      ],
+      events: [],
+      teams: [team('a'), team('b')],
+      rules: bonusRules,
+      draws: [],
+      rng: createSeededRng('walkover-bonus-test'),
+    }).rows;
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        teamId: 'b',
+        played: 1,
+        won: 1,
+        pointsFor: 28,
+        pointsAgainst: 0,
+        triesFor: 0,
+        bonusPoints: 0,
+        tablePoints: 4,
+      }),
+      expect.objectContaining({
+        teamId: 'a',
+        played: 1,
+        lost: 1,
+        pointsFor: 0,
+        pointsAgainst: 28,
+        triesFor: 0,
+        bonusPoints: 0,
+        tablePoints: 0,
+      }),
+    ]);
   });
 
   it('counts a bye as a played win without changing scores when configured not to count score', () => {

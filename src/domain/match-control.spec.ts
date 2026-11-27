@@ -3,8 +3,10 @@ import {
   buildMatchControlView,
   finishDetailMatch,
   finishDirectMatch,
+  finishWalkover,
   startMatch,
   switchDirectToDetail,
+  undoWalkover,
 } from './match-control';
 import { createFixedClock } from './clock';
 import { Match, ResolvedMatch, TournamentSnapshot } from './model';
@@ -83,6 +85,107 @@ function snapshot(matches: readonly Match[]): TournamentSnapshot {
 }
 
 describe('match control', () => {
+  it('finishes a pending match as a walkover with the configured score and resolved winner', () => {
+    const pending = match('one', 1);
+    const base = snapshot([pending]);
+
+    const result = finishWalkover(
+      base,
+      [resolved('one')],
+      'one',
+      'home-one',
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'FINISHED',
+        result: {
+          mode: 'WALKOVER',
+          homePoints: 0,
+          awayPoints: 28,
+          definition: 'WALKOVER',
+          winnerTeamId: 'away-one',
+        },
+        finishedAt: '2026-11-26T12:40:00.000Z',
+      },
+    });
+    expect(pending.status).toBe('PENDING');
+  });
+
+  it('uses the configured losing score when the away team does not show up', () => {
+    const base = snapshot([match('one', 1)]);
+    const customScore = {
+      ...base,
+      tournament: {
+        ...base.tournament,
+        rules: {
+          ...base.tournament.rules,
+          walkoverScore: { winner: 31, loser: 2 },
+        },
+      },
+    };
+
+    const result = finishWalkover(
+      customScore,
+      [resolved('one')],
+      'one',
+      'away-one',
+      createFixedClock(0),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        result: {
+          homePoints: 31,
+          awayPoints: 2,
+          winnerTeamId: 'home-one',
+        },
+      },
+    });
+  });
+
+  it('rejects a walkover for a team that is not in the match', () => {
+    const result = finishWalkover(
+      snapshot([match('one', 1)]),
+      [resolved('one')],
+      'one',
+      'unrelated-team',
+      createFixedClock(0),
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'invalidAbsentTeam' },
+    });
+  });
+
+  it('undoes a finished walkover back to pending without changing the original match', () => {
+    const pending = match('one', 1);
+    const base = snapshot([pending]);
+    const finished = finishWalkover(
+      base,
+      [resolved('one')],
+      'one',
+      'home-one',
+      createFixedClock(0),
+    );
+    if (!finished.ok) throw new Error('Expected walkover to finish');
+
+    const undone = undoWalkover(
+      { ...base, matches: [finished.value] },
+      'one',
+    );
+
+    expect(undone).toMatchObject({
+      ok: true,
+      value: { status: 'PENDING', result: null, finishedAt: null },
+    });
+    expect(pending.status).toBe('PENDING');
+  });
+
   it('finishes a detail match with the recomputed score', () => {
     const live = match('one', 1, 'IN_PROGRESS');
     const base = snapshot([live]);

@@ -243,6 +243,86 @@ export function finishDirectMatch(
   };
 }
 
+export function finishWalkover(
+  snapshot: TournamentSnapshot,
+  resolvedMatches: readonly ResolvedMatch[],
+  matchId: Id,
+  absentTeamId: Id,
+  clock: Clock,
+): Result<Match, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (match.status !== 'PENDING') {
+    return error('matchNotPending', 'matchControl.matchNotPending');
+  }
+  if (match.isPhantom || match.isConditional) {
+    return error('matchNotPlayable', 'matchControl.matchNotPlayable');
+  }
+
+  const resolved = resolvedMatches.find((candidate) => candidate.matchId === matchId);
+  if (!resolved?.isPlayable || resolved.homeTeamId === null || resolved.awayTeamId === null) {
+    return error('matchNotResolved', 'matchControl.matchNotResolved');
+  }
+  if (absentTeamId !== resolved.homeTeamId && absentTeamId !== resolved.awayTeamId) {
+    return error('invalidAbsentTeam', 'matchControl.invalidAbsentTeam');
+  }
+
+  const absentIsHome = absentTeamId === resolved.homeTeamId;
+  const { winner, loser } = snapshot.tournament.rules.walkoverScore;
+  return {
+    ok: true,
+    value: {
+      ...match,
+      status: 'FINISHED',
+      result: {
+        mode: 'WALKOVER',
+        homePoints: absentIsHome ? loser : winner,
+        awayPoints: absentIsHome ? winner : loser,
+        definition: 'WALKOVER',
+        winnerTeamId: absentIsHome ? resolved.awayTeamId : resolved.homeTeamId,
+      },
+      finishedAt: formatIsoDateTime(clock.nowMs()),
+    },
+  };
+}
+
+export function undoWalkover(
+  snapshot: TournamentSnapshot,
+  matchId: Id,
+): Result<Match, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (
+    match.status !== 'FINISHED' ||
+    match.result?.mode !== 'WALKOVER' ||
+    match.result.definition !== 'WALKOVER'
+  ) {
+    return error('matchNotWalkover', 'matchControl.matchNotWalkover');
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...match,
+      status: 'PENDING',
+      result: null,
+      finishedAt: null,
+    },
+  };
+}
+
 export function switchDirectToDetail(
   snapshot: TournamentSnapshot,
   matchId: Id,
