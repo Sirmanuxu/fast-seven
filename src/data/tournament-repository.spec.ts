@@ -200,6 +200,97 @@ describe('TournamentRepository.saveFixture', () => {
   });
 });
 
+describe('TournamentRepository.startMatch', () => {
+  beforeEach(() => {
+    vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
+      const operation = arguments_.find((argument) => typeof argument === 'function');
+      if (typeof operation !== 'function') {
+        return Dexie.Promise.reject(new Error('Transaction scope is missing'));
+      }
+      return Dexie.Promise.resolve(Reflect.apply(operation, undefined, []));
+    });
+    vi.spyOn(tournamentDatabase.players, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.teams, 'toArray').mockResolvedValue([
+      team('fixture-match-home'),
+      team('fixture-match-away'),
+    ]);
+    vi.spyOn(tournamentDatabase.stages, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.groups, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([match('fixture-match', 1)]);
+    vi.spyOn(tournamentDatabase.matches, 'get').mockResolvedValue(match('fixture-match', 1));
+    vi.spyOn(tournamentDatabase.events, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.draws, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
+    vi.spyOn(tournamentDatabase.backups, 'count').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.matches, 'update').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('backs up the original snapshot and starts the first match atomically', async () => {
+    const repository = new TournamentRepository();
+    const existing = tournament('FIXTURE_GENERATED');
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(existing);
+
+    await repository.startMatch('fixture-match', '2026-11-26T12:00:00.000Z');
+
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      expect.arrayContaining(['tournament', 'matches', 'backups', 'teams', 'events']),
+      expect.any(Function),
+    );
+    expect(tournamentDatabase.backups.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'TOURNAMENT_START',
+        snapshot: expect.objectContaining({ tournament: existing }),
+      }),
+    );
+    expect(tournamentDatabase.matches.update).toHaveBeenCalledWith('fixture-match', {
+      status: 'IN_PROGRESS',
+      startedAt: '2026-11-26T12:00:00.000Z',
+    });
+    expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith('tournament', {
+      status: 'RUNNING',
+      updatedAt: '2026-11-26T12:00:00.000Z',
+    });
+  });
+
+  it('does not create another tournament-start backup after the tournament is running', async () => {
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('RUNNING'));
+
+    await repository.startMatch('fixture-match', '2026-11-26T12:00:00.000Z');
+
+    expect(tournamentDatabase.backups.add).not.toHaveBeenCalled();
+    expect(tournamentDatabase.matches.update).toHaveBeenCalled();
+    expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith(
+      'tournament',
+      expect.objectContaining({ status: 'RUNNING' }),
+    );
+  });
+
+  it('rejects a match that is not playable without changing the tournament', async () => {
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('FIXTURE_GENERATED'));
+    const unplayableMatch = {
+      ...match('fixture-match', 1),
+      home: { kind: 'WINNER_OF', matchId: 'missing-match' },
+    } satisfies Match;
+    vi.spyOn(tournamentDatabase.matches, 'get').mockResolvedValue(unplayableMatch);
+    vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([unplayableMatch]);
+
+    await expect(
+      repository.startMatch('fixture-match', '2026-11-26T12:00:00.000Z'),
+    ).rejects.toThrow('Only playable matches');
+    expect(tournamentDatabase.backups.add).not.toHaveBeenCalled();
+    expect(tournamentDatabase.matches.update).not.toHaveBeenCalled();
+    expect(tournamentDatabase.tournament.update).not.toHaveBeenCalled();
+  });
+});
+
 describe('TournamentRepository.updateFormat', () => {
   beforeEach(() => {
     vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {

@@ -21,6 +21,9 @@ import {
 import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
 import { canCreateOrDeleteTeam, getDefaultTeamColorPair, normalizeTeamName } from '../domain/team';
 import { normalizePlayerKey } from '../domain/player';
+import { createSeededRng } from '../domain/rng';
+import { resolveMatches } from '../domain/resolve-matches';
+import { startTournamentMatch } from '../domain/start-tournament-match';
 
 export interface MatchSaveInput {
   readonly match: Match;
@@ -418,6 +421,57 @@ export class TournamentRepository {
     );
   }
 
+  async startMatch(matchId: string, startedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        const match = await tournamentDatabase.matches.get(matchId);
+        if (!tournament || !match) {
+          throw new Error('Tournament or match is no longer available');
+        }
+
+        const snapshot = await this.readSnapshot(tournament);
+        const tieBreakSeed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'match-start';
+        const resolvedMatch = resolveMatches(snapshot, createSeededRng(tieBreakSeed)).find(
+          (entry) => entry.matchId === matchId,
+        );
+        if (!resolvedMatch?.isPlayable) {
+          throw new Error('Only playable matches can be started');
+        }
+
+        const transition = startTournamentMatch(tournament, match, startedAt);
+        if (!transition.ok) {
+          throw new Error(`Match cannot be started: ${transition.error}`);
+        }
+
+        if (transition.value.requiresBackup) {
+          await this.writeBackup('TOURNAMENT_START', snapshot);
+        }
+        await tournamentDatabase.matches.update(matchId, {
+          status: transition.value.match.status,
+          startedAt: transition.value.match.startedAt,
+        });
+        await tournamentDatabase.tournament.update(tournament.id, {
+          status: transition.value.tournament.status,
+          updatedAt: transition.value.tournament.updatedAt,
+        });
+      },
+    );
+  }
+
   private async readSnapshot(tournament: Tournament): Promise<TournamentSnapshot> {
     const [players, teams, stages, groups, matches, events, draws] = await Promise.all([
       tournamentDatabase.players.toArray(),
@@ -439,6 +493,9 @@ export class TournamentRepository {
       snapshot,
     };
     await tournamentDatabase.backups.add(backup);
+    if ((await tournamentDatabase.backups.count()) <= 10) {
+      return backup;
+    }
     const oldIds = await tournamentDatabase.backups
       .orderBy('createdAt')
       .reverse()
