@@ -222,6 +222,17 @@
           }
 
           <div>
+            @if (!isDoubleWithdrawn(current.resolved)) {
+              <button
+                type="button"
+                (click)="beginWalkover(current.match.id)"
+                [disabled]="startBusy() || eventBusy()"
+              >
+                {{ matchControlStrings.walkover }}
+              </button>
+            } @else {
+              <p role="status">{{ matchControlStrings.doubleWalkoverNeedsManualResult }}</p>
+            }
             @if (isEliminationMatch(current.match) && isLiveTie()) {
               <p role="status">{{ matchControlStrings.suddenDeath }}</p>
               <button
@@ -267,6 +278,9 @@
           @if (matchContextLabel(next.match); as context) {
             <span class="match-context">{{ context }}</span>
           }
+          @if (isDoubleWithdrawn(next.resolved)) {
+            <p role="status">{{ matchControlStrings.doubleWalkoverNeedsManualResult }}</p>
+          }
           @if (tentativeStart(next.match.id); as start) {
             <span>{{ matchControlStrings.tentative }}: {{ start }}</span>
           }
@@ -277,7 +291,9 @@
           >
             {{ matchControlStrings.putInPlay }}
           </button>
-          @if (!next.match.isPhantom && !next.match.isConditional) {
+          @if (
+            !next.match.isPhantom && !next.match.isConditional && !isDoubleWithdrawn(next.resolved)
+          ) {
             <button
               type="button"
               (click)="beginWalkover(next.match.id)"
@@ -297,10 +313,17 @@
           @for (entry of matchControl().following; track entry.match.id) {
             <li>
               <strong>{{ entry.resolved.homeLabel }} - {{ entry.resolved.awayLabel }}</strong>
+              @if (isDoubleWithdrawn(entry.resolved)) {
+                <p role="status">{{ matchControlStrings.doubleWalkoverNeedsManualResult }}</p>
+              }
               @if (tentativeStart(entry.match.id); as start) {
                 <span> · {{ matchControlStrings.tentative }}: {{ start }}</span>
               }
-              @if (!entry.match.isPhantom && !entry.match.isConditional) {
+              @if (
+                !entry.match.isPhantom &&
+                !entry.match.isConditional &&
+                !isDoubleWithdrawn(entry.resolved)
+              ) {
                 <button
                   type="button"
                   (click)="beginWalkover(entry.match.id)"

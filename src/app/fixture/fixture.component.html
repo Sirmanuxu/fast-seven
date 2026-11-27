@@ -126,7 +126,8 @@
                       @if (
                         current.tournament.status === 'RUNNING' &&
                         row.match.status === 'FINISHED' &&
-                        row.match.result?.mode === 'WALKOVER'
+                        row.match.result?.mode === 'WALKOVER' &&
+                        !row.match.result.walkoverOrigin
                       ) {
                         <button type="button" (click)="undoWalkover(row)" [disabled]="isBusy()">
                           {{ matchControlStrings.undoWalkover }}

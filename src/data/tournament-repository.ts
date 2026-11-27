@@ -34,6 +34,11 @@ import {
   undoWalkover as undoWalkoverDomain,
   undoMatchInProgress,
 } from '../domain/match-control';
+import {
+  finishPendingWithdrawalWalkovers,
+  reinstateTeam as reinstateTeamDomain,
+  withdrawTeam as withdrawTeamDomain,
+} from '../domain/team-withdrawal';
 import { analyzeEditImpactWithDraws } from '../domain/edit-impact';
 import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
@@ -307,9 +312,93 @@ export class TournamentRepository {
 
         await this.writeBackup('MATCH_FINISHED', snapshot);
         await tournamentDatabase.matches.put(finished.value);
+        await this.finishReadyWithdrawalWalkovers(tournament, finishedAt);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
         });
+      },
+    );
+  }
+
+  async withdrawTeam(teamId: string, changedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+
+        const snapshot = await this.readSnapshot(tournament);
+        const seed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ??
+          'team-withdrawal';
+        const resolved = resolveMatches(snapshot, createSeededRng(seed));
+        const withdrawal = withdrawTeamDomain(
+          snapshot,
+          resolved,
+          teamId,
+          createFixedClock(Date.parse(changedAt)),
+        );
+        if (!withdrawal.ok) {
+          throw new Error(`Team cannot be withdrawn: ${withdrawal.error.code}`);
+        }
+
+        await this.writeBackup('BEFORE_CASCADE_EDIT', snapshot);
+        await tournamentDatabase.teams.put(withdrawal.value.team);
+        if (withdrawal.value.matches.length > 0) {
+          await tournamentDatabase.matches.bulkPut([...withdrawal.value.matches]);
+          for (const match of withdrawal.value.matches) {
+            if (snapshot.events.some((event) => event.matchId === match.id)) {
+              await tournamentDatabase.events.where('matchId').equals(match.id).delete();
+            }
+          }
+        }
+        await tournamentDatabase.tournament.update(tournament.id, { updatedAt: changedAt });
+      },
+    );
+  }
+
+  async reinstateTeam(teamId: string, changedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+
+        const snapshot = await this.readSnapshot(tournament);
+        const reinstatement = reinstateTeamDomain(snapshot, teamId);
+        if (!reinstatement.ok) {
+          throw new Error(`Team cannot be reinstated: ${reinstatement.error.code}`);
+        }
+
+        await this.writeBackup('BEFORE_CASCADE_EDIT', snapshot);
+        await tournamentDatabase.teams.put(reinstatement.value.team);
+        if (reinstatement.value.matches.length > 0) {
+          await tournamentDatabase.matches.bulkPut([...reinstatement.value.matches]);
+        }
+        await this.finishReadyWithdrawalWalkovers(tournament, changedAt);
+        await tournamentDatabase.tournament.update(tournament.id, { updatedAt: changedAt });
       },
     );
   }
@@ -354,8 +443,11 @@ export class TournamentRepository {
 
         await this.writeBackup('MATCH_FINISHED', snapshot);
         await tournamentDatabase.matches.put(finished.value);
-        await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        if (snapshot.events.some((event) => event.matchId === matchId)) {
+          await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        }
         await tournamentDatabase.events.bulkPut([...events]);
+        await this.finishReadyWithdrawalWalkovers(tournament, finishedAt);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
         });
@@ -405,7 +497,10 @@ export class TournamentRepository {
 
         await this.writeBackup('MATCH_FINISHED', snapshot);
         await tournamentDatabase.matches.put(finished.value);
-        await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        if (snapshot.events.some((event) => event.matchId === matchId)) {
+          await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        }
+        await this.finishReadyWithdrawalWalkovers(tournament, finishedAt);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
         });
@@ -451,6 +546,10 @@ export class TournamentRepository {
 
         await this.writeBackup('MATCH_FINISHED', snapshot);
         await tournamentDatabase.matches.put(finished.value);
+        if (snapshot.events.some((event) => event.matchId === matchId)) {
+          await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        }
+        await this.finishReadyWithdrawalWalkovers(tournament, finishedAt);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
         });
@@ -538,6 +637,7 @@ export class TournamentRepository {
         if (analysis.draws.length > 0) {
           await tournamentDatabase.draws.bulkPut([...analysis.draws]);
         }
+        await this.finishReadyWithdrawalWalkovers(tournament, input.changedAt);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: input.changedAt,
         });
@@ -1023,6 +1123,32 @@ export class TournamentRepository {
       tournamentDatabase.draws.toArray(),
     ]);
     return { tournament, players, teams, stages, groups, matches, events, draws };
+  }
+
+  private async finishReadyWithdrawalWalkovers(
+    tournament: Tournament,
+    changedAt: string,
+  ): Promise<void> {
+    const snapshot = await this.readSnapshot(tournament);
+    const seed =
+      snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'team-withdrawal';
+    const resolved = resolveMatches(snapshot, createSeededRng(seed));
+    const finished = finishPendingWithdrawalWalkovers(
+      snapshot,
+      resolved,
+      createFixedClock(Date.parse(changedAt)),
+    );
+    if (!finished.ok) {
+      throw new Error(`Pending withdrawal walkovers cannot be completed: ${finished.error.code}`);
+    }
+    if (finished.value.matches.length > 0) {
+      await tournamentDatabase.matches.bulkPut([...finished.value.matches]);
+      for (const match of finished.value.matches) {
+        if (snapshot.events.some((event) => event.matchId === match.id)) {
+          await tournamentDatabase.events.where('matchId').equals(match.id).delete();
+        }
+      }
+    }
   }
 
   private async writeBackup(reason: BackupReason, snapshot: TournamentSnapshot): Promise<Backup> {

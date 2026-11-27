@@ -333,6 +333,7 @@ export interface MatchResult {
    * derived from the points. Cleared automatically if an edit makes the score non-tied.
    */
   readonly winnerTeamId: Id | null;
+  readonly walkoverOrigin?: { readonly kind: 'TEAM_WITHDRAWAL'; readonly teamId: Id };
 }
 
 export interface Match {

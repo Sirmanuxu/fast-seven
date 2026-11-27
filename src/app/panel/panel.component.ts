@@ -195,14 +195,26 @@ export class PanelComponent implements OnInit {
     this.walkoverMatchId.set(this.walkoverMatchId() === matchId ? null : matchId);
   }
 
-  protected get walkoverEntry(): NonNullable<MatchControlView['next']> | null {
+  protected get walkoverEntry(): NonNullable<MatchControlView['current']> | null {
     const matchId = this.walkoverMatchId();
     if (!matchId) return null;
 
     const control = this.matchControl();
-    return control.next?.match.id === matchId
-      ? control.next
-      : (control.following.find((candidate) => candidate.match.id === matchId) ?? null);
+    return control.current?.match.id === matchId
+      ? control.current
+      : control.next?.match.id === matchId
+        ? control.next
+        : (control.following.find((candidate) => candidate.match.id === matchId) ?? null);
+  }
+
+  protected isDoubleWithdrawn(resolved: ResolvedMatch): boolean {
+    const teams = this.snapshot()?.teams ?? [];
+    return (
+      resolved.homeTeamId !== null &&
+      resolved.awayTeamId !== null &&
+      teams.some((team) => team.id === resolved.homeTeamId && team.status === 'WITHDRAWN') &&
+      teams.some((team) => team.id === resolved.awayTeamId && team.status === 'WITHDRAWN')
+    );
   }
 
   protected cancelWalkover(): void {
@@ -214,9 +226,11 @@ export class PanelComponent implements OnInit {
     const snapshot = this.snapshot();
     const control = this.matchControl();
     const entry =
-      control.next?.match.id === matchId
-        ? control.next
-        : control.following.find((candidate) => candidate.match.id === matchId);
+      control.current?.match.id === matchId
+        ? control.current
+        : control.next?.match.id === matchId
+          ? control.next
+          : control.following.find((candidate) => candidate.match.id === matchId);
     if (
       !snapshot ||
       !entry ||
@@ -235,7 +249,13 @@ export class PanelComponent implements OnInit {
     const { winner, loser } = snapshot.tournament.rules.walkoverScore;
     if (
       !window.confirm(
-        MATCH_CONTROL_STRINGS.confirmWalkover(absentName, winnerName, winner, loser),
+        MATCH_CONTROL_STRINGS.confirmWalkover(
+          absentName,
+          winnerName,
+          winner,
+          loser,
+          snapshot.events.some((event) => event.matchId === matchId),
+        ),
       )
     ) {
       return;

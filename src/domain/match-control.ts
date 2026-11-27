@@ -251,6 +251,7 @@ export function finishWalkover(
   matchId: Id,
   absentTeamId: Id,
   clock: Clock,
+  walkoverOrigin?: MatchResult['walkoverOrigin'],
 ): Result<Match, DomainError> {
   if (snapshot.tournament.status !== 'RUNNING') {
     return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
@@ -260,7 +261,7 @@ export function finishWalkover(
   if (!match) {
     return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
   }
-  if (match.status !== 'PENDING') {
+  if (match.status !== 'PENDING' && match.status !== 'IN_PROGRESS') {
     return error('matchNotPending', 'matchControl.matchNotPending');
   }
   if (match.isPhantom || match.isConditional) {
@@ -288,6 +289,7 @@ export function finishWalkover(
         awayPoints: absentIsHome ? winner : loser,
         definition: 'WALKOVER',
         winnerTeamId: absentIsHome ? resolved.awayTeamId : resolved.homeTeamId,
+        ...(walkoverOrigin ? { walkoverOrigin } : {}),
       },
       finishedAt: formatIsoDateTime(clock.nowMs()),
     },
@@ -420,6 +422,12 @@ export function undoWalkover(
   ) {
     return error('matchNotWalkover', 'matchControl.matchNotWalkover');
   }
+  if (match.result.walkoverOrigin) {
+    return error(
+      'withdrawalWalkoverMustBeReinstated',
+      'matchControl.withdrawalWalkoverMustBeReinstated',
+    );
+  }
 
   return {
     ok: true,
@@ -427,6 +435,7 @@ export function undoWalkover(
       ...match,
       status: 'PENDING',
       result: null,
+      startedAt: null,
       finishedAt: null,
     },
   };
@@ -463,8 +472,7 @@ export function undoMatchInProgress(
     snapshot.matches.every(
       (candidate) => candidate.id === matchId || candidate.status === 'PENDING',
     ) && snapshot.events.every((event) => event.matchId === matchId);
-  const shouldOfferFixtureReset =
-    firstMatch?.id === matchId && noMatchesWereTouched;
+  const shouldOfferFixtureReset = firstMatch?.id === matchId && noMatchesWereTouched;
 
   return {
     ok: true,

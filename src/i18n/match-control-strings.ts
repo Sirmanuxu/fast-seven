@@ -56,8 +56,11 @@ export const MATCH_CONTROL_STRINGS = {
     winnerName: string,
     winnerPoints: number,
     loserPoints: number,
+    discardEvents = false,
   ) =>
-    `¿Confirmás el W.O.? ${absentName} no se presentó y ${winnerName} gana ${winnerPoints} - ${loserPoints}.`,
+    `¿Confirmás el W.O.? ${absentName} no se presentó y ${winnerName} gana ${winnerPoints} - ${loserPoints}.${discardEvents ? ' Se van a borrar los eventos cargados en este partido.' : ''}`,
+  doubleWalkoverNeedsManualResult:
+    'Los dos equipos están retirados. Resolvé el partido con un marcador directo; en eliminación, definí además quién avanza por muerte súbita.',
   walkoverRecorded: 'El W.O. quedó registrado.',
   walkoverFailed: 'No se pudo registrar el W.O.',
   undoWalkover: 'Deshacer W.O.',

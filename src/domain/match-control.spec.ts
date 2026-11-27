@@ -216,6 +216,56 @@ describe('match control', () => {
     });
   });
 
+  it('can resolve an in-progress match as a walkover', () => {
+    const live = {
+      ...match('one', 1, 'IN_PROGRESS'),
+      startedAt: '2026-11-26T12:30:00.000Z',
+    };
+
+    const result = finishWalkover(
+      snapshot([live]),
+      [resolved('one')],
+      'one',
+      'home-one',
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'FINISHED',
+        startedAt: '2026-11-26T12:30:00.000Z',
+        result: {
+          mode: 'WALKOVER',
+          homePoints: 0,
+          awayPoints: 28,
+          winnerTeamId: 'away-one',
+        },
+      },
+    });
+  });
+
+  it('requires reinstatement instead of manually undoing a withdrawal walkover', () => {
+    const generated = {
+      ...match('one', 1, 'FINISHED'),
+      result: {
+        mode: 'WALKOVER' as const,
+        homePoints: 0,
+        awayPoints: 28,
+        definition: 'WALKOVER' as const,
+        winnerTeamId: 'away-one',
+        walkoverOrigin: { kind: 'TEAM_WITHDRAWAL' as const, teamId: 'home-one' },
+      },
+    };
+
+    const result = undoWalkover(snapshot([generated]), 'one');
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'withdrawalWalkoverMustBeReinstated' },
+    });
+  });
+
   it('edits a finalized direct result while preserving the original match inputs', () => {
     const finished = {
       ...match('one', 1, 'FINISHED'),

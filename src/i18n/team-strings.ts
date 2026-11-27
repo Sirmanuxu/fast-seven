@@ -63,4 +63,19 @@ export const TEAM_STRINGS = {
   rosterSettingsInvalid: 'Ingresá un mínimo positivo y un máximo mayor o igual (o dejalo vacío).',
   rosterSettingsDisabled:
     'No se pueden cambiar los límites con el torneo en curso. Para modificarlos, primero hay que reiniciarlo.',
+  withdrawn: 'Retirado',
+  withdraw: 'Retirar equipo',
+  reinstate: 'Reincorporar equipo',
+  withdrawConfirm: (teamName: string) =>
+    `¿Retirar a ${teamName}? Sus partidos pendientes pasarán a W.O. si el rival sigue activo. Los partidos entre dos equipos retirados quedarán pendientes para resolverlos manualmente. Los grupos no se recalculan y pueden quedar desparejos. Primero resolvé cualquier partido que el equipo tenga en juego.`,
+  reinstateConfirm: (teamName: string) =>
+    `¿Reincorporar a ${teamName}? Los W.O. generados por su retiro volverán a pendiente.`,
+  withdrawalSaved:
+    'El equipo quedó retirado. Los grupos no se recalcularon y pueden quedar desparejos.',
+  reinstatementSaved: 'El equipo quedó reincorporado y sus W.O. de retiro volvieron a pendiente.',
+  withdrawalMatchInProgress:
+    'Primero resolvé el partido que este equipo tiene en juego. Podés finalizarlo o cargar un W.O.',
+  withdrawalFailed: 'No se pudo retirar el equipo.',
+  reinstatementFailed: 'No se pudo reincorporar el equipo.',
+  withdrawalUnavailable: 'Solo podés retirar o reincorporar equipos con el torneo en curso.',
 } as const;

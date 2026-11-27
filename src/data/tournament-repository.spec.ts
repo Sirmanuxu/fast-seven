@@ -363,6 +363,90 @@ describe('TournamentRepository.updateFormat', () => {
   });
 });
 
+describe('TournamentRepository team withdrawal', () => {
+  const changedAt = '2026-11-27T03:00:00.000Z';
+
+  beforeEach(() => {
+    vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
+      const operation = arguments_.find((argument) => typeof argument === 'function');
+      if (typeof operation !== 'function') {
+        return Dexie.Promise.reject(new Error('Transaction scope is missing'));
+      }
+      return Dexie.Promise.resolve(Reflect.apply(operation, undefined, []));
+    });
+    vi.spyOn(tournamentDatabase.players, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.teams, 'toArray').mockResolvedValue([
+      team('retiring'),
+      team('opponent'),
+    ]);
+    vi.spyOn(tournamentDatabase.stages, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.groups, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([
+      {
+        ...match('withdrawal-match', 1),
+        home: { kind: 'TEAM', teamId: 'opponent' },
+        away: { kind: 'TEAM', teamId: 'retiring' },
+      },
+    ]);
+    vi.spyOn(tournamentDatabase.events, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.draws, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
+    vi.spyOn(tournamentDatabase.backups, 'count').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.teams, 'put').mockResolvedValue('retiring');
+    vi.spyOn(tournamentDatabase.matches, 'bulkPut').mockResolvedValue('withdrawal-match');
+    vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('backs up and writes withdrawal results in one Dexie transaction', async () => {
+    const repository = new TournamentRepository();
+    const existing = tournament('RUNNING');
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(existing);
+
+    await repository.withdrawTeam('retiring', changedAt);
+
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      expect.arrayContaining(['teams', 'matches', 'backups', 'events', 'tournament']),
+      expect.any(Function),
+    );
+    expect(tournamentDatabase.backups.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'BEFORE_CASCADE_EDIT',
+        snapshot: expect.objectContaining({
+          tournament: existing,
+          teams: expect.arrayContaining([
+            expect.objectContaining({ id: 'retiring', status: 'ACTIVE' }),
+          ]),
+          matches: expect.arrayContaining([
+            expect.objectContaining({ id: 'withdrawal-match', status: 'PENDING' }),
+          ]),
+        }),
+      }),
+    );
+    expect(tournamentDatabase.teams.put).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'retiring', status: 'WITHDRAWN' }),
+    );
+    expect(tournamentDatabase.matches.bulkPut).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: 'withdrawal-match',
+        result: expect.objectContaining({
+          mode: 'WALKOVER',
+          homePoints: 28,
+          awayPoints: 0,
+          walkoverOrigin: { kind: 'TEAM_WITHDRAWAL', teamId: 'retiring' },
+        }),
+      }),
+    ]);
+    expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith('tournament', {
+      updatedAt: changedAt,
+    });
+  });
+});
+
 describe('TournamentRepository tournament reset actions', () => {
   const teamDraw: Draw = {
     id: 'team-draw',

@@ -492,6 +492,46 @@ export class TeamsComponent implements OnInit {
     }
   }
 
+  protected async withdrawTeam(team: Team): Promise<void> {
+    if (this.tournament()?.status !== 'RUNNING') {
+      showErrorPopup(TEAM_STRINGS.withdrawalUnavailable);
+      return;
+    }
+    if (team.status === 'WITHDRAWN') return;
+    if (!window.confirm(TEAM_STRINGS.withdrawConfirm(team.name))) return;
+
+    try {
+      await tournamentRepository.withdrawTeam(team.id, new Date().toISOString());
+      await this.load();
+      this.statusMessage.set(TEAM_STRINGS.withdrawalSaved);
+    } catch (error) {
+      console.error('Team withdrawal failed', error);
+      if (error instanceof Error && error.message.includes('teamHasInProgressMatch')) {
+        showErrorPopup(TEAM_STRINGS.withdrawalMatchInProgress);
+      } else {
+        showErrorPopup(TEAM_STRINGS.withdrawalFailed);
+      }
+    }
+  }
+
+  protected async reinstateTeam(team: Team): Promise<void> {
+    if (this.tournament()?.status !== 'RUNNING') {
+      showErrorPopup(TEAM_STRINGS.withdrawalUnavailable);
+      return;
+    }
+    if (team.status !== 'WITHDRAWN') return;
+    if (!window.confirm(TEAM_STRINGS.reinstateConfirm(team.name))) return;
+
+    try {
+      await tournamentRepository.reinstateTeam(team.id, new Date().toISOString());
+      await this.load();
+      this.statusMessage.set(TEAM_STRINGS.reinstatementSaved);
+    } catch (error) {
+      console.error('Team reinstatement failed', error);
+      showErrorPopup(TEAM_STRINGS.reinstatementFailed);
+    }
+  }
+
   protected rosterStatus(team: Team): string {
     const limits = this.tournament()?.rules.roster;
     if (!limits) {

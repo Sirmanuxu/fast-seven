@@ -190,6 +190,9 @@
             @if (team.isSeed) {
               <small>{{ strings.seed }}</small>
             }
+            @if (team.status === 'WITHDRAWN') {
+              <small>{{ strings.withdrawn }}</small>
+            }
           </div>
           <p class="roster {{ rosterLabel(team) }}">
             {{ rosterStatus(team) }}
@@ -204,6 +207,17 @@
           <div class="actions">
             <button type="button" (click)="selectTeam(team.id)">Asignar jugadores</button>
             <button type="button" (click)="openEdit(team)">Editar</button>
+            @if (tournament()?.status === 'RUNNING') {
+              @if (team.status === 'WITHDRAWN') {
+                <button type="button" (click)="reinstateTeam(team)">
+                  {{ strings.reinstate }}
+                </button>
+              } @else {
+                <button type="button" (click)="withdrawTeam(team)">
+                  {{ strings.withdraw }}
+                </button>
+              }
+            }
             <button type="button" (click)="deleteTeam(team)" [disabled]="!canCreateOrDelete">
               {{ strings.delete }}
             </button>

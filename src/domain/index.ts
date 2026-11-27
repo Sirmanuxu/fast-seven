@@ -3,6 +3,7 @@ export * from './rng';
 export * from './clock';
 export * from './player';
 export * from './team';
+export * from './team-withdrawal';
 export * from './team-assignment';
 export * from './capacity';
 export * from './team-draw';
