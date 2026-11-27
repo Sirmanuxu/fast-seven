@@ -242,7 +242,27 @@ export class FixtureComponent implements OnInit {
     this.editHomePoints.set(result.homePoints);
     this.editAwayPoints.set(result.awayPoints);
     this.editWinnerTeamId.set(result.winnerTeamId);
-    this.editEvents.set(snapshot.events.filter((event) => event.matchId === row.match.id));
+    const resolved = this.resolvedMatches().find((entry) => entry.matchId === row.match.id);
+    const validTeamIds = new Set(
+      [resolved?.homeTeamId, resolved?.awayTeamId].filter(
+        (teamId): teamId is string => teamId !== null && teamId !== undefined,
+      ),
+    );
+    this.editEvents.set(
+      snapshot.events
+        .filter((event) => event.matchId === row.match.id)
+        .map((event) => {
+          if (!validTeamIds.has(event.teamId)) return null;
+          const player = event.playerId
+            ? snapshot.players.find((candidate) => candidate.id === event.playerId)
+            : null;
+          return {
+            ...event,
+            playerId: player?.teamId === event.teamId ? event.playerId : null,
+          };
+        })
+        .filter((event): event is MatchEvent => event !== null),
+    );
     this.pendingResultEdit.set(null);
     this.editImpact.set(null);
   }
@@ -302,9 +322,12 @@ export class FixtureComponent implements OnInit {
 
   protected updateEditEventAuthor(eventId: string, playerId: string): void {
     this.editEvents.update((events) =>
-      events.map((event) =>
-        event.id === eventId ? { ...event, playerId: playerId || null } : event,
-      ),
+      events.map((event) => {
+        if (event.id !== eventId) return event;
+        if (!playerId) return { ...event, playerId: null };
+        const player = this.snapshot()?.players.find((candidate) => candidate.id === playerId);
+        return player?.teamId === event.teamId ? { ...event, playerId } : event;
+      }),
     );
   }
 

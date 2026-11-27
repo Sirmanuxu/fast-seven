@@ -648,6 +648,15 @@ export class PanelComponent implements OnInit {
 
   protected selectPlayer(side: 'home' | 'away', playerId: string | null): void {
     this.activePlayerSearch.set(null);
+    if (playerId !== null) {
+      const current = this.matchControl().current;
+      const expectedTeamId =
+        side === 'home'
+          ? current?.resolved.homeTeamId
+          : current?.resolved.awayTeamId;
+      const player = this.snapshot()?.players.find((candidate) => candidate.id === playerId);
+      if (!expectedTeamId || player?.teamId !== expectedTeamId) return;
+    }
     if (side === 'home') {
       this.homePlayerId.set(playerId);
       this.homePlayerSearch.set('');

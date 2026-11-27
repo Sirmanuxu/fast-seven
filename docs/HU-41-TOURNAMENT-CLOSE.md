@@ -34,3 +34,4 @@
 - The player author search now resets when the current in-progress match changes, preventing selections from a previous match from leaking into the next event.
 - The fixture displays «Editar resultado» for both `RUNNING` and `FINISHED` tournaments.
 - Rechecking withdrawal-generated walkovers after a finalized-result edit now supports `FINISHED`; team withdrawal and reinstatement remain restricted to `RUNNING`.
+- Match event editing validates that an author belongs to the event's team and normalizes inconsistent saved events when opening the fixture editor.
