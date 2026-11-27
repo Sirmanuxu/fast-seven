@@ -67,6 +67,38 @@ button {
   min-height: 44px;
 }
 
+.projector-message-control {
+  max-width: 48rem;
+}
+
+.projector-message-control textarea,
+.projector-message-control select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+}
+
+.projector-message-control textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.message-character-count {
+  margin: 0;
+  text-align: right;
+}
+
+.message-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.message-control-actions button {
+  margin: 0;
+}
+
 .match-control {
   display: grid;
   gap: 1rem;

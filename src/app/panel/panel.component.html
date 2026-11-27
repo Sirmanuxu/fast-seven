@@ -112,6 +112,55 @@
     </label>
   </section>
 
+  <section class="projector-message-control" aria-labelledby="projector-message-control-title">
+    <h2 id="projector-message-control-title">{{ projectorStrings.messageTitle }}</h2>
+    <label for="projector-message-text">{{ projectorStrings.messageTextLabel }}</label>
+    <textarea
+      id="projector-message-text"
+      rows="3"
+      [attr.maxlength]="projectorMessageMaxLength"
+      [value]="projectorMessageDraft()"
+      [disabled]="projectorMessageBusy()"
+      [attr.aria-describedby]="'projector-message-count'"
+      (input)="updateProjectorMessageDraft($event)"
+    ></textarea>
+    <p id="projector-message-count" class="message-character-count">
+      {{ projectorMessageDraft().length }}/{{ projectorMessageMaxLength }}
+    </p>
+    <label for="projector-message-mode">{{ projectorStrings.messageModeLabel }}</label>
+    <select
+      id="projector-message-mode"
+      [value]="projectorMessageMode()"
+      [disabled]="projectorMessageBusy()"
+      (change)="selectProjectorMessageMode($event)"
+    >
+      <option value="BANNER">{{ projectorStrings.messageBanner }}</option>
+      <option value="FULLSCREEN">{{ projectorStrings.messageFullscreen }}</option>
+    </select>
+    <div class="message-control-actions">
+      <button
+        type="button"
+        (click)="saveProjectorMessage()"
+        [disabled]="projectorMessageBusy()"
+      >
+        {{
+          projectorState().message
+            ? projectorStrings.messageUpdate
+            : projectorStrings.messageShow
+        }}
+      </button>
+      @if (projectorState().message) {
+        <button
+          type="button"
+          (click)="clearProjectorMessage()"
+          [disabled]="projectorMessageBusy()"
+        >
+          {{ projectorStrings.messageClear }}
+        </button>
+      }
+    </div>
+  </section>
+
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }

@@ -380,7 +380,7 @@ tr.withdrawn {
 
 .timer-overlay {
   position: absolute;
-  z-index: 2;
+  z-index: 4;
   top: clamp(0.5rem, 2vmin, 1.5rem);
   right: clamp(0.5rem, 2vmin, 1.5rem);
   display: grid;

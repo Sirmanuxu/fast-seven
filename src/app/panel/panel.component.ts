@@ -18,6 +18,7 @@ import { TOURNAMENT_CLOSE_STRINGS } from '../../i18n/tournament-close-strings';
 import {
   Match,
   MatchEvent,
+  ProjectorMessage,
   ProjectorState,
   ProjectorTimer,
   ProjectorView,
@@ -30,6 +31,10 @@ import {
   formatProjectorTimer,
   isProjectorTimerExpired,
 } from '../../domain/projector-timer';
+import {
+  createProjectorMessage,
+  PROJECTOR_MESSAGE_MAX_LENGTH,
+} from '../../domain/projector-message';
 import {
   canCloseTournament,
   computeFinalTournamentResult,
@@ -105,6 +110,10 @@ export class PanelComponent implements OnInit {
   ]);
   protected readonly timerBusy = signal(false);
   protected readonly timerSoundEnabled = signal(false);
+  protected readonly projectorMessageDraft = signal('');
+  protected readonly projectorMessageMode = signal<ProjectorMessage['mode']>('BANNER');
+  protected readonly projectorMessageBusy = signal(false);
+  protected readonly projectorMessageMaxLength = PROJECTOR_MESSAGE_MAX_LENGTH;
   private timerAudioContext: AudioContext | null = null;
   private lastAlertedTimerKey: string | null = null;
   protected readonly projectorViewSelection = computed(() =>
@@ -168,6 +177,8 @@ export class PanelComponent implements OnInit {
     await this.requestPersistentStorage();
     this.checkOfflineStatus();
     await this.publishProjectorState(true);
+    this.projectorMessageDraft.set(this.projectorState().message?.text ?? '');
+    this.projectorMessageMode.set(this.projectorState().message?.mode ?? 'BANNER');
     const projectorViewClock = window.setInterval(() => this.projectorClock.set(Date.now()), 1000);
     const stateTimer = window.setInterval(() => {
       void this.publishProjectorState(false);
@@ -829,6 +840,45 @@ export class PanelComponent implements OnInit {
     void this.persistForcedProjectorView(null);
   }
 
+  protected updateProjectorMessageDraft(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLTextAreaElement) {
+      this.projectorMessageDraft.set(target.value);
+    }
+  }
+
+  protected selectProjectorMessageMode(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLSelectElement && this.isProjectorMessageMode(target.value)) {
+      this.projectorMessageMode.set(target.value);
+    }
+  }
+
+  protected saveProjectorMessage(): void {
+    const result = createProjectorMessage(
+      this.projectorMessageDraft(),
+      this.projectorMessageMode(),
+    );
+    if (!result.ok) {
+      showErrorPopup(
+        result.error.code === 'projectorMessageRequired'
+          ? PROJECTOR_PANEL_STRINGS.messageRequired
+          : PROJECTOR_PANEL_STRINGS.messageTooLong,
+      );
+      return;
+    }
+    void this.persistProjectorMessage(result.value);
+  }
+
+  protected clearProjectorMessage(): void {
+    if (this.projectorMessageBusy() || !this.projectorState().message) return;
+    void this.persistProjectorMessage(null);
+  }
+
+  protected isProjectorMessageMode(value: string): value is ProjectorMessage['mode'] {
+    return value === 'BANNER' || value === 'FULLSCREEN';
+  }
+
   protected updateTimerPresetName(id: TimerPresetId, name: string): void {
     this.timerPresets.update((presets) =>
       presets.map((preset) => (preset.id === id ? { ...preset, name } : preset)),
@@ -977,6 +1027,24 @@ export class PanelComponent implements OnInit {
       showErrorPopup(PROJECTOR_PANEL_STRINGS.timerSaveFailed);
     } finally {
       this.timerBusy.set(false);
+    }
+  }
+
+  private async persistProjectorMessage(message: ProjectorMessage | null): Promise<void> {
+    this.projectorMessageBusy.set(true);
+    try {
+      const current = await tournamentRepository.getProjectorState();
+      const updated = { ...current, message };
+      await tournamentRepository.saveProjectorState(updated);
+      this.projectorState.set(updated);
+      this.projectorMessageDraft.set(message?.text ?? '');
+      this.projectorMessageMode.set(message?.mode ?? this.projectorMessageMode());
+      await this.publishProjectorState(true);
+    } catch (error) {
+      console.error('Updating the projector message failed', error);
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.messageSaveFailed);
+    } finally {
+      this.projectorMessageBusy.set(false);
     }
   }
 

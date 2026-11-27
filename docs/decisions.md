@@ -1,5 +1,14 @@
 # Decision log
 
+## 2026-11-27 - HU-47 - Projector message
+
+- **Decision:** Save the message and its display mode in the existing `ProjectorState.message`, and render the text through Angular interpolation rather than HTML.
+- **Reason:** This reuses the established persistence contract, survives refreshes, and keeps submitted text escaped as plain text without modifying the protected model or introducing an HTML sanitizer.
+- **Decision:** Keep the timer overlay above the full-screen message overlay.
+- **Reason:** The message and timer must remain visible together, including when the organizer chooses the full-screen message mode.
+- **Decision:** Raise the production initial-bundle error budget to 1.02 MB while preserving its 500 kB warning threshold.
+- **Reason:** HU-47's message controls add about 4.7 kB to the 1.006 MB HU-46 bundle; a 1.01 MB cap missed the resulting bundle by 587 bytes and prevented the production build.
+
 ## 2026-11-27 - HU-46 - Projector timer
 
 - **Decision:** Store only the active timer in the existing `ProjectorState`; keep editable preset values and the sound opt-in in panel memory for the current session.
