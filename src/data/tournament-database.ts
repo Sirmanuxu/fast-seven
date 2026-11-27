@@ -24,6 +24,16 @@ export interface StoredTournamentFileState {
   readonly warningIntervalMin: number;
 }
 
+export interface AutoSaveDirectoryHandle extends FileSystemDirectoryHandle {
+  queryPermission(descriptor: { readonly mode: 'readwrite' }): Promise<PermissionState>;
+  requestPermission(descriptor: { readonly mode: 'readwrite' }): Promise<PermissionState>;
+}
+
+export interface StoredAutoSaveDirectory {
+  readonly id: 'current';
+  readonly handle: AutoSaveDirectoryHandle;
+}
+
 export const TOURNAMENT_SCHEMA_VERSION = 2;
 
 export class TournamentDatabase extends Dexie {
@@ -38,6 +48,7 @@ export class TournamentDatabase extends Dexie {
   backups!: Table<Backup, string>;
   projectorState!: Table<StoredProjectorState, 'current'>;
   tournamentFileState!: Table<StoredTournamentFileState, 'current'>;
+  autoSaveDirectory!: Table<StoredAutoSaveDirectory, 'current'>;
 
   constructor() {
     super('fast-seven');
@@ -57,6 +68,9 @@ export class TournamentDatabase extends Dexie {
     });
     this.version(3).stores({
       tournamentFileState: 'id',
+    });
+    this.version(4).stores({
+      autoSaveDirectory: 'id',
     });
   }
 }

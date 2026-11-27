@@ -722,3 +722,16 @@
 - **Decision:** Raise the initial bundle error budget to 1.06 MB.
 - **Reason:** The required load flow exceeded the HU-49 1.03 MB limit by 16.80 kB; retaining that
   limit would make the production build fail.
+
+## 2026-11-27 - HU-51 - Auto-save to a folder
+
+- **Decision:** Store the File System Access directory handle in a singleton IndexedDB record and
+  overwrite one stable auto-save file for the tournament.
+- **Reason:** Reusing the selected directory across refreshes and keeping a stable filename avoids
+  repeated prompts and unbounded backup files.
+- **Decision:** Publish backup completion only after its Dexie transaction commits, then write the
+  external file and record its checksum.
+- **Reason:** A disk or permission failure must not undo or block the tournament backup.
+- **Decision:** Keep the manual-save path visible in unsupported browsers and surface external
+  write failures as a persistent application warning.
+- **Reason:** Auto-save is optional, but the operator still needs a clear recovery path.

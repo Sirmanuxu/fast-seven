@@ -6,6 +6,18 @@ export const TOURNAMENT_FILE_STRINGS = {
   loading: 'Validando el archivo…',
   loaded: 'Se cargó el torneo y se guardó una copia del torneo anterior.',
   loadFailed: 'No se pudo cargar el archivo. El torneo actual no se modificó.',
+  autoSaveFailed:
+    'No se pudo guardar una copia en la carpeta elegida. El torneo sigue disponible; guardalo manualmente a un archivo.',
+  autoSaveUnsupported:
+    'Este navegador no permite elegir una carpeta para el autoguardado. Guardá el torneo a un archivo manualmente.',
+  chooseAutoSaveDirectory: 'Elegir carpeta para copias',
+  autoSaveDirectoryReady: 'Las copias se guardan automáticamente en la carpeta elegida.',
+  autoSavePermissionRequired: 'La carpeta necesita permiso para guardar copias.',
+  grantAutoSavePermission: 'Permitir acceso a la carpeta',
+  removeAutoSaveDirectory: 'Dejar de usar esta carpeta',
+  autoSaveDirectorySaved: 'Se eligió la carpeta y se guardó una copia del torneo.',
+  autoSaveDirectoryRemoved: 'Se dejó de usar la carpeta para el autoguardado.',
+  autoSaveDirectoryFailed: 'No se pudo configurar el autoguardado en la carpeta.',
   invalidJson: 'El archivo no contiene un JSON válido.',
   invalidFormat: 'El archivo no tiene el formato de un torneo de rugby seven.',
   newerSchema: 'El archivo fue creado con una versión más nueva de la aplicación.',
@@ -38,4 +50,5 @@ export const TOURNAMENT_FILE_STRINGS = {
     `Hay cambios sin guardar desde hace más de ${minutes} min. Guardá el torneo a un archivo.`,
   saveFailed: 'No se pudo guardar el archivo. El torneo sigue disponible en el navegador.',
   statusLoadFailed: 'No se pudo consultar el estado del archivo guardado.',
+  autoSaveStatusLoadFailed: 'No se pudo consultar el permiso de la carpeta de autoguardado.',
 } as const;

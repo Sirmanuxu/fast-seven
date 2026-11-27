@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import {
   Backup,
   BackupReason,
@@ -50,7 +51,7 @@ import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
 import { createSeededRng } from '../domain/rng';
 import { closeTournament, reopenTournamentAfterMatchEdit } from '../domain/tournament-close';
-import { backupQuotaExceeded, isQuotaExceededError } from './backup-events';
+import { backupCreated, backupQuotaExceeded, isQuotaExceededError } from './backup-events';
 
 export interface MatchSaveInput {
   readonly match: Match;
@@ -1444,6 +1445,9 @@ export class TournamentRepository {
       if (isQuotaExceededError(error)) backupQuotaExceeded.next();
       throw error;
     }
+    const transaction = Dexie.currentTransaction;
+    if (transaction) transaction.on('complete', () => backupCreated.next());
+    else backupCreated.next();
     return backup;
   }
 

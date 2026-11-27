@@ -33,13 +33,7 @@ export async function createTournamentFile(
 }
 
 export function createTournamentFileName(tournamentName: string, exportedAt: Date): string {
-  const slug =
-    tournamentName
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLocaleLowerCase('es-AR')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'sin-nombre';
+  const slug = createTournamentSlug(tournamentName);
   const date = [
     exportedAt.getFullYear(),
     String(exportedAt.getMonth() + 1).padStart(2, '0'),
@@ -47,4 +41,19 @@ export function createTournamentFileName(tournamentName: string, exportedAt: Dat
   ].join('');
   const time = `${String(exportedAt.getHours()).padStart(2, '0')}${String(exportedAt.getMinutes()).padStart(2, '0')}`;
   return `torneo-${slug}-${date}-${time}.json`;
+}
+
+export function createTournamentAutoSaveFileName(tournamentName: string): string {
+  return `torneo-${createTournamentSlug(tournamentName)}-autoguardado.json`;
+}
+
+function createTournamentSlug(tournamentName: string): string {
+  return (
+    tournamentName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('es-AR')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'sin-nombre'
+  );
 }
