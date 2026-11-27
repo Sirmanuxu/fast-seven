@@ -75,6 +75,30 @@ describe('double-elimination fixture', () => {
     });
   });
 
+  it.each([5, 6, 7, 9, 12])(
+    'creates 2n-2 real matches and phantom byes for n = %i',
+    (count) => {
+      const fixture = generateDoubleEliminationFixture({
+        teams: teams(count),
+        grandFinalReset: false,
+        rng: createSeededRng(`double-byes-${count}`),
+      });
+      expect(fixture.ok).toBe(true);
+      if (!fixture.ok) return;
+      expect(
+        fixture.value.matches.filter((match) => !match.isPhantom && !match.isConditional),
+      ).toHaveLength(2 * count - 2);
+      expect(
+        fixture.value.matches.filter(
+          (match) =>
+            match.isPhantom &&
+            match.stageId === 'double-winners' &&
+            match.away.kind === 'BYE',
+        ),
+      ).toHaveLength(2 ** Math.ceil(Math.log2(count)) - count);
+    },
+  );
+
   it('persists a bracket draw through the public fixture contract', () => {
     const fixture = generateFixture({
       teams: teams(4),

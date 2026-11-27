@@ -149,6 +149,39 @@ export function generateDoubleEliminationFixture(input: {
       const home = roundSlots[index];
       const away = roundSlots[index + 1] ?? ({ kind: 'BYE' } as MatchRef);
       if (home.kind === 'BYE' || away.kind === 'BYE') {
+        if (round === 1) {
+          const teamRefValue = home.kind === 'TEAM' ? home : away.kind === 'TEAM' ? away : null;
+          if (teamRefValue) {
+            const id = `${WINNERS_STAGE_ID}-round-${round}-phantom-${index / 2 + 1}`;
+            matches.push(
+              buildMatch({
+                id,
+                stageId: WINNERS_STAGE_ID,
+                round,
+                order,
+                label: 'Libre (bye)',
+                home,
+                away,
+              }),
+            );
+            const phantomIndex = matches.length - 1;
+            matches[phantomIndex] = {
+              ...matches[phantomIndex],
+              status: 'FINISHED',
+              result: {
+                mode: 'DIRECT',
+                homePoints: 0,
+                awayPoints: 0,
+                definition: 'REGULAR',
+                winnerTeamId: teamRefValue.teamId,
+              },
+              finishedAt: '1970-01-01T00:00:00.000Z',
+              isPhantom: true,
+            };
+            roundMatches.push(id);
+            order += 1;
+          }
+        }
         continue;
       }
       const id = `${WINNERS_STAGE_ID}-round-${round}-match-${index / 2 + 1}`;
@@ -177,12 +210,55 @@ export function generateDoubleEliminationFixture(input: {
 
   const losersMatches: Match[] = [];
   let loserRound = 1;
+  let losersFinalId: Id | null = null;
 
+  if (bracketSize !== activeTeams.length) {
+    const eliminationLoserRefs = winnersByRound
+      .flatMap((roundMatchIds) =>
+        roundMatchIds
+          .filter((matchId) => {
+            const match = matches.find((candidate) => candidate.id === matchId);
+            return match?.isPhantom !== true;
+          })
+          .map((matchId) => loserRef(matchId)),
+      );
+    const loserMatchCount = activeTeams.length - 2;
+    let previousLoserMatchId: Id | null = null;
+    for (let index = 0; index < loserMatchCount; index += 1) {
+      const home =
+        previousLoserMatchId === null
+          ? eliminationLoserRefs[index] ?? ({ kind: 'BYE' } as MatchRef)
+          : winnerRef(previousLoserMatchId);
+      const away =
+        previousLoserMatchId === null
+          ? eliminationLoserRefs[index + 1] ?? ({ kind: 'BYE' } as MatchRef)
+          : eliminationLoserRefs[index + 1] ?? ({ kind: 'BYE' } as MatchRef);
+      const id = `${LOSERS_STAGE_ID}-round-${loserRound}-match-${index + 1}`;
+      losersMatches.push(
+        buildMatch({
+          id,
+          stageId: LOSERS_STAGE_ID,
+          round: loserRound,
+          order,
+          label: 'Ronda de perdedores',
+          home,
+          away,
+        }),
+      );
+      previousLoserMatchId = id;
+      loserRound += 1;
+      order += 1;
+      losersFinalId = id;
+    }
+  } else {
   const firstWinners = winnersByRound[0];
   const firstLoserPairs: Id[] = [];
   for (let index = 0; index < firstWinners.length; index += 2) {
     if (!firstWinners[index + 1]) break;
     const id = `${LOSERS_STAGE_ID}-round-${loserRound}-match-${index / 2 + 1}`;
+    const leftSource = matches.find((match) => match.id === firstWinners[index]);
+    const rightSource = matches.find((match) => match.id === firstWinners[index + 1]);
+    const isGhost = leftSource?.isPhantom === true || rightSource?.isPhantom === true;
     losersMatches.push(
       buildMatch({
         id,
@@ -192,8 +268,13 @@ export function generateDoubleEliminationFixture(input: {
         label: 'Primera caída',
         home: loserRef(firstWinners[index]),
         away: loserRef(firstWinners[index + 1]),
+        isConditional: false,
       }),
     );
+    if (isGhost) {
+      const ghostIndex = losersMatches.length - 1;
+      losersMatches[ghostIndex] = { ...losersMatches[ghostIndex], isPhantom: true };
+    }
     firstLoserPairs.push(id);
     order += 1;
   }
@@ -209,6 +290,11 @@ export function generateDoubleEliminationFixture(input: {
           ? winnerRef(previousLoserWinners[index])
           : { kind: 'BYE' } as MatchRef;
       const id = `${LOSERS_STAGE_ID}-round-${loserRound}-match-${index + 1}`;
+      const priorSource = losersMatches.find(
+        (match) => previousLoserWinners[index] !== undefined && match.id === previousLoserWinners[index],
+      );
+      const winnersSource = matches.find((match) => match.id === winnersLosers[index]);
+      const isGhost = priorSource?.isPhantom === true || winnersSource?.isPhantom === true;
       losersMatches.push(
         buildMatch({
           id,
@@ -220,6 +306,10 @@ export function generateDoubleEliminationFixture(input: {
           away: loserRef(winnersLosers[index]),
         }),
       );
+      if (isGhost) {
+        const ghostIndex = losersMatches.length - 1;
+        losersMatches[ghostIndex] = { ...losersMatches[ghostIndex], isPhantom: true };
+      }
       dropMatches.push(id);
       order += 1;
     }
@@ -234,6 +324,9 @@ export function generateDoubleEliminationFixture(input: {
       for (let index = 0; index < dropMatches.length; index += 2) {
         if (!dropMatches[index + 1]) break;
         const id = `${LOSERS_STAGE_ID}-round-${loserRound}-match-${index / 2 + 1}`;
+        const leftSource = losersMatches.find((match) => match.id === dropMatches[index]);
+        const rightSource = losersMatches.find((match) => match.id === dropMatches[index + 1]);
+        const isGhost = leftSource?.isPhantom === true || rightSource?.isPhantom === true;
         losersMatches.push(
           buildMatch({
             id,
@@ -245,6 +338,10 @@ export function generateDoubleEliminationFixture(input: {
             away: winnerRef(dropMatches[index + 1]),
           }),
         );
+        if (isGhost) {
+          const ghostIndex = losersMatches.length - 1;
+          losersMatches[ghostIndex] = { ...losersMatches[ghostIndex], isPhantom: true };
+        }
         internalMatches.push(id);
         order += 1;
       }
@@ -252,10 +349,11 @@ export function generateDoubleEliminationFixture(input: {
     }
     previousLoserWinners = currentLoserWinners;
   }
+    losersFinalId = previousLoserWinners[0] ?? null;
+  }
 
   matches.push(...losersMatches);
   const winnersFinalId = winnersByRound[winnersRoundCount - 1][0];
-  const losersFinalId = previousLoserWinners[0];
   if (!winnersFinalId || !losersFinalId) return error('invalidBracket');
 
   const grandFinalId = `${GRAND_FINAL_STAGE_ID}-match-1`;

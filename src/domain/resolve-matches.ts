@@ -122,6 +122,15 @@ export function resolveMatchesWithDraws(
     const nextAncestors = new Set(ancestors).add(match.id);
     const homeTeamId = resolveReference(match.home, nextAncestors);
     const awayTeamId = resolveReference(match.away, nextAncestors);
+    if (match.isPhantom) {
+      const resolvedTeamIds = [homeTeamId, awayTeamId].filter(
+        (teamId): teamId is Id => teamId !== null,
+      );
+      if (resolvedTeamIds.length === 1) {
+        return { winner: resolvedTeamIds[0], loser: null };
+      }
+      return null;
+    }
     if (match.home.kind === 'BYE' && awayTeamId !== null) {
       return { winner: awayTeamId, loser: null };
     }
