@@ -83,6 +83,7 @@ export class PanelComponent implements OnInit {
   protected readonly directHomeScore = signal(0);
   protected readonly directAwayScore = signal(0);
   protected readonly walkoverMatchId = signal<string | null>(null);
+  private activeEventMatchId: string | null = null;
   protected readonly tournamentCloseStrings = TOURNAMENT_CLOSE_STRINGS;
   protected readonly canClose = signal(false);
   protected readonly finalResult = signal<FinalTournamentResult | null>(null);
@@ -765,7 +766,21 @@ export class PanelComponent implements OnInit {
     this.resolvedMatches.set(resolved);
     const schedule = computeScheduleDetails(snapshot, Date.now(), resolved, 'PERSISTED');
     this.scheduleDetails.set(schedule);
-    this.matchControl.set(buildMatchControlView(snapshot, resolved, schedule.orderedMatchIds));
+    const control = buildMatchControlView(snapshot, resolved, schedule.orderedMatchIds);
+    const currentMatchId = control.current?.match.id ?? null;
+    if (currentMatchId !== this.activeEventMatchId) {
+      this.activeEventMatchId = currentMatchId;
+      this.homePlayerId.set(null);
+      this.awayPlayerId.set(null);
+      this.homePlayerSearch.set('');
+      this.awayPlayerSearch.set('');
+      this.activePlayerSearch.set(null);
+      this.directMode.set(false);
+      this.directHomeScore.set(0);
+      this.directAwayScore.set(0);
+      this.walkoverMatchId.set(null);
+    }
+    this.matchControl.set(control);
   }
 
   private async loadLastRecord(): Promise<void> {

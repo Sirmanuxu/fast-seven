@@ -134,7 +134,9 @@
                         </button>
                       }
                       @if (
-                        current.tournament.status === 'RUNNING' && row.match.status === 'FINISHED'
+                        (current.tournament.status === 'RUNNING' ||
+                          current.tournament.status === 'FINISHED') &&
+                        row.match.status === 'FINISHED'
                       ) {
                         <button type="button" (click)="beginResultEdit(row)" [disabled]="isBusy()">
                           {{ strings.editResult }}

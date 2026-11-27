@@ -28,3 +28,8 @@
 - `npm test` — passed: 257 tests.
 - `npm run lint` — passed.
 - `npm run build` — passed. Existing warnings remain for the initial bundle budget and CommonJS `papaparse`.
+
+## Follow-up fixes
+
+- The player author search now resets when the current in-progress match changes, preventing selections from a previous match from leaking into the next event.
+- The fixture displays «Editar resultado» for both `RUNNING` and `FINISHED` tournaments.
