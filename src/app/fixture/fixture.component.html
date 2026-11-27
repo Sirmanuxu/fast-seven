@@ -177,10 +177,20 @@
                                         updateEditEventTeam(event.id, $any($event.target).value)
                                       "
                                     >
-                                      <option [value]="matchTeamId(row.match.id, 'home')">
+                                      <option
+                                        [value]="matchTeamId(row.match.id, 'home')"
+                                        [selected]="
+                                          event.teamId === matchTeamId(row.match.id, 'home')
+                                        "
+                                      >
                                         {{ row.homeLabel }}
                                       </option>
-                                      <option [value]="matchTeamId(row.match.id, 'away')">
+                                      <option
+                                        [value]="matchTeamId(row.match.id, 'away')"
+                                        [selected]="
+                                          event.teamId === matchTeamId(row.match.id, 'away')
+                                        "
+                                      >
                                         {{ row.awayLabel }}
                                       </option>
                                     </select>

@@ -25,7 +25,7 @@
 
 ## Validation
 
-- `npm test` — passed: 257 tests.
+- `npm test` — passed: 258 tests.
 - `npm run lint` — passed.
 - `npm run build` — passed. Existing warnings remain for the initial bundle budget and CommonJS `papaparse`.
 
@@ -35,4 +35,6 @@
 - The fixture displays «Editar resultado» for both `RUNNING` and `FINISHED` tournaments.
 - Rechecking withdrawal-generated walkovers after a finalized-result edit now supports `FINISHED`; team withdrawal and reinstatement remain restricted to `RUNNING`.
 - Match event editing validates that an author belongs to the event's team and normalizes inconsistent saved events when opening the fixture editor.
+- The fixture event team selector explicitly selects the option matching each event's stored team.
 - The player team-draw flow only accepts existing selected teams; it no longer offers or creates new teams.
+- The team-draw category/gender balance option is enabled and selected by default.
