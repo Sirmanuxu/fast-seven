@@ -92,6 +92,16 @@ button {
   vertical-align: top;
 }
 
+.review-table td.category-cell {
+  white-space: normal;
+}
+
+.category-cell input,
+.category-cell button {
+  display: block;
+  max-width: 100%;
+}
+
 .review-table small {
   display: block;
   margin-top: 0.25rem;
