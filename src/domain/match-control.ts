@@ -432,6 +432,58 @@ export function undoWalkover(
   };
 }
 
+export interface InProgressUndo {
+  readonly match: Match;
+  readonly events: readonly MatchEvent[];
+  readonly shouldOfferFixtureReset: boolean;
+}
+
+export function undoMatchInProgress(
+  snapshot: TournamentSnapshot,
+  matchId: Id,
+  preserveEvents: boolean,
+): Result<InProgressUndo, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (match.status !== 'IN_PROGRESS') {
+    return error('matchNotInProgress', 'matchControl.matchNotInProgress');
+  }
+
+  const playableMatches = snapshot.matches
+    .filter((candidate) => !candidate.isPhantom && !candidate.isConditional)
+    .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+  const firstMatch = playableMatches[0];
+  const noMatchesWereTouched =
+    snapshot.matches.every(
+      (candidate) => candidate.id === matchId || candidate.status === 'PENDING',
+    ) && snapshot.events.every((event) => event.matchId === matchId);
+  const shouldOfferFixtureReset =
+    firstMatch?.id === matchId && noMatchesWereTouched;
+
+  return {
+    ok: true,
+    value: {
+      match: {
+        ...match,
+        status: 'PENDING',
+        startedAt: null,
+        finishedAt: null,
+        result: null,
+      },
+      events: preserveEvents
+        ? snapshot.events.filter((event) => event.matchId === matchId)
+        : snapshot.events.filter((event) => event.matchId !== matchId),
+      shouldOfferFixtureReset,
+    },
+  };
+}
+
 export function switchDirectToDetail(
   snapshot: TournamentSnapshot,
   matchId: Id,

@@ -8,6 +8,7 @@ import {
   startMatch,
   switchDirectToDetail,
   undoWalkover,
+  undoMatchInProgress,
 } from './match-control';
 import { createFixedClock } from './clock';
 import { Match, ResolvedMatch, TournamentSnapshot } from './model';
@@ -86,6 +87,73 @@ function snapshot(matches: readonly Match[]): TournamentSnapshot {
 }
 
 describe('match control', () => {
+  it('undoes an in-progress match, clears its start time and preserves selected events', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), startedAt: '2026-11-26T12:34:56.000Z' };
+    const event = {
+      id: 'try-1',
+      matchId: 'one',
+      teamId: 'home-one',
+      type: 'TRY' as const,
+      playerId: null,
+      createdAt: '2026-11-26T12:35:00.000Z',
+    };
+    const base = { ...snapshot([live]), events: [event] };
+
+    const result = undoMatchInProgress(base, 'one', true);
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        match: { status: 'PENDING', startedAt: null, finishedAt: null, result: null },
+        events: [event],
+        shouldOfferFixtureReset: true,
+      },
+    });
+  });
+
+  it('removes target events when the operator chooses not to preserve them', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), startedAt: '2026-11-26T12:34:56.000Z' };
+    const event = {
+      id: 'try-1',
+      matchId: 'one',
+      teamId: 'home-one',
+      type: 'TRY' as const,
+      playerId: null,
+      createdAt: '2026-11-26T12:35:00.000Z',
+    };
+
+    const result = undoMatchInProgress({ ...snapshot([live]), events: [event] }, 'one', false);
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { events: [] },
+    });
+  });
+
+  it('does not offer fixture reset when a later match is undone', () => {
+    const first = match('first', 1);
+    const live = { ...match('second', 2, 'IN_PROGRESS'), startedAt: '2026-11-26T12:34:56.000Z' };
+
+    const result = undoMatchInProgress(snapshot([first, live]), 'second', false);
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { shouldOfferFixtureReset: false },
+    });
+  });
+
+  it('does not offer fixture reset after another match was finished', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), startedAt: '2026-11-26T12:34:56.000Z' };
+    const finished = match('finished', 2, 'FINISHED');
+
+    const result = undoMatchInProgress(snapshot([live, finished]), 'one', false);
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { shouldOfferFixtureReset: false },
+    });
+  });
+
   it('finishes a pending match as a walkover with the configured score and resolved winner', () => {
     const pending = match('one', 1);
     const base = snapshot([pending]);
