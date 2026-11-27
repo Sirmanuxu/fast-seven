@@ -211,19 +211,42 @@ export function resolveMatchesWithDraws(
       awayTeamId === null
         ? describeReference(match.away, snapshot)
         : (teamsById.get(awayTeamId)?.name ?? awayTeamId);
+    let isPlayable =
+      homeTeamId !== null &&
+      awayTeamId !== null &&
+      match.home.kind !== 'BYE' &&
+      match.away.kind !== 'BYE' &&
+      !match.isPhantom &&
+      !match.isConditional;
+    if (match.isConditional) {
+      const sourceRef =
+        match.home.kind === 'WINNER_OF'
+          ? match.home.matchId
+          : match.away.kind === 'WINNER_OF'
+            ? match.away.matchId
+            : match.away.kind === 'LOSER_OF'
+              ? match.away.matchId
+              : null;
+      const source = sourceRef ? matchesById.get(sourceRef) : undefined;
+      if (source) {
+        const outcome = resolveFinishedWinner(source, new Set([match.id]));
+        isPlayable =
+          outcome !== null &&
+          outcome.winner === awayTeamId &&
+          homeTeamId !== null &&
+          awayTeamId !== null &&
+          !match.isPhantom;
+      } else {
+        isPlayable = false;
+      }
+    }
     return {
       matchId: match.id,
       homeTeamId,
       awayTeamId,
       homeLabel,
       awayLabel,
-      isPlayable:
-        homeTeamId !== null &&
-        awayTeamId !== null &&
-        match.home.kind !== 'BYE' &&
-        match.away.kind !== 'BYE' &&
-        !match.isPhantom &&
-        !match.isConditional,
+      isPlayable,
     };
   });
 

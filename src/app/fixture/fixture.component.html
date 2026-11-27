@@ -85,6 +85,20 @@
         }
       </section>
 
+      @if (doubleEliminationLives.length > 0) {
+        <section class="double-elimination-lives">
+          <h2>{{ strings.doubleEliminationLives }}</h2>
+          <ul>
+            @for (life of doubleEliminationLives; track life.teamId) {
+              <li>
+                {{ life.name }}: {{ life.losses }} {{ strings.losses }};
+                {{ life.livesRemaining }} {{ strings.livesRemaining }}
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
       @if (underMinimumTeams.length > 0) {
         <section class="warning" role="status">
           <h2>{{ strings.rosterWarning }}</h2>
@@ -156,6 +170,9 @@
                         <span>{{ row.groupLabel }}</span>
                       }
                       <span>{{ statusLabel(row.match.status) }}</span>
+                      @if (resetStatus(row.match); as resetStatus) {
+                        <span>{{ resetStatus }}</span>
+                      }
                       @if (resultLabel(row); as result) {
                         <span>{{ strings.result }}: {{ result }}</span>
                       }

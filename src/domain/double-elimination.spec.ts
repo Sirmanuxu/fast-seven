@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { generateDoubleEliminationFixture } from './double-elimination';
 import { generateFixture } from './fixture';
-import { Team } from './model';
+import {
+  Match,
+  ResolvedMatch,
+  Team,
+} from './model';
+import { computeDoubleEliminationLives, isDoubleEliminationResetNeeded } from './double-elimination';
 import { createSeededRng } from './rng';
 
 function teams(count: number): readonly Team[] {
@@ -85,5 +90,105 @@ describe('double-elimination fixture', () => {
       'GRAND_FINAL',
     ]);
     expect(fixture.value.newDraws).toHaveLength(1);
+  });
+
+  it('derives each team’s remaining lives and two-loss elimination', () => {
+    const match = (
+      id: string,
+      homeTeamId: string,
+      awayTeamId: string,
+      homePoints: number,
+      awayPoints: number,
+    ): Match => ({
+      id,
+      stageId: 'double-winners',
+      groupId: null,
+      round: 1,
+      order: 1,
+      label: null,
+      home: { kind: 'TEAM', teamId: homeTeamId },
+      away: { kind: 'TEAM', teamId: awayTeamId },
+      status: 'FINISHED',
+      result: {
+        mode: 'DIRECT',
+        homePoints,
+        awayPoints,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
+      startedAt: null,
+      finishedAt: '2026-11-27T12:00:00.000Z',
+      isPhantom: false,
+      isConditional: false,
+    });
+    const matches = [
+      match('w1', 'T1', 'T4', 21, 0),
+      match('w2', 'T2', 'T3', 21, 0),
+    ];
+    const resolved: readonly ResolvedMatch[] = matches.map((entry) => ({
+      matchId: entry.id,
+      homeTeamId: entry.home.kind === 'TEAM' ? entry.home.teamId : null,
+      awayTeamId: entry.away.kind === 'TEAM' ? entry.away.teamId : null,
+      homeLabel: '',
+      awayLabel: '',
+      isPlayable: true,
+    }));
+    const lives = computeDoubleEliminationLives(
+      ['T1', 'T2', 'T3', 'T4'],
+      matches,
+      resolved,
+    );
+    expect(lives).toContainEqual({ teamId: 'T3', losses: 1, livesRemaining: 1 });
+    expect(lives).toContainEqual({ teamId: 'T4', losses: 1, livesRemaining: 1 });
+  });
+
+  it('requires the reset only when the losers-bracket champion wins the grand final', () => {
+    const grandFinal: Match = {
+      id: 'gf',
+      stageId: 'double-grand-final',
+      groupId: null,
+      round: 1,
+      order: 1,
+      label: 'Gran final',
+      home: { kind: 'TEAM', teamId: 'T1' },
+      away: { kind: 'TEAM', teamId: 'T2' },
+      status: 'FINISHED',
+      result: {
+        mode: 'DIRECT',
+        homePoints: 10,
+        awayPoints: 14,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
+      startedAt: null,
+      finishedAt: '2026-11-27T12:00:00.000Z',
+      isPhantom: false,
+      isConditional: false,
+    };
+    const reset: Match = {
+      ...grandFinal,
+      id: 'gfr',
+      round: 2,
+      isConditional: true,
+      status: 'PENDING',
+      result: null,
+    };
+    const resolved: readonly ResolvedMatch[] = [
+      {
+        matchId: 'gf',
+        homeTeamId: 'T1',
+        awayTeamId: 'T2',
+        homeLabel: 'T1',
+        awayLabel: 'T2',
+        isPlayable: true,
+      },
+    ];
+    expect(isDoubleEliminationResetNeeded([grandFinal, reset], resolved)).toBe(true);
+    expect(
+      isDoubleEliminationResetNeeded(
+        [{ ...grandFinal, result: { ...grandFinal.result!, homePoints: 14, awayPoints: 10 } }, reset],
+        resolved,
+      ),
+    ).toBe(false);
   });
 });

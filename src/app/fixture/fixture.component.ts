@@ -26,6 +26,10 @@ import { createSeededRng } from '../../domain/rng';
 import { computeScheduleDetails, ScheduleDetails } from '../../domain/schedule';
 import { getRosterStatus } from '../../domain/team';
 import { resolveMatches } from '../../domain/resolve-matches';
+import {
+  computeDoubleEliminationLives,
+  isDoubleEliminationResetNeeded,
+} from '../../domain/double-elimination';
 import { analyzeEditImpact } from '../../domain/edit-impact';
 import { editFinalizedMatch as editFinalizedMatchDomain } from '../../domain/match-control';
 import { createFixedClock } from '../../domain/clock';
@@ -172,6 +176,32 @@ export class FixtureComponent implements OnInit {
       });
   }
 
+  protected get doubleEliminationLives(): readonly {
+    readonly teamId: string;
+    readonly name: string;
+    readonly losses: number;
+    readonly livesRemaining: number;
+  }[] {
+    const snapshot = this.snapshot();
+    if (
+      !snapshot ||
+      snapshot.tournament.formatParams?.format !== 'DOUBLE_ELIMINATION'
+    ) {
+      return [];
+    }
+    const teamIds = snapshot.teams
+      .filter((team) => team.status === 'ACTIVE')
+      .map((team) => team.id);
+    const lives = computeDoubleEliminationLives(teamIds, snapshot.matches, this.resolvedMatches());
+    return lives.map((life) => ({
+      teamId: life.teamId,
+      name:
+        snapshot.teams.find((team) => team.id === life.teamId)?.name ?? life.teamId,
+      losses: life.losses,
+      livesRemaining: life.livesRemaining,
+    }));
+  }
+
   protected get underMinimumTeams(): readonly { readonly name: string; readonly count: number }[] {
     const snapshot = this.snapshot();
     if (!snapshot) return [];
@@ -225,6 +255,22 @@ export class FixtureComponent implements OnInit {
     if (status === 'IN_PROGRESS') return this.strings.inProgress;
     if (status === 'FINISHED') return this.strings.finished;
     return this.strings.pending;
+  }
+
+  protected resetStatus(match: Match): string | null {
+    if (!match.isConditional) return null;
+    const snapshot = this.snapshot();
+    if (!snapshot) return null;
+    if (isDoubleEliminationResetNeeded(snapshot.matches, this.resolvedMatches())) {
+      return this.strings.resetEnabled;
+    }
+    const grandFinal = snapshot.matches.find(
+      (candidate) =>
+        candidate.stageId === match.stageId &&
+        candidate.round === 1 &&
+        candidate.status === 'FINISHED',
+    );
+    return grandFinal ? this.strings.resetNotNeeded : this.strings.resetAwaitingGrandFinal;
   }
 
   protected canMoveMatch(match: Match, direction: 'UP' | 'DOWN'): boolean {

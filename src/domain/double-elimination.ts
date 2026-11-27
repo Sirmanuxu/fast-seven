@@ -6,6 +6,7 @@ import {
   Id,
   Match,
   MatchRef,
+  ResolvedMatch,
   Result,
   Rng,
   Stage,
@@ -297,6 +298,91 @@ export function generateDoubleEliminationFixture(input: {
     ok: true,
     value: { stages, matches, draw, teamOrder },
   };
+}
+
+export interface DoubleEliminationLives {
+  readonly teamId: Id;
+  readonly losses: number;
+  readonly livesRemaining: number;
+}
+
+export function computeDoubleEliminationLives(
+  teamIds: readonly Id[],
+  matches: readonly Match[],
+  resolvedMatches: readonly ResolvedMatch[],
+): readonly DoubleEliminationLives[] {
+  const losses = new Map(teamIds.map((teamId) => [teamId, 0]));
+  const resolvedById = new Map(
+    resolvedMatches.map((resolved) => [resolved.matchId, resolved]),
+  );
+  for (const match of matches) {
+    if (
+      match.isPhantom ||
+      match.isConditional ||
+      match.status !== 'FINISHED' ||
+      match.result === null
+    ) {
+      continue;
+    }
+    const resolved = resolvedById.get(match.id);
+    if (!resolved?.homeTeamId || !resolved.awayTeamId) continue;
+    const winnerId =
+      match.result.winnerTeamId ??
+      (match.result.homePoints === match.result.awayPoints
+        ? null
+        : match.result.homePoints > match.result.awayPoints
+          ? resolved.homeTeamId
+          : resolved.awayTeamId);
+    if (!winnerId) continue;
+    const loserId =
+      winnerId === resolved.homeTeamId ? resolved.awayTeamId : resolved.homeTeamId;
+    if (losses.has(loserId)) {
+      losses.set(loserId, (losses.get(loserId) ?? 0) + 1);
+    }
+  }
+  return teamIds.map((teamId) => {
+    const lossCount = losses.get(teamId) ?? 0;
+    return {
+      teamId,
+      losses: lossCount,
+      livesRemaining: Math.max(0, 2 - lossCount),
+    };
+  });
+}
+
+export function isDoubleEliminationResetNeeded(
+  matches: readonly Match[],
+  resolvedMatches: readonly ResolvedMatch[],
+): boolean {
+  const resolvedById = new Map(
+    resolvedMatches.map((resolved) => [resolved.matchId, resolved]),
+  );
+  const grandFinal = matches.find(
+    (match) =>
+      match.stageId === GRAND_FINAL_STAGE_ID &&
+      match.round === 1 &&
+      match.status === 'FINISHED',
+  );
+  if (!grandFinal) return false;
+  const resolved = resolvedById.get(grandFinal.id);
+  if (!resolved?.homeTeamId || !resolved.awayTeamId) return false;
+  const result = grandFinal.result;
+  if (!result) return false;
+  const winnerId =
+    result.winnerTeamId ??
+    (result.homePoints === result.awayPoints
+      ? null
+      : result.homePoints > result.awayPoints
+        ? resolved.homeTeamId
+        : resolved.awayTeamId);
+  if (!winnerId) return false;
+  const reset = matches.find(
+    (match) =>
+      match.stageId === GRAND_FINAL_STAGE_ID &&
+      match.round === 2 &&
+      match.isConditional,
+  );
+  return reset !== undefined && winnerId === resolved.awayTeamId;
 }
 
 export const generateDoubleEliminationFixtureContract: GenerateFixture = (input) => {
