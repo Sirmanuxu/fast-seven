@@ -23,7 +23,7 @@
 7. Open two projector windows and confirm both receive and display the current state.
 8. Refresh a projector and confirm it reads the persisted state and reconnects.
 9. Switch away from a projector tab and back; confirm it requests resynchronization.
-10. Compare the projector at 1280×720 and 1920×1080 (or resize the window to those viewports); confirm text and spacing grow with the available screen area without introducing scrollbars.
+10. Compare the projector at 1280×720 and 1920×1080 (or resize the window to those viewports); confirm text and spacing grow with the available screen area and the page has no horizontal or vertical scrollbar.
 
 ## Decisions and notes
 

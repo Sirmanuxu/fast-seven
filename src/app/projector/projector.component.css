@@ -1,18 +1,27 @@
+:host {
+  position: fixed;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  background: #111;
+}
+
 main {
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
   padding: clamp(1rem, 3vmin, 4rem);
   box-sizing: border-box;
   display: grid;
   place-content: center;
   gap: clamp(0.5rem, 2vmin, 2rem);
+  min-width: 0;
   text-align: center;
   background: #111;
   color: white;
   cursor: none;
   overflow: hidden;
-  font-size: clamp(1.25rem, min(5vw, 8vh), 6rem);
+  font-size: clamp(1rem, min(5vw, 8dvh), 6rem);
   line-height: 1.1;
 }
 
@@ -25,9 +34,9 @@ p {
 
 button {
   justify-self: center;
-  min-height: max(44px, 6vh);
+  min-height: max(44px, 6dvh);
   padding: 0.5em 1em;
-  font-size: clamp(1rem, min(2.5vw, 4vh), 2rem);
+  font-size: clamp(1rem, min(2.5vw, 4dvh), 2rem);
   cursor: pointer;
 }
 
@@ -39,5 +48,5 @@ button {
 
 .connection,
 .public-message {
-  font-size: clamp(1rem, min(3vw, 5vh), 3rem);
+  font-size: clamp(1rem, min(3vw, 5dvh), 3rem);
 }
