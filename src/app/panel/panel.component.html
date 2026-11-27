@@ -222,13 +222,31 @@
           }
 
           <div>
-            <button
-              type="button"
-              (click)="finishControlMatch(current.match.id)"
-              [disabled]="startBusy() || eventBusy()"
-            >
-              {{ matchControlStrings.finish }}
-            </button>
+            @if (isEliminationMatch(current.match) && isLiveTie()) {
+              <p role="status">{{ matchControlStrings.suddenDeath }}</p>
+              <button
+                type="button"
+                (click)="finishControlMatch(current.match.id, current.resolved.homeTeamId ?? undefined)"
+                [disabled]="startBusy() || eventBusy()"
+              >
+                {{ matchControlStrings.suddenDeathWinner(current.resolved.homeLabel) }}
+              </button>
+              <button
+                type="button"
+                (click)="finishControlMatch(current.match.id, current.resolved.awayTeamId ?? undefined)"
+                [disabled]="startBusy() || eventBusy()"
+              >
+                {{ matchControlStrings.suddenDeathWinner(current.resolved.awayLabel) }}
+              </button>
+            } @else {
+              <button
+                type="button"
+                (click)="finishControlMatch(current.match.id)"
+                [disabled]="startBusy() || eventBusy()"
+              >
+                {{ matchControlStrings.finish }}
+              </button>
+            }
           </div>
         </article>
       } @else {

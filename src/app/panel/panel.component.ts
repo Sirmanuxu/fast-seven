@@ -142,7 +142,7 @@ export class PanelComponent implements OnInit {
     }
   }
 
-  protected async finishControlMatch(matchId: string): Promise<void> {
+  protected async finishControlMatch(matchId: string, suddenDeathWinnerTeamId?: string): Promise<void> {
     if (this.eventBusy() || this.startBusy()) return;
     const snapshot = this.snapshot();
     const current = this.matchControl().current;
@@ -150,7 +150,7 @@ export class PanelComponent implements OnInit {
     if (!current.resolved.homeTeamId || !current.resolved.awayTeamId) return;
 
     if (this.directMode()) {
-      await this.finishDirectControlMatch(matchId, current);
+      await this.finishDirectControlMatch(matchId, current, suddenDeathWinnerTeamId);
       return;
     }
 
@@ -167,17 +167,26 @@ export class PanelComponent implements OnInit {
       stage?.type === 'WINNERS_BRACKET' ||
       stage?.type === 'LOSERS_BRACKET' ||
       stage?.type === 'GRAND_FINAL';
-    if (isElimination && score.home === score.away) {
+    if (isElimination && score.home === score.away && !suddenDeathWinnerTeamId) {
       showErrorPopup(MATCH_CONTROL_STRINGS.eliminationTie);
       return;
     }
 
-    const confirmation = MATCH_CONTROL_STRINGS.confirmDetailFinish(
-      current.resolved.homeLabel,
-      score.home,
-      score.away,
-      current.resolved.awayLabel,
-    );
+    const confirmation =
+      suddenDeathWinnerTeamId
+        ? MATCH_CONTROL_STRINGS.confirmSuddenDeath(
+            suddenDeathWinnerTeamId === current.resolved.homeTeamId
+              ? current.resolved.homeLabel
+              : current.resolved.awayLabel,
+            score.home,
+            score.away,
+          )
+        : MATCH_CONTROL_STRINGS.confirmDetailFinish(
+            current.resolved.homeLabel,
+            score.home,
+            score.away,
+            current.resolved.awayLabel,
+          );
     if (!window.confirm(confirmation)) return;
 
     this.eventBusy.set(true);
@@ -187,6 +196,7 @@ export class PanelComponent implements OnInit {
         matchId,
         events,
         new Date().toISOString(),
+        suddenDeathWinnerTeamId ?? null,
       );
       await this.loadMatchControl();
       this.statusMessage.set(MATCH_CONTROL_STRINGS.matchFinished);
@@ -217,6 +227,7 @@ export class PanelComponent implements OnInit {
   private async finishDirectControlMatch(
     matchId: string,
     current: NonNullable<MatchControlView['current']>,
+    suddenDeathWinnerTeamId?: string,
   ): Promise<void> {
     const homePoints = this.directHomeScore();
     const awayPoints = this.directAwayScore();
@@ -243,18 +254,27 @@ export class PanelComponent implements OnInit {
         stage?.type === 'WINNERS_BRACKET' ||
         stage?.type === 'LOSERS_BRACKET' ||
         stage?.type === 'GRAND_FINAL';
-      if (isElimination && homePoints === awayPoints) {
+      if (isElimination && homePoints === awayPoints && !suddenDeathWinnerTeamId) {
         showErrorPopup(MATCH_CONTROL_STRINGS.eliminationTie);
         return;
       }
     }
 
-    const confirmation = MATCH_CONTROL_STRINGS.confirmDirectFinish(
-      current.resolved.homeLabel,
-      homePoints,
-      awayPoints,
-      current.resolved.awayLabel,
-    );
+    const confirmation =
+      suddenDeathWinnerTeamId
+        ? MATCH_CONTROL_STRINGS.confirmSuddenDeath(
+            suddenDeathWinnerTeamId === current.resolved.homeTeamId
+              ? current.resolved.homeLabel
+              : current.resolved.awayLabel,
+            homePoints,
+            awayPoints,
+          )
+        : MATCH_CONTROL_STRINGS.confirmDirectFinish(
+            current.resolved.homeLabel,
+            homePoints,
+            awayPoints,
+            current.resolved.awayLabel,
+          );
     if (!window.confirm(confirmation)) return;
 
     this.eventBusy.set(true);
@@ -264,6 +284,7 @@ export class PanelComponent implements OnInit {
         homePoints,
         awayPoints,
         new Date().toISOString(),
+        suddenDeathWinnerTeamId ?? null,
       );
       await this.loadMatchControl();
       this.directMode.set(false);
@@ -382,6 +403,26 @@ export class PanelComponent implements OnInit {
       current.resolved.awayTeamId,
     );
     return score.ok ? score.value : null;
+  }
+
+  protected isEliminationMatch(match: Match): boolean {
+    const snapshot = this.snapshot();
+    const stage = snapshot?.stages.find((candidate) => candidate.id === match.stageId);
+    return (
+      stage?.type === 'KNOCKOUT' ||
+      stage?.type === 'CUP' ||
+      stage?.type === 'WINNERS_BRACKET' ||
+      stage?.type === 'LOSERS_BRACKET' ||
+      stage?.type === 'GRAND_FINAL'
+    );
+  }
+
+  protected isLiveTie(): boolean {
+    if (this.directMode()) {
+      return this.directHomeScore() === this.directAwayScore();
+    }
+    const score = this.liveScore();
+    return score !== null && score.home === score.away;
   }
 
   protected eventsForMatch(matchId: string): readonly MatchEvent[] {

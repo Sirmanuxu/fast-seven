@@ -1,5 +1,14 @@
 # Decision log
 
+## 2026-11-27 - HU-36 - Sudden death for knockout ties
+
+- **Decision:** Require an explicit resolved-team winner before a tied detail or direct elimination match can be finalized, and store it with `definition = SUDDEN_DEATH`.
+- **Reason:** The match result contract already supports `winnerTeamId`, and the winner must be one of the two resolved participants so bracket references advance deterministically.
+- **Decision:** Clear `winnerTeamId` and restore `definition = REGULAR` whenever a finished result is no longer tied.
+- **Reason:** The model contract requires sudden-death fields only for tied eliminated matches; clearing stale values prevents old winners from affecting bracket resolution.
+- **Decision:** Show two team-specific sudden-death buttons in the match-control screen instead of a free winner input.
+- **Reason:** The resolved team names make the choice explicit and prevent invalid IDs, while preserving the existing confirmation flow.
+
 ## 2026-11-27 - HU-34 - Detail match result entry
 
 - **Decision:** Implement live try and conversion entry in the existing match-control panel, with player search, no-author events, individual undo, and an atomic detail-match finalization transaction.

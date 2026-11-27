@@ -304,6 +304,7 @@ export class TournamentRepository {
     matchId: string,
     events: readonly MatchEvent[],
     finishedAt: string,
+    suddenDeathWinnerTeamId: string | null = null,
   ): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',
@@ -331,6 +332,7 @@ export class TournamentRepository {
           matchId,
           events,
           createFixedClock(Date.parse(finishedAt)),
+          suddenDeathWinnerTeamId,
         );
         if (!finished.ok) {
           throw new Error(`Detail match cannot finish: ${finished.error.code}`);
@@ -352,6 +354,7 @@ export class TournamentRepository {
     homePoints: number,
     awayPoints: number,
     finishedAt: string,
+    suddenDeathWinnerTeamId: string | null = null,
   ): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',
@@ -380,6 +383,7 @@ export class TournamentRepository {
           homePoints,
           awayPoints,
           createFixedClock(Date.parse(finishedAt)),
+          suddenDeathWinnerTeamId,
         );
         if (!finished.ok) {
           throw new Error(`Direct match cannot finish: ${finished.error.code}`);

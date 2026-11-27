@@ -216,6 +216,146 @@ describe('match control', () => {
     });
   });
 
+  it('stores a sudden-death winner for a tied elimination detail match', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), stageId: 'knockout' };
+    const base = {
+      ...snapshot([live]),
+      stages: [
+        { id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null },
+      ],
+    };
+    const events = [
+      {
+        id: 'try-home',
+        matchId: 'one',
+        teamId: 'home-one',
+        type: 'TRY' as const,
+        playerId: null,
+        createdAt: '2026-11-26T12:35:00.000Z',
+      },
+      {
+        id: 'try-away',
+        matchId: 'one',
+        teamId: 'away-one',
+        type: 'TRY' as const,
+        playerId: null,
+        createdAt: '2026-11-26T12:36:00.000Z',
+      },
+    ];
+
+    const result = finishDetailMatch(
+      base,
+      [resolved('one')],
+      'one',
+      events,
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+      'away-one',
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'FINISHED',
+        result: {
+          mode: 'DETAIL',
+          homePoints: 5,
+          awayPoints: 5,
+          definition: 'SUDDEN_DEATH',
+          winnerTeamId: 'away-one',
+        },
+      },
+    });
+  });
+
+  it('stores a sudden-death winner for a tied elimination direct match', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), stageId: 'knockout' };
+    const base = {
+      ...snapshot([live]),
+      stages: [
+        { id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null },
+      ],
+    };
+
+    const result = finishDirectMatch(
+      base,
+      [resolved('one')],
+      'one',
+      15,
+      15,
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+      'home-one',
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'FINISHED',
+        result: {
+          mode: 'DIRECT',
+          homePoints: 15,
+          awayPoints: 15,
+          definition: 'SUDDEN_DEATH',
+          winnerTeamId: 'home-one',
+        },
+      },
+    });
+  });
+
+  it('rejects a sudden-death winner outside the resolved teams', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), stageId: 'knockout' };
+    const base = {
+      ...snapshot([live]),
+      stages: [
+        { id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null },
+      ],
+    };
+
+    const result = finishDirectMatch(
+      base,
+      [resolved('one')],
+      'one',
+      15,
+      15,
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+      'other-team',
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'invalidSuddenDeathWinner' },
+    });
+  });
+
+  it('clears sudden-death fields when a later non-tied direct score is finished', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), stageId: 'knockout' };
+    const base = {
+      ...snapshot([live]),
+      stages: [
+        { id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null },
+      ],
+    };
+
+    const result = finishDirectMatch(
+      base,
+      [resolved('one')],
+      'one',
+      15,
+      12,
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+      'away-one',
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        result: {
+          definition: 'REGULAR',
+          winnerTeamId: null,
+        },
+      },
+    });
+  });
+
   it('starts a playable pending match and records the real start time', () => {
     const original = match('one', 1);
     const result = startMatch(

@@ -187,9 +187,15 @@ export class FixtureComponent implements OnInit {
 
   protected resultLabel(row: FixtureMatchRow): string | null {
     const result = row.match.result;
-    return result
-      ? `${row.homeLabel} ${result.homePoints}${this.strings.scoreSeparator}${result.awayPoints} ${row.awayLabel}`
-      : null;
+    if (!result) return null;
+    const score = `${row.homeLabel} ${result.homePoints}${this.strings.scoreSeparator}${result.awayPoints} ${row.awayLabel}`;
+    if (result.definition !== 'SUDDEN_DEATH' || !result.winnerTeamId) {
+      return score;
+    }
+    const winnerName =
+      this.snapshot()?.teams.find((team) => team.id === result.winnerTeamId)?.name ??
+      'Equipo ganador';
+    return `${score} (${this.strings.suddenDeath(winnerName)})`;
   }
 
   protected consecutiveWarning(teamName: string): string {

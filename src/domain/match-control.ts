@@ -103,6 +103,7 @@ export function finishDetailMatch(
   matchId: Id,
   events: readonly MatchEvent[],
   clock: Clock,
+  suddenDeathWinnerTeamId: Id | null = null,
 ): Result<Match, DomainError> {
   if (snapshot.tournament.status !== 'RUNNING') {
     return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
@@ -141,9 +142,21 @@ export function finishDetailMatch(
     stage?.type === 'LOSERS_BRACKET' ||
     stage?.type === 'GRAND_FINAL';
   if (isEliminationStage && score.value.home === score.value.away) {
-    return error('eliminationTie', 'matchControl.eliminationTie');
+    if (suddenDeathWinnerTeamId === null) {
+      return error('eliminationTie', 'matchControl.eliminationTie');
+    }
+    if (
+      suddenDeathWinnerTeamId !== resolved.homeTeamId &&
+      suddenDeathWinnerTeamId !== resolved.awayTeamId
+    ) {
+      return error('invalidSuddenDeathWinner', 'matchControl.invalidSuddenDeathWinner');
+    }
   }
 
+  const isSuddenDeath =
+    isEliminationStage &&
+    score.value.home === score.value.away &&
+    suddenDeathWinnerTeamId !== null;
   return {
     ok: true,
     value: {
@@ -153,8 +166,8 @@ export function finishDetailMatch(
         mode: 'DETAIL',
         homePoints: score.value.home,
         awayPoints: score.value.away,
-        definition: 'REGULAR',
-        winnerTeamId: null,
+        definition: isSuddenDeath ? 'SUDDEN_DEATH' : 'REGULAR',
+        winnerTeamId: isSuddenDeath ? suddenDeathWinnerTeamId : null,
       },
       finishedAt: formatIsoDateTime(clock.nowMs()),
     },
@@ -168,6 +181,7 @@ export function finishDirectMatch(
   homePoints: number,
   awayPoints: number,
   clock: Clock,
+  suddenDeathWinnerTeamId: Id | null = null,
 ): Result<Match, DomainError> {
   if (snapshot.tournament.status !== 'RUNNING') {
     return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
@@ -197,9 +211,21 @@ export function finishDirectMatch(
     stage?.type === 'LOSERS_BRACKET' ||
     stage?.type === 'GRAND_FINAL';
   if (isEliminationStage && homePoints === awayPoints) {
-    return error('eliminationTie', 'matchControl.eliminationTie');
+    if (suddenDeathWinnerTeamId === null) {
+      return error('eliminationTie', 'matchControl.eliminationTie');
+    }
+    if (
+      suddenDeathWinnerTeamId !== resolved.homeTeamId &&
+      suddenDeathWinnerTeamId !== resolved.awayTeamId
+    ) {
+      return error('invalidSuddenDeathWinner', 'matchControl.invalidSuddenDeathWinner');
+    }
   }
 
+  const isSuddenDeath =
+    isEliminationStage &&
+    homePoints === awayPoints &&
+    suddenDeathWinnerTeamId !== null;
   return {
     ok: true,
     value: {
@@ -209,8 +235,8 @@ export function finishDirectMatch(
         mode: 'DIRECT',
         homePoints,
         awayPoints,
-        definition: 'REGULAR',
-        winnerTeamId: null,
+        definition: isSuddenDeath ? 'SUDDEN_DEATH' : 'REGULAR',
+        winnerTeamId: isSuddenDeath ? suddenDeathWinnerTeamId : null,
       },
       finishedAt: formatIsoDateTime(clock.nowMs()),
     },

@@ -41,7 +41,12 @@ export const MATCH_CONTROL_STRINGS = {
   eventSaveFailed: 'No se pudo guardar el evento.',
   eventRemoveFailed: 'No se pudo deshacer el evento.',
   conversionUnavailable: 'Todavía no hay un try disponible para esta conversión.',
-  eliminationTie: 'Este partido de eliminación no puede finalizar empatado. La definición por muerte súbita se carga en HU-36.',
+  eliminationTie: 'Este partido de eliminación no puede finalizar empatado.',
+  suddenDeath: 'Definir por muerte súbita',
+  suddenDeathWinner: (teamName: string) => `Dar el triunfo a ${teamName}`,
+  confirmSuddenDeath: (teamName: string, homePoints: number, awayPoints: number) =>
+    `¿Confirmás la muerte súbita: ${teamName} gana ${homePoints} - ${awayPoints}?`,
+  invalidSuddenDeathWinner: 'El ganador elegido no participa en este partido.',
   confirmDetailFinish: (homeName: string, homePoints: number, awayPoints: number, awayName: string) =>
     `¿Finalizar ${homeName} ${homePoints} - ${awayPoints} ${awayName}?`,
 } as const;

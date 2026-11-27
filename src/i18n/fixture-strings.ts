@@ -48,6 +48,7 @@ export const FIXTURE_STRINGS = {
   match: 'partido',
   unknownGroup: 'sin identificar',
   scoreSeparator: ' - ',
+  suddenDeath: (winnerName: string) => `definido por muerte súbita: ${winnerName}`,
   minutes: 'min',
   hours: 'h',
 } as const;
