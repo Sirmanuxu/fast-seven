@@ -652,3 +652,8 @@
 - **Reason:** This returns the public display to automatic rotation when its selected data disappears, without leaving a stale preference behind.
 - **Decision:** Keep the panel’s projector labels in a small shared translation module rather than importing the full projector string catalog into the panel bundle.
 - **Reason:** The production build’s initial bundle has a strict 1 MB limit, and the panel control should not pull in unrelated projector-only strings.
+
+## 2026-11-27 - HU-45 follow-up - Combined group standings
+
+- **Decision:** Show every group’s independent standings table together in the projector’s standings view, and stop rotating between groups.
+- **Reason:** The operator can see all group positions at once without implying that teams from different groups share one ranking. Bracket-stage subview rotation remains unchanged.

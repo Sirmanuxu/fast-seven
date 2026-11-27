@@ -897,7 +897,7 @@ Criterios de aceptación:
 
 Criterios de aceptación:
 
-- Desde el panel se elige cualquier vista (con parámetro cuando corresponde: qué grupo, qué copa). Queda «Fijada» con un indicador visible y un botón «Volver a automático».
+- Desde el panel se elige cualquier vista (con parámetro cuando corresponde: qué copa). La vista de posiciones muestra juntas las tablas independientes de todos los grupos. Queda «Fijada» con un indicador visible y un botón «Volver a automático».
 - La vista fijada se guarda en `EstadoProyector` y sobrevive a un refresco.
 - Si la vista fijada deja de tener datos, se vuelve al modo automático con un aviso en el panel.
 
@@ -1323,7 +1323,7 @@ Ventana única, siempre oscura, sin menús, cursor ni scroll. Un botón discreto
 | Placa de partido | Equipos con colores, marcador en vivo, último try y su autor | Partido en juego |
 | Próximo partido | Equipos, hora tentativa o «a definir» | Alterna con la placa y en los breaks |
 | Lista corta | Últimos 3 finalizados, actual y próximos 5 | Entre partidos |
-| Tablas | Una tabla por grupo, con criterio de desempate | Entre partidos |
+| Tablas | Todas las tablas de grupo juntas, cada una con su criterio de desempate | Entre partidos |
 | Cuadro | Llave de eliminación con los cruces | Entre partidos, en fases finales |
 | Goleadores | Top 10 | Entre partidos, si hay datos |
 | Resultado final | Marcador final del partido recién terminado, 15 segundos | Al finalizar un partido |
