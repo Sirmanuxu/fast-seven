@@ -1,5 +1,10 @@
 # Decision log
 
+## 2026-11-27 - HU-58 - Explanation disclosures
+
+- **Decision:** Raise the production initial-bundle error budget from 1.09 MB to 1.10 MB.
+- **Reason:** The reusable explanation disclosures and their localized content bring the initial bundle about 1.9 kB above the existing limit. The increase is limited to 10 kB and preserves the 500 kB warning threshold.
+
 ## 2026-11-27 - HU-47 - Projector message
 
 - **Decision:** Save the message and its display mode in the existing `ProjectorState.message`, and render the text through Angular interpolation rather than HTML.

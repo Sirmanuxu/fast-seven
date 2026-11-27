@@ -52,6 +52,7 @@
   </section>
   <section class="draw-section" aria-label="Sorteo de jugadores">
     <h2>{{ strings.drawTitle }}</h2>
+    <app-explanation [text]="explanations.teamDraw" />
     @if (!canDraw) {
       <p role="status">{{ strings.drawDisabledRunning }}</p>
     } @else if (unassignedPlayers.length === 0) {
@@ -87,6 +88,7 @@
     @if (drawPlan(); as plan) {
       <div class="draw-preview">
         <h3>{{ strings.drawPreviewTitle }}</h3>
+        <app-explanation [text]="teamDrawExplanation(plan)" />
         @for (assignment of plan.assignments; track assignment.targetId) {
           <article>
             <h4>{{ drawTargetName(assignment.targetId) }}</h4>

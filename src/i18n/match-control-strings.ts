@@ -24,8 +24,6 @@ export const MATCH_CONTROL_STRINGS = {
   confirmDirectFinish: (homeName: string, homePoints: number, awayPoints: number, awayName: string) =>
     `¿Finalizar ${homeName} ${homePoints} - ${awayPoints} ${awayName}?`,
   confirmDiscardEvents: 'Al pasar a marcador directo se descartarán los eventos cargados. ¿Querés continuar?',
-  triesIncompleteWarning: (count: number) =>
-    `Tries a favor incompleto: ${count} ${count === 1 ? 'partido sin detalle' : 'partidos sin detalle'}.`,
   try: 'Try',
   conversion: 'Conversión',
   noAuthor: 'Sin autor',

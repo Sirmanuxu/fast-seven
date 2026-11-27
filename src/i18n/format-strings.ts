@@ -27,18 +27,11 @@ interface FormatStrings {
   readonly params: string;
   readonly parameters: string;
   readonly rounds: string;
-  readonly roundsDescription: string;
-  readonly swissRoundsDescription: string;
   readonly groupCount: string;
-  readonly groupCountDescription: string;
   readonly groupDistribution: string;
-  readonly unevenGroupsRule: string;
   readonly qualifiersPerGroup: string;
-  readonly qualifiersDescription: string;
   readonly thirdPlaceMatch: string;
-  readonly thirdPlaceDescription: string;
   readonly grandFinalReset: string;
-  readonly grandFinalResetDescription: string;
   readonly groupDrawTitle: string;
   readonly groupDrawDescription: string;
   readonly groupDrawButton: string;
@@ -48,9 +41,6 @@ interface FormatStrings {
   readonly groupDrawInvalid: string;
   readonly groupDrawFailed: string;
   readonly groupDrawSaved: string;
-  readonly groupSeedExplanation: string;
-  readonly groupNoSeeds: string;
-  readonly groupUnevenExplanation: string;
   readonly groupMoveTitle: string;
   readonly groupMoveTeam: string;
   readonly groupMoveFrom: string;
@@ -59,7 +49,6 @@ interface FormatStrings {
   readonly groupMoveButton: string;
   readonly groupMoveInvalid: string;
   readonly groupDrawCurrent: string;
-  readonly descriptions: Readonly<Record<FormatId, string>>;
   readonly labels: Readonly<Record<FormatId, string>>;
 }
 
@@ -91,21 +80,11 @@ export const FORMAT_STRINGS: FormatStrings = {
   params: 'Parámetros sugeridos',
   parameters: 'Parámetros del formato',
   rounds: 'Vueltas',
-  roundsDescription: 'Cantidad de veces que cada equipo juega contra cada rival.',
-  swissRoundsDescription:
-    'Entre 1 y n-1 rondas. Recomendá al menos log₂(n) para definir un campeón con claridad.',
   groupCount: 'Cantidad de grupos',
-  groupCountDescription:
-    'Elegí el reparto. Los equipos se distribuyen de manera 4-4-3 o 6-5, según corresponda.',
   groupDistribution: 'Equipos por grupo',
-  unevenGroupsRule:
-    'Los grupos quedan desparejos; al comparar posiciones, se descartan los partidos contra el último equipo de los grupos más grandes.',
   qualifiersPerGroup: 'Clasificados por grupo',
-  qualifiersDescription: 'No puede superar el tamaño del grupo más chico.',
   thirdPlaceMatch: 'Partido por el tercer puesto',
-  thirdPlaceDescription: 'Agrega una definición de tercer puesto al formato.',
   grandFinalReset: 'Final con reinicio',
-  grandFinalResetDescription: 'Si gana el campeón de perdedores, se juega una segunda final.',
   groupDrawTitle: 'Sorteo de grupos',
   groupDrawDescription:
     'Las cabezas de serie se reparten por tandas y el resto de los equipos se sortea respetando el tamaño de cada grupo.',
@@ -116,9 +95,6 @@ export const FORMAT_STRINGS: FormatStrings = {
   groupDrawInvalid: 'No se puede sortear con la configuración actual.',
   groupDrawFailed: 'No se pudo guardar el sorteo de grupos.',
   groupDrawSaved: 'Sorteo de grupos guardado.',
-  groupSeedExplanation: 'Cabezas de serie',
-  groupNoSeeds: 'ninguna',
-  groupUnevenExplanation: 'Grupos desparejos: {groups}.',
   groupMoveTitle: 'Ajuste manual',
   groupMoveTeam: 'Equipo',
   groupMoveFrom: 'Desde',
@@ -142,15 +118,6 @@ export const FORMAT_STRINGS: FormatStrings = {
     GROUPS_POSITION_PLAYOFFS: 'Grupos + cruces de posiciones',
     SWISS: 'Suizo',
     DOUBLE_ELIMINATION: 'Doble eliminación',
-  },
-  descriptions: {
-    ROUND_ROBIN: 'Todos juegan contra todos. Gana quien más puntos suma.',
-    GROUPS_KNOCKOUT: 'Los equipos juegan en grupos y los mejores pasan a una llave de eliminación.',
-    GROUPS_CUPS: 'Después de los grupos, cada posición disputa una copa hasta el final.',
-    KNOCKOUT: 'Llave de eliminación desde el primer partido.',
-    GROUPS_POSITION_PLAYOFFS: 'Los equipos juegan grupos y luego cruces según su posición.',
-    SWISS: 'En cada ronda se enfrentan equipos con rendimiento parecido sin repetir rivales.',
-    DOUBLE_ELIMINATION: 'Cada equipo queda eliminado recién cuando pierde dos veces.',
   },
   'format.notEnoughTeams': 'Se necesitan al menos 2 equipos.',
   'format.swissNeedsFourTeams': 'El suizo necesita al menos 4 equipos.',

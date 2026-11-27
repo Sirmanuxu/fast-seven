@@ -156,6 +156,9 @@
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }
+  @if (triesIncompleteCount > 0) {
+    <app-explanation [text]="explanations.triesIncomplete" />
+  }
   @if (canClose()) {
     <button type="button" (click)="closeTournament()" [disabled]="startBusy()">
       {{ tournamentCloseStrings.closeTournament }}
@@ -407,6 +410,7 @@
             }
             @if (isEliminationMatch(current.match) && isLiveTie()) {
               <p role="status">{{ matchControlStrings.suddenDeath }}</p>
+              <app-explanation [text]="suddenDeathPendingExplanation()" />
               <button
                 type="button"
                 (click)="
@@ -513,7 +517,6 @@
         </ol>
       }
     </section>
-
   } @else if (tournament()?.status === 'FINISHED') {
     <section class="final-result">
       <h2>{{ tournamentCloseStrings.tournamentFinished }}</h2>
@@ -582,6 +585,7 @@
       >
         <h2 id="walkover-dialog-title">{{ matchControlStrings.walkoverQuestion }}</h2>
         <p>{{ entry.resolved.homeLabel }} - {{ entry.resolved.awayLabel }}</p>
+        <app-explanation [text]="explanations.walkoverRule" />
         <button
           type="button"
           (click)="recordWalkover(entry.match.id, 'home')"

@@ -9,10 +9,12 @@ import { PROJECTOR_PANEL_STRINGS, PROJECTOR_VIEW_TITLES } from '../../i18n/proje
 import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
 import { showErrorPopup } from '../error-popup';
+import { ExplanationComponent } from '../explanation/explanation.component';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
 import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
 import { BACKUP_STRINGS } from '../../i18n/backup-strings';
 import { TOURNAMENT_CLOSE_STRINGS } from '../../i18n/tournament-close-strings';
+import { EXPLANATION_STRINGS } from '../../i18n/explanations-strings';
 import {
   Match,
   MatchEvent,
@@ -70,6 +72,7 @@ interface TimerPreset {
 }
 
 @Component({
+  imports: [ExplanationComponent],
   selector: 'app-panel',
   templateUrl: './panel.component.html',
   styleUrl: './panel.component.css',
@@ -90,6 +93,7 @@ export class PanelComponent implements OnInit {
   protected readonly startBusy = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly matchControlStrings = MATCH_CONTROL_STRINGS;
+  protected readonly explanations = EXPLANATION_STRINGS;
   protected readonly settingsStrings = SETTINGS_STRINGS;
   protected readonly backupStrings = BACKUP_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
@@ -156,6 +160,19 @@ export class PanelComponent implements OnInit {
       ? crypto.randomUUID()
       : `panel-${Date.now()}-${Math.random()}`;
   private readonly projectorHeartbeats = new Map<string, number>();
+
+  protected get triesIncompleteCount(): number {
+    const snapshot = this.snapshot();
+    if (!snapshot?.tournament.rules.tiebreakers.includes('TRIES_FOR')) return 0;
+    return snapshot.matches.filter((match) => match.result?.mode === 'DIRECT').length;
+  }
+
+  protected suddenDeathPendingExplanation(): string {
+    const score = this.directMode()
+      ? { home: this.directHomeScore(), away: this.directAwayScore() }
+      : this.liveScore();
+    return this.explanations.suddenDeathPending(score?.home ?? 0, score?.away ?? 0);
+  }
 
   async ngOnInit(): Promise<void> {
     const stopListening = this.projectorChannel.listen((message) => {
@@ -548,7 +565,7 @@ export class PanelComponent implements OnInit {
       if (usesTriesFor) {
         const directMatchCount =
           updatedSnapshot?.matches.filter((match) => match.result?.mode === 'DIRECT').length ?? 0;
-        this.statusMessage.set(MATCH_CONTROL_STRINGS.triesIncompleteWarning(directMatchCount));
+        this.statusMessage.set(this.explanations.triesIncompleteWarning(directMatchCount));
       } else {
         this.statusMessage.set(MATCH_CONTROL_STRINGS.matchFinished);
       }

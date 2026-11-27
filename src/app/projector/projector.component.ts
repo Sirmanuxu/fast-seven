@@ -21,10 +21,15 @@ import {
   getTiebreakLabel,
   ProjectorBracketView,
   ProjectorMatchCard,
+  ProjectorStandingsRow,
+  ProjectorStandingsView,
 } from './projector-view-model';
+import { EXPLANATION_STRINGS } from '../../i18n/explanations-strings';
+import { ExplanationComponent } from '../explanation/explanation.component';
+import { explainTiebreak } from './tiebreak-explanation';
 
 @Component({
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, ExplanationComponent],
   selector: 'app-projector',
   templateUrl: './projector.component.html',
   styleUrl: './projector.component.css',
@@ -34,6 +39,7 @@ export class ProjectorComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly strings = PROJECTOR_STRINGS;
+  protected readonly explanations = EXPLANATION_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
   protected readonly projectorState = signal<ProjectorState>({
     forcedView: null,
@@ -110,8 +116,7 @@ export class ProjectorComponent implements OnInit {
 
     const subviewRotation = window.setInterval(() => {
       const forcedView = this.projectorState().forcedView;
-      const hasForcedSubview =
-        (forcedView?.kind === 'BRACKET' && forcedView.stageId !== undefined);
+      const hasForcedSubview = forcedView?.kind === 'BRACKET' && forcedView.stageId !== undefined;
       if (
         !hasForcedSubview &&
         this.viewModel().activeView === 'BRACKET' &&
@@ -142,6 +147,13 @@ export class ProjectorComponent implements OnInit {
 
   protected tiebreakLabel(criterion: string): string {
     return getTiebreakLabel(criterion);
+  }
+
+  protected tieBreakExplanation(
+    entry: ProjectorStandingsRow,
+    standings: ProjectorStandingsView,
+  ): string {
+    return explainTiebreak(entry, standings, this.strings.toBeDefined);
   }
 
   protected selectedBracket(): ProjectorBracketView | null {

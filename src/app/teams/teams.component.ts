@@ -13,9 +13,12 @@ import {
 import { createTeamDrawPlan, TeamDrawPlan } from '../../domain/team-draw';
 import { createSeededRng } from '../../domain/rng';
 import { TEAM_STRINGS } from '../../i18n/team-strings';
+import { EXPLANATION_STRINGS } from '../../i18n/explanations-strings';
+import { ExplanationComponent } from '../explanation/explanation.component';
 import { showErrorPopup } from '../error-popup';
 
 @Component({
+  imports: [ExplanationComponent],
   selector: 'app-teams',
   templateUrl: './teams.component.html',
   styleUrl: './teams.component.css',
@@ -24,6 +27,7 @@ export class TeamsComponent implements OnInit {
   private readonly router = inject(Router);
 
   protected readonly strings = TEAM_STRINGS;
+  protected readonly explanations = EXPLANATION_STRINGS;
   protected readonly teams = signal<readonly Team[]>([]);
   protected readonly players = signal<readonly Player[]>([]);
   protected readonly tournament = signal<Tournament | null>(null);
@@ -342,6 +346,16 @@ export class TeamsComponent implements OnInit {
 
   protected drawTargetName(targetId: string): string {
     return this.teams().find((team) => team.id === targetId)?.name ?? targetId;
+  }
+
+  protected teamDrawExplanation(plan: TeamDrawPlan): string {
+    const assignments = plan.assignments
+      .map(
+        (assignment) =>
+          `${this.drawTargetName(assignment.targetId)}: ${assignment.playerIds.length} ${this.strings.players}`,
+      )
+      .join(', ');
+    return `${this.explanations.teamDraw} ${this.explanations.teamDrawAssignments(assignments)}`;
   }
 
   private drawErrorMessage(

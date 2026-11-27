@@ -42,6 +42,7 @@
     @if (hasFixture) {
       <section class="summary">
         <h2>{{ strings.summary }}</h2>
+        <app-explanation [label]="explanations.howFormat" [text]="formatExplanation()" />
         <dl>
           <div>
             <dt>{{ strings.totalMatches }}</dt>
@@ -91,8 +92,8 @@
           <ul>
             @for (life of doubleEliminationLives; track life.teamId) {
               <li>
-                {{ life.name }}: {{ life.losses }} {{ strings.losses }};
-                {{ life.livesRemaining }} {{ strings.livesRemaining }}
+                {{ life.name }}: {{ life.losses }} {{ strings.losses }}; {{ life.livesRemaining }}
+                {{ strings.livesRemaining }}
               </li>
             }
           </ul>
@@ -127,8 +128,7 @@
             <ul>
               @for (pairing of preview.pairings; track pairing.homeTeamId + pairing.awayTeamId) {
                 <li>
-                  {{ swissTeamName(pairing.homeTeamId) }} -
-                  {{ swissTeamName(pairing.awayTeamId) }}:
+                  {{ swissTeamName(pairing.homeTeamId) }} - {{ swissTeamName(pairing.awayTeamId) }}:
                   {{ swissPairingExplanation(pairing) }}
                 </li>
               }
@@ -175,6 +175,9 @@
                       }
                       @if (resultLabel(row); as result) {
                         <span>{{ strings.result }}: {{ result }}</span>
+                      }
+                      @if (resultExplanation(row); as explanation) {
+                        <app-explanation [text]="explanation" />
                       }
                       @if (
                         current.tournament.status === 'RUNNING' &&
@@ -453,6 +456,7 @@
         >
           <h2 id="cascade-dialog-title">{{ strings.cascadeDialogTitle }}</h2>
           <p>{{ strings.cascadeDialogIntro }}</p>
+          <app-explanation [text]="explanations.cascade" />
           <ul>
             @for (affected of impact.affected; track affected.matchId) {
               <li [class.in-progress-warning]="affected.status === 'IN_PROGRESS'">

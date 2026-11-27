@@ -52,9 +52,7 @@
         <input
           type="checkbox"
           [checked]="compared().includes(option.format)"
-          [disabled]="
-            formatLocked || (!option.viable && !compared().includes(option.format))
-          "
+          [disabled]="formatLocked || (!option.viable && !compared().includes(option.format))"
           (change)="toggleComparison(option.format)"
         />
         {{ formatLabel(option.format) }}
@@ -75,7 +73,7 @@
             <span>{{ strings.selected }}</span>
           }
         </header>
-        <p>{{ strings.descriptions[option.format] }}</p>
+        <app-explanation [text]="explanations.formatDescriptions[option.format]" />
         @if (option.viable) {
           <p>
             <strong>{{ strings.params }}:</strong> {{ paramsText(option.suggestedParams) }}
@@ -100,6 +98,9 @@
           </dl>
           @for (warning of option.warnings; track warning.code) {
             <p class="warning">{{ warningText(warning.code, option) }}</p>
+            @if (warningExplanation(warning.code, option); as explanation) {
+              <app-explanation [text]="explanation" />
+            }
           }
           <button type="button" (click)="choose(option)" [disabled]="formatLocked">
             {{ strings.select }}
@@ -145,7 +146,7 @@
               <option [value]="1">1</option>
               <option [value]="2">2</option>
             </select>
-            <small>{{ strings.roundsDescription }}</small>
+            <app-explanation [text]="explanations.parameters.rounds" />
           </label>
         }
 
@@ -160,7 +161,7 @@
               [disabled]="formatLocked"
               (input)="setRoundCount($any($event.target).value)"
             />
-            <small>{{ strings.swissRoundsDescription }}</small>
+            <app-explanation [text]="explanations.parameters.swissRounds" />
           </label>
         }
 
@@ -173,7 +174,7 @@
               (change)="setGrandFinalReset($any($event.target).checked)"
             />
             {{ strings.grandFinalReset }}
-            <small>{{ strings.grandFinalResetDescription }}</small>
+            <app-explanation [text]="explanations.parameters.grandFinalReset" />
           </label>
         }
 
@@ -193,7 +194,7 @@
                 <option [value]="count">{{ count }} grupos ({{ groupSizeText(count) }})</option>
               }
             </select>
-            <small>{{ strings.groupCountDescription }}</small>
+            <app-explanation [text]="explanations.parameters.groupCount" />
           </label>
           <p>{{ strings.groupDistribution }}: {{ groupSizeText(params.groupCount) }}</p>
         }
@@ -208,7 +209,7 @@
               [disabled]="formatLocked"
               (input)="setQualifiers($any($event.target).value)"
             />
-            <small>{{ strings.qualifiersDescription }}</small>
+            <app-explanation [text]="explanations.parameters.qualifiers" />
           </label>
           <label>
             <input
@@ -218,7 +219,7 @@
               (change)="setThirdPlace($any($event.target).checked)"
             />
             {{ strings.thirdPlaceMatch }}
-            <small>{{ strings.thirdPlaceDescription }}</small>
+            <app-explanation [text]="explanations.parameters.thirdPlace" />
           </label>
         }
 
@@ -231,7 +232,7 @@
               (change)="setThirdPlace($any($event.target).checked)"
             />
             {{ strings.thirdPlaceMatch }}
-            <small>{{ strings.thirdPlaceDescription }}</small>
+            <app-explanation [text]="explanations.parameters.thirdPlace" />
           </label>
         }
       }
@@ -264,6 +265,9 @@
           warning.code !== 'SWISS_ROUNDS_OUT_OF_RANGE'
         ) {
           <p class="warning">{{ warningText(warning.code, option) }}</p>
+          @if (warningExplanation(warning.code, option); as explanation) {
+            <app-explanation [text]="explanation" />
+          }
         }
       }
       @for (error of parameterErrors; track error) {
@@ -279,13 +283,14 @@
         <p role="status">{{ strings.groupDrawDisabled }}</p>
       } @else {
         <p>{{ strings.groupDrawDescription }}</p>
+        <app-explanation [text]="explanations.groupDraw" />
         <button type="button" (click)="previewGroupDraw()" [disabled]="formatLocked">
           {{ groupDrawPlan() ? strings.groupDrawRepeat : strings.groupDrawButton }}
         </button>
       }
 
       @if (groupDrawPlan(); as plan) {
-        <p role="status">{{ groupExplanation(plan) }}</p>
+        <app-explanation [text]="groupExplanation(plan)" />
         <div class="group-preview">
           @for (group of plan.groupTeamIds; track $index) {
             <article>

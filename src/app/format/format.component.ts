@@ -17,15 +17,19 @@ import { FormatId, FormatOption, FormatParams, Group, Team, Tournament } from '.
 import { createSeededRng } from '../../domain/rng';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { FORMAT_STRINGS } from '../../i18n/format-strings';
+import { EXPLANATION_STRINGS } from '../../i18n/explanations-strings';
+import { ExplanationComponent } from '../explanation/explanation.component';
 import { showErrorPopup } from '../error-popup';
 
 @Component({
+  imports: [ExplanationComponent],
   selector: 'app-format',
   templateUrl: './format.component.html',
   styleUrl: './format.component.css',
 })
 export class FormatComponent implements OnInit {
   protected readonly strings = FORMAT_STRINGS;
+  protected readonly explanations = EXPLANATION_STRINGS;
   protected readonly tournament = signal<Tournament | null>(null);
   protected readonly teamCount = signal(0);
   protected readonly matchDuration = signal(40);
@@ -50,6 +54,15 @@ export class FormatComponent implements OnInit {
   protected get formatLocked(): boolean {
     const status = this.tournament()?.status;
     return status === 'RUNNING' || status === 'FINISHED';
+  }
+
+  protected warningExplanation(code: string, option: FormatOption): string | null {
+    const warning = option.warnings.find((item) => item.code === code);
+    if (!warning) return null;
+    if (code === 'KNOCKOUT_BYES' || code === 'DOUBLE_ELIMINATION_BYES') {
+      return this.explanations.byes(Number(warning.params?.['count'] ?? 0));
+    }
+    return code === 'UNEVEN_GROUPS' ? this.explanations.unevenGroups : null;
   }
 
   protected get options(): readonly FormatOption[] {
@@ -232,12 +245,9 @@ export class FormatComponent implements OnInit {
   protected groupExplanation(plan: GroupDrawPlan): string {
     const seeded = plan.explanation.seededTeamIds.map((id) => this.groupTeamName(id)).join(', ');
     const uneven = plan.explanation.uneven
-      ? ` ${this.strings.groupUnevenExplanation.replace(
-          '{groups}',
-          plan.groupSizes.map((size, index) => `${this.groupName(index)}: ${size}`).join(', '),
-        )}`
+      ? ` ${this.explanations.groupUnevenSizes(plan.groupSizes)} ${this.explanations.unevenGroups}`
       : '';
-    return `${this.strings.groupSeedExplanation}: ${seeded || this.strings.groupNoSeeds}.${uneven}`;
+    return `${this.explanations.seeds(seeded)} ${this.explanations.groupDraw}${uneven}`;
   }
 
   protected async previewGroupDraw(): Promise<void> {
@@ -356,18 +366,7 @@ export class FormatComponent implements OnInit {
 
   protected paramsText(params: FormatParams | null): string {
     if (!params) return '';
-    if (params.format === 'ROUND_ROBIN') return `Vueltas: ${params.rounds}`;
-    if (params.format === 'SWISS') return `Rondas: ${params.rounds}`;
-    if (params.format === 'DOUBLE_ELIMINATION')
-      return `Final con reinicio: ${params.grandFinalReset ? 'sí' : 'no'}`;
-    if (params.format === 'GROUPS_KNOCKOUT') {
-      return `Grupos: ${params.groupCount}; clasificados por grupo: ${params.qualifiersPerGroup}; 3er puesto: ${params.thirdPlaceMatch ? 'sí' : 'no'}`;
-    }
-    if (params.format === 'GROUPS_CUPS') {
-      return `Grupos: ${params.groupCount}; 3er puesto de cada copa: ${params.thirdPlaceMatch ? 'sí' : 'no'}`;
-    }
-    if (params.format === 'GROUPS_POSITION_PLAYOFFS') return `Grupos: ${params.groupCount}`;
-    return `3er puesto: ${params.thirdPlaceMatch ? 'sí' : 'no'}`;
+    return this.explanations.formatParameters(params);
   }
 
   protected findOption(format: FormatId): FormatOption | undefined {

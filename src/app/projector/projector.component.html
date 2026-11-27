@@ -195,6 +195,7 @@
                           <small class="tiebreak-detail">
                             {{ strings.tieBreak }}: {{ entry.tiebreakLabel }}
                           </small>
+                          <app-explanation [text]="tieBreakExplanation(entry, standings)" />
                         }
                       </td>
                       <td>{{ entry.row.played }}</td>
@@ -333,11 +334,7 @@
 
   @if (projectorState().timer; as timer) {
     @if (shouldShowTimer(timer)) {
-      <aside
-        class="timer-overlay"
-        [class.timer-expired]="isTimerExpired(timer)"
-        aria-live="off"
-      >
+      <aside class="timer-overlay" [class.timer-expired]="isTimerExpired(timer)" aria-live="off">
         <span>{{ timer.name }}</span>
         <strong>{{ remainingTime() }}</strong>
       </aside>

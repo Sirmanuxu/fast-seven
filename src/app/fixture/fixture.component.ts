@@ -23,6 +23,7 @@ import {
   TournamentSnapshot,
 } from '../../domain/model';
 import { createSeededRng } from '../../domain/rng';
+import { compareAcrossGroups } from '../../domain/compare-across-groups';
 import { computeScheduleDetails, ScheduleDetails } from '../../domain/schedule';
 import { getRosterStatus } from '../../domain/team';
 import { resolveMatches } from '../../domain/resolve-matches';
@@ -37,6 +38,8 @@ import { canAddConversion, computeScore } from '../../domain/match-events';
 import { FIXTURE_STRINGS } from '../../i18n/fixture-strings';
 import { MATCH_ORDER_STRINGS } from '../../i18n/match-order-strings';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
+import { EXPLANATION_STRINGS } from '../../i18n/explanations-strings';
+import { ExplanationComponent } from '../explanation/explanation.component';
 import { showErrorPopup } from '../error-popup';
 import { assignGeneratedFixtureIds } from './fixture-id-mapping';
 
@@ -59,6 +62,7 @@ interface FixtureStageView {
 }
 
 @Component({
+  imports: [ExplanationComponent],
   selector: 'app-fixture',
   templateUrl: './fixture.component.html',
   styleUrl: './fixture.component.css',
@@ -68,6 +72,7 @@ export class FixtureComponent implements OnInit {
 
   protected readonly strings = FIXTURE_STRINGS;
   protected readonly matchControlStrings = MATCH_CONTROL_STRINGS;
+  protected readonly explanations = EXPLANATION_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
   protected readonly resolvedMatches = signal<readonly ResolvedMatch[]>([]);
   protected readonly scheduleDetails = signal<ScheduleDetails>({
@@ -309,6 +314,74 @@ export class FixtureComponent implements OnInit {
       this.snapshot()?.teams.find((team) => team.id === result.winnerTeamId)?.name ??
       'Equipo ganador';
     return `${score} (${this.strings.suddenDeath(winnerName)})`;
+  }
+
+  protected formatExplanation(): string {
+    const snapshot = this.snapshot();
+    const params = snapshot?.tournament.formatParams;
+    if (!snapshot || !params) return this.explanations.noFormat;
+
+    const description = this.explanations.formatDescriptions[params.format];
+    const parameterSummary = this.explanations.formatParameters(params);
+    const summary = this.explanations.formatSummary(description, parameterSummary);
+    const unevenStage = snapshot.stages.find((stage) => {
+      if (stage.type !== 'GROUPS') return false;
+      const stageGroups = snapshot.groups.filter((group) => group.stageId === stage.id);
+      return new Set(stageGroups.map((group) => group.teamIds.length)).size > 1;
+    });
+    if (!unevenStage) return summary;
+
+    const groups = snapshot.groups.filter((group) => group.stageId === unevenStage.id);
+    const groupMatches = snapshot.matches.filter((match) => match.stageId === unevenStage.id);
+    const comparison = compareAcrossGroups({
+      groups,
+      matches: groupMatches,
+      events: snapshot.events,
+      rules: snapshot.tournament.rules,
+      level: 1,
+    });
+    const discardedMatches = comparison.excludedMatchIds
+      .map((matchId) => snapshot.matches.find((match) => match.id === matchId))
+      .filter((match): match is Match => match !== undefined)
+      .map(
+        (match) =>
+          `${this.strings.matchNumber.replace('{number}', String(match.order))}: ${this.referenceLabel(match.home, snapshot)} - ${this.referenceLabel(match.away, snapshot)}`,
+      )
+      .join('; ');
+    const groupSizes = groups.map((group) => group.teamIds.length);
+    return `${summary} ${this.explanations.groupUnevenSizes(groupSizes)} ${this.explanations.unevenGroups} ${this.explanations.unevenGroupsMatches(discardedMatches, comparison.isProvisional)}`;
+  }
+
+  protected resultExplanation(row: FixtureMatchRow): string | null {
+    const result = row.match.result;
+    if (result?.definition === 'SUDDEN_DEATH') {
+      const winner =
+        this.snapshot()?.teams.find((team) => team.id === result.winnerTeamId)?.name ??
+        this.strings.unresolved;
+      return this.explanations.suddenDeath(winner, result.homePoints, result.awayPoints);
+    }
+    if (result?.mode === 'WALKOVER') {
+      const resolved = this.resolvedMatches().find((match) => match.matchId === row.match.id);
+      const winnerId =
+        result.winnerTeamId ??
+        (result.homePoints >= result.awayPoints ? resolved?.homeTeamId : resolved?.awayTeamId);
+      const absentId =
+        result.walkoverOrigin?.teamId ??
+        (winnerId === resolved?.homeTeamId ? resolved?.awayTeamId : resolved?.homeTeamId);
+      const teams = this.snapshot()?.teams ?? [];
+      const winner = teams.find((team) => team.id === winnerId)?.name ?? this.strings.unresolved;
+      const absentTeam =
+        teams.find((team) => team.id === absentId)?.name ?? this.strings.unresolved;
+      const winnerPoints =
+        winnerId === resolved?.homeTeamId ? result.homePoints : result.awayPoints;
+      const loserPoints = winnerId === resolved?.homeTeamId ? result.awayPoints : result.homePoints;
+      return this.explanations.walkover(winner, absentTeam, winnerPoints, loserPoints);
+    }
+    if (row.match.isPhantom && (row.match.home.kind === 'BYE' || row.match.away.kind === 'BYE')) {
+      const team = row.match.home.kind === 'BYE' ? row.awayLabel : row.homeLabel;
+      return this.explanations.fixtureBye(team);
+    }
+    return null;
   }
 
   protected beginResultEdit(row: FixtureMatchRow): void {
