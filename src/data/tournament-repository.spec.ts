@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Draw, FormatParams, Match, Team, Tournament } from '../domain/model';
+import { Draw, FormatParams, Match, ProjectorState, Team, Tournament } from '../domain/model';
 import { TournamentRepository } from './tournament-repository';
 import { tournamentDatabase } from './tournament-database';
 
@@ -613,6 +613,7 @@ describe('TournamentRepository projector state', () => {
   });
 
   it('stores the current projector state atomically', async () => {
+    let storedState: ({ readonly id: 'current' } & ProjectorState) | undefined;
     vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
       const operation = arguments_.find((argument) => typeof argument === 'function');
       if (typeof operation !== 'function') {
@@ -620,9 +621,15 @@ describe('TournamentRepository projector state', () => {
       }
       return Dexie.Promise.resolve(Reflect.apply(operation, undefined, []));
     });
-    vi.spyOn(tournamentDatabase.projectorState, 'put').mockResolvedValue('current');
-    const state = {
-      forcedView: null,
+    vi.spyOn(tournamentDatabase.projectorState, 'get').mockImplementation(() =>
+      Dexie.Promise.resolve(storedState),
+    );
+    vi.spyOn(tournamentDatabase.projectorState, 'put').mockImplementation((record) => {
+      storedState = record;
+      return Dexie.Promise.resolve('current');
+    });
+    const state: ProjectorState = {
+      forcedView: { kind: 'STANDINGS', groupId: 'group-1' },
       message: { text: 'Almuerzo hasta las 14:00', mode: 'BANNER' as const },
       timer: { name: 'Almuerzo', endsAtEpochMs: 1799999999 },
     };
@@ -638,5 +645,6 @@ describe('TournamentRepository projector state', () => {
       id: 'current',
       ...state,
     });
+    await expect(new TournamentRepository().getProjectorState()).resolves.toMatchObject(state);
   });
 });

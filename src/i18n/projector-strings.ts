@@ -1,19 +1,11 @@
+import { PROJECTOR_PANEL_STRINGS, PROJECTOR_VIEW_TITLES } from './projector-panel-strings';
+
 export const PROJECTOR_STRINGS = {
   projectorTitle: 'Pantalla pública',
   projectorWaiting: 'Esperando la información del torneo',
   projectorConnectionLive: 'Conectado al panel',
   projectorFullscreen: 'Pantalla completa',
-  viewTitles: {
-    TEAMS_AND_FIXTURE: 'Equipos y fixture',
-    MATCH_PLATE: 'Partido en juego',
-    NEXT_MATCH: 'Próximo partido',
-    SHORT_LIST: 'Partidos recientes y próximos',
-    STANDINGS: 'Tabla de posiciones',
-    BRACKET: 'Cuadro de eliminación',
-    SCORERS: 'Goleadores',
-    FINAL_RESULT: 'Resultados finales',
-    FINAL_STANDINGS: 'Posiciones finales',
-  },
+  viewTitles: PROJECTOR_VIEW_TITLES,
   noTeams: 'Todavía no hay equipos cargados',
   noFixture: 'El fixture todavía no está generado',
   noCurrentMatch: 'No hay un partido en juego',
@@ -29,8 +21,8 @@ export const PROJECTOR_STRINGS = {
   team: 'Equipo',
   teams: 'Equipos',
   matchPrefix: 'Partido',
-  groupPrefix: 'Grupo',
-  generalStandingsTitle: 'Tabla general',
+  groupPrefix: PROJECTOR_PANEL_STRINGS.groupPrefix,
+  generalStandingsTitle: PROJECTOR_PANEL_STRINGS.generalStandingsTitle,
   unassignedPlayer: 'Sin autor',
   unassignedTeam: 'Sin equipo',
   unknownPlayer: 'Jugador',
