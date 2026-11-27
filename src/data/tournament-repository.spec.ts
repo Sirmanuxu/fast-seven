@@ -150,6 +150,7 @@ describe('TournamentRepository.saveFixture', () => {
     vi.spyOn(tournamentDatabase.matches, 'clear').mockResolvedValue(undefined);
     vi.spyOn(tournamentDatabase.events, 'clear').mockResolvedValue(undefined);
     vi.spyOn(tournamentDatabase.draws, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.projectorState, 'clear').mockResolvedValue(undefined);
     vi.spyOn(tournamentDatabase.matches, 'bulkPut').mockResolvedValue('fixture-match');
     vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
   });
@@ -487,6 +488,7 @@ describe('TournamentRepository tournament reset actions', () => {
     vi.spyOn(tournamentDatabase.matches, 'clear').mockResolvedValue(undefined);
     vi.spyOn(tournamentDatabase.events, 'clear').mockResolvedValue(undefined);
     vi.spyOn(tournamentDatabase.draws, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.projectorState, 'clear').mockResolvedValue(undefined);
     vi.spyOn(tournamentDatabase.teams, 'bulkPut').mockResolvedValue('active');
     vi.spyOn(tournamentDatabase.draws, 'bulkPut').mockResolvedValue('team-draw');
     vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
@@ -592,5 +594,49 @@ describe('TournamentRepository tournament reset actions', () => {
     expect(tournamentDatabase.backups.add).not.toHaveBeenCalled();
     expect(tournamentDatabase.matches.clear).not.toHaveBeenCalled();
     expect(tournamentDatabase.teams.bulkPut).not.toHaveBeenCalled();
+  });
+});
+
+describe('TournamentRepository projector state', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns the default state when no state is stored', async () => {
+    vi.spyOn(tournamentDatabase.projectorState, 'get').mockResolvedValue(undefined);
+
+    await expect(new TournamentRepository().getProjectorState()).resolves.toEqual({
+      forcedView: null,
+      message: null,
+      timer: null,
+    });
+  });
+
+  it('stores the current projector state atomically', async () => {
+    vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
+      const operation = arguments_.find((argument) => typeof argument === 'function');
+      if (typeof operation !== 'function') {
+        return Dexie.Promise.reject(new Error('Transaction scope is missing'));
+      }
+      return Dexie.Promise.resolve(Reflect.apply(operation, undefined, []));
+    });
+    vi.spyOn(tournamentDatabase.projectorState, 'put').mockResolvedValue('current');
+    const state = {
+      forcedView: null,
+      message: { text: 'Almuerzo hasta las 14:00', mode: 'BANNER' as const },
+      timer: { name: 'Almuerzo', endsAtEpochMs: 1799999999 },
+    };
+
+    await new TournamentRepository().saveProjectorState(state);
+
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      tournamentDatabase.projectorState,
+      expect.any(Function),
+    );
+    expect(tournamentDatabase.projectorState.put).toHaveBeenCalledWith({
+      id: 'current',
+      ...state,
+    });
   });
 });

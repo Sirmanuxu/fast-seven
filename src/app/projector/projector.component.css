@@ -2,10 +2,28 @@ main {
   min-height: 100dvh;
   display: grid;
   place-content: center;
+  gap: clamp(0.5rem, 2vh, 2rem);
   text-align: center;
   background: #111;
   color: white;
   cursor: none;
   overflow: hidden;
   font-size: clamp(2rem, 5vw, 6rem);
+}
+
+button {
+  justify-self: center;
+  min-height: 44px;
+  font-size: clamp(1rem, 2vw, 2rem);
+  cursor: pointer;
+}
+
+.connection,
+.tournament-name,
+.public-message {
+  margin: 0;
+}
+
+.connection {
+  font-size: clamp(1rem, 2vw, 2.5rem);
 }

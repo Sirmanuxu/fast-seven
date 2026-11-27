@@ -615,3 +615,13 @@
 - **Reason:** These matches represent byes or an unnecessary double-elimination reset and must not block closure.
 - **Decision:** Use elimination rounds for knockout-style position ordering and overall standings for unresolved or fallback positions.
 - **Reason:** This covers champion and runner-up directly, while preserving a deterministic table-based fallback for teams eliminated at the same stage.
+## 2026-11-27 - HU-42 - Projector window and synchronization
+
+- **Decision:** Broadcast a versioned projector envelope with an increasing sequence, tournament snapshot and `ProjectorState`.
+- **Reason:** Sequence numbers let every projector ignore stale messages, while snapshot plus projector state supports refresh, greeting and resynchronization recovery.
+- **Decision:** The panel publishes snapshot/state changes every 500 ms when their JSON fingerprint changes, and projectors send heartbeats every 2 seconds.
+- **Reason:** The short polling interval covers repository changes made across existing panel workflows without requiring every mutation to know about sync, while heartbeats provide a bounded connected/disconnected indicator.
+- **Decision:** Store a singleton `projectorState` row in Dexie schema v2 and clear it on tournament deletion or fixture reset.
+- **Reason:** `ProjectorState` must survive refreshes and remain independent from tournament snapshot exports.
+- **Decision:** Open projector windows with `_blank` instead of a shared named window.
+- **Reason:** It allows several public projector windows to run simultaneously.

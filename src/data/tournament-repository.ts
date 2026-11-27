@@ -10,6 +10,7 @@ import {
   MatchEvent,
   MatchResult,
   Player,
+  ProjectorState,
   RosterLimits,
   ScheduleConfig,
   Stage,
@@ -128,6 +129,17 @@ export class TournamentRepository {
     return (await tournamentDatabase.tournament.toCollection().first()) ?? null;
   }
 
+  async getProjectorState(): Promise<ProjectorState> {
+    const stored = await tournamentDatabase.projectorState.get('current');
+    return stored ?? { forcedView: null, message: null, timer: null };
+  }
+
+  async saveProjectorState(state: ProjectorState): Promise<void> {
+    await tournamentDatabase.transaction('rw', tournamentDatabase.projectorState, async () => {
+      await tournamentDatabase.projectorState.put({ id: 'current', ...state });
+    });
+  }
+
   async getSnapshot(): Promise<TournamentSnapshot | null> {
     const [tournament, players, teams, stages, groups, matches, events, draws] = await Promise.all([
       this.getTournament(),
@@ -167,6 +179,7 @@ export class TournamentRepository {
         'events',
         'draws',
         'backups',
+        'projectorState',
       ],
       async () => {
         const tournament = await this.getTournament();
@@ -184,6 +197,7 @@ export class TournamentRepository {
           tournamentDatabase.matches.clear(),
           tournamentDatabase.events.clear(),
           tournamentDatabase.draws.clear(),
+          tournamentDatabase.projectorState.clear(),
         ]);
       },
     );
@@ -202,6 +216,7 @@ export class TournamentRepository {
         'events',
         'draws',
         'backups',
+        'projectorState',
       ],
       async () => {
         const tournament = await this.getTournament();
@@ -220,6 +235,7 @@ export class TournamentRepository {
           tournamentDatabase.matches.clear(),
           tournamentDatabase.events.clear(),
           tournamentDatabase.draws.clear(),
+          tournamentDatabase.projectorState.clear(),
           tournamentDatabase.teams.bulkPut(
             snapshot.teams.map((team) => ({ ...team, status: 'ACTIVE' })),
           ),

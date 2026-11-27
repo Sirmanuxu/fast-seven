@@ -22,4 +22,10 @@ export const SPIKE_STRINGS = {
   startTournamentFailed: 'No se pudo iniciar el torneo. Revisá que el fixture esté generado.',
   tournamentInProgress: 'El torneo está en curso.',
   projectorTitle: 'Proyector de prueba',
+  projectorInstructions:
+    'Arrastrá la ventana del proyector al monitor externo. Usá el botón de pantalla completa dentro de esa ventana.',
+  projectorConnectedStatus: 'Proyector conectado',
+  projectorDisconnectedStatus: 'Proyector desconectado',
+  projectorFullscreen: 'Pantalla completa',
+  projectorConnectionLive: 'Conectado al panel',
 } as const;

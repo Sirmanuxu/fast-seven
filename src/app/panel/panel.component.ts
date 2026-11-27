@@ -87,14 +87,54 @@ export class PanelComponent implements OnInit {
   protected readonly tournamentCloseStrings = TOURNAMENT_CLOSE_STRINGS;
   protected readonly canClose = signal(false);
   protected readonly finalResult = signal<FinalTournamentResult | null>(null);
+  protected readonly projectorConnected = signal(false);
+  private projectorSequence = 0;
+  private projectorFingerprint = '';
+  private readonly projectorWindowId =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `panel-${Date.now()}-${Math.random()}`;
+  private readonly projectorHeartbeats = new Map<string, number>();
 
   async ngOnInit(): Promise<void> {
-    this.destroyRef.onDestroy(() => this.projectorChannel.close());
+    const stopListening = this.projectorChannel.listen((message) => {
+      if (message.type === 'HEARTBEAT') {
+        this.projectorHeartbeats.set(message.senderId, message.sentAt);
+        this.projectorConnected.set(true);
+      } else if (message.type === 'HELLO' || message.type === 'RESYNC') {
+        void this.publishProjectorState(true);
+      }
+    });
+    this.destroyRef.onDestroy(() => {
+      stopListening();
+      this.projectorChannel.close();
+    });
     await this.loadLastRecord();
     this.tournament.set(await tournamentRepository.getTournament());
     await this.loadMatchControl();
     await this.requestPersistentStorage();
     this.checkOfflineStatus();
+    await this.publishProjectorState(true);
+    const stateTimer = window.setInterval(() => {
+      void this.publishProjectorState(false);
+    }, 500);
+    const heartbeatTimer = window.setInterval(() => {
+      this.projectorChannel.heartbeat(this.projectorWindowId);
+      const cutoff = Date.now() - 5000;
+      let connected = false;
+      for (const [senderId, sentAt] of this.projectorHeartbeats) {
+        if (sentAt < cutoff) {
+          this.projectorHeartbeats.delete(senderId);
+        } else {
+          connected = true;
+        }
+      }
+      this.projectorConnected.set(connected);
+    }, 2000);
+    this.destroyRef.onDestroy(() => {
+      window.clearInterval(stateTimer);
+      window.clearInterval(heartbeatTimer);
+    });
   }
 
   protected async saveTest(): Promise<void> {
@@ -688,9 +728,24 @@ export class PanelComponent implements OnInit {
     return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  private async publishProjectorState(force: boolean): Promise<void> {
+    const snapshot = await tournamentRepository.getSnapshot();
+    const projectorState = await tournamentRepository.getProjectorState();
+    const fingerprint = JSON.stringify([snapshot, projectorState]);
+    if (!force && fingerprint === this.projectorFingerprint) return;
+
+    this.projectorFingerprint = fingerprint;
+    this.projectorSequence += 1;
+    this.projectorChannel.publishState(
+      this.projectorSequence,
+      snapshot,
+      projectorState,
+    );
+  }
+
   protected openProjector(): void {
     const target = new URL('#/proyector', window.location.href);
-    const projector = window.open(target.href, 'fast-seven-projector', 'popup=yes');
+    const projector = window.open(target.href, '_blank', 'popup=yes');
     if (projector === null) {
       showErrorPopup(this.strings.popupBlocked);
     }

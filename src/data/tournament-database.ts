@@ -9,9 +9,14 @@ import {
   Stage,
   Team,
   Tournament,
+  ProjectorState,
 } from '../domain/model';
 
-export const TOURNAMENT_SCHEMA_VERSION = 1;
+export interface StoredProjectorState extends ProjectorState {
+  readonly id: 'current';
+}
+
+export const TOURNAMENT_SCHEMA_VERSION = 2;
 
 export class TournamentDatabase extends Dexie {
   tournament!: Table<Tournament, string>;
@@ -23,10 +28,11 @@ export class TournamentDatabase extends Dexie {
   events!: Table<MatchEvent, string>;
   draws!: Table<Draw, string>;
   backups!: Table<Backup, string>;
+  projectorState!: Table<StoredProjectorState, 'current'>;
 
   constructor() {
     super('fast-seven');
-    this.version(TOURNAMENT_SCHEMA_VERSION).stores({
+    this.version(1).stores({
       tournament: 'id, status, updatedAt',
       players: 'id, teamId, category, normalizedKey',
       teams: 'id, name, status',
@@ -36,6 +42,9 @@ export class TournamentDatabase extends Dexie {
       events: 'id, matchId, teamId, playerId, createdAt',
       draws: 'id, createdAt',
       backups: 'id, createdAt, reason',
+    });
+    this.version(2).stores({
+      projectorState: 'id',
     });
   }
 }

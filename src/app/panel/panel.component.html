@@ -1,5 +1,9 @@
 <main>
   <h1>{{ strings.panelTitle }}</h1>
+  <p role="status">
+    {{ projectorConnected() ? strings.projectorConnectedStatus : strings.projectorDisconnectedStatus }}
+  </p>
+  <p>{{ strings.projectorInstructions }}</p>
 
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>

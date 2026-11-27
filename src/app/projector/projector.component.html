@@ -1,11 +1,25 @@
 <main>
   <h1>{{ strings.projectorTitle }}</h1>
+  <button type="button" (click)="requestFullscreen()">
+    {{ strings.projectorFullscreen }}
+  </button>
 
-  @if (message(); as currentMessage) {
-    <p>{{ currentMessage.text }}</p>
-    @if (latencyMs(); as latency) {
-      <small>Recepción: {{ latency }} ms</small>
-    }
+  @if (connected()) {
+    <p class="connection">{{ strings.projectorConnectionLive }}</p>
+  } @else {
+    <p class="connection">{{ strings.projectorWaiting }}</p>
+  }
+
+  @if (snapshot(); as tournamentSnapshot) {
+    <p class="tournament-name">{{ tournamentSnapshot.tournament.name }}</p>
+  }
+
+  @if (projectorState().message; as publicMessage) {
+    <p class="public-message">{{ publicMessage.text }}</p>
+  }
+
+  @if (legacyMessage(); as currentMessage) {
+    <p>{{ currentMessage }}</p>
   } @else {
     <p>{{ strings.projectorWaiting }}</p>
   }
