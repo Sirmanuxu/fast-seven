@@ -562,3 +562,6 @@
   view, with confirmation before either state change.
 - **Reason:** The control panel exposes upcoming matches, while the fixture remains the accessible
   list of completed matches; both actions need clear team selection and confirmation.
+- **Decision:** Present the absent-team choice in a modal popup instead of inline controls.
+- **Reason:** The organizer must resolve which team is absent in a focused step before confirming
+  the configured walkover score.

@@ -17,7 +17,7 @@
 ## Manual verification
 
 1. Run `npm start`, create a tournament with at least two teams, generate its fixture, and start the tournament.
-2. From `/#/panel`, choose W.O. on an upcoming playable match, select the absent team, and confirm the configured winner/loser score.
+2. From `/#/panel`, choose W.O. on an upcoming playable match. In the popup, select the absent team and confirm the configured winner/loser score.
 3. Check that the match leaves the pending list; for a knockout match, verify that the present team resolves into the next bracket slot. Confirm standings and scorers reflect the W.O. rules.
 4. Open `/#/panel/fixture`, choose «Deshacer W.O.» on the finished match, confirm, and verify that it returns to `PENDING`.
 

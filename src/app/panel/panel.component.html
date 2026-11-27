@@ -278,28 +278,6 @@
             >
               {{ matchControlStrings.walkover }}
             </button>
-            @if (walkoverMatchId() === next.match.id) {
-              <div class="walkover-picker" role="group">
-                <p>{{ matchControlStrings.walkoverQuestion }}</p>
-                <button
-                  type="button"
-                  (click)="recordWalkover(next.match.id, 'home')"
-                  [disabled]="startBusy() || eventBusy()"
-                >
-                  {{ matchControlStrings.absentTeam(next.resolved.homeLabel) }}
-                </button>
-                <button
-                  type="button"
-                  (click)="recordWalkover(next.match.id, 'away')"
-                  [disabled]="startBusy() || eventBusy()"
-                >
-                  {{ matchControlStrings.absentTeam(next.resolved.awayLabel) }}
-                </button>
-                <button type="button" (click)="cancelWalkover()">
-                  {{ matchControlStrings.cancelWalkover }}
-                </button>
-              </div>
-            }
           }
         </article>
       } @else {
@@ -323,28 +301,6 @@
                 >
                   {{ matchControlStrings.walkover }}
                 </button>
-                @if (walkoverMatchId() === entry.match.id) {
-                  <div class="walkover-picker" role="group">
-                    <p>{{ matchControlStrings.walkoverQuestion }}</p>
-                    <button
-                      type="button"
-                      (click)="recordWalkover(entry.match.id, 'home')"
-                      [disabled]="startBusy() || eventBusy()"
-                    >
-                      {{ matchControlStrings.absentTeam(entry.resolved.homeLabel) }}
-                    </button>
-                    <button
-                      type="button"
-                      (click)="recordWalkover(entry.match.id, 'away')"
-                      [disabled]="startBusy() || eventBusy()"
-                    >
-                      {{ matchControlStrings.absentTeam(entry.resolved.awayLabel) }}
-                    </button>
-                    <button type="button" (click)="cancelWalkover()">
-                      {{ matchControlStrings.cancelWalkover }}
-                    </button>
-                  </div>
-                }
               }
             </li>
           }
@@ -372,5 +328,36 @@
 
   @if (lastRecord(); as record) {
     <p>Último dato guardado: {{ record.message }}</p>
+  }
+
+  @if (walkoverEntry; as entry) {
+    <div class="walkover-backdrop">
+      <section
+        class="walkover-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="walkover-dialog-title"
+      >
+        <h2 id="walkover-dialog-title">{{ matchControlStrings.walkoverQuestion }}</h2>
+        <p>{{ entry.resolved.homeLabel }} - {{ entry.resolved.awayLabel }}</p>
+        <button
+          type="button"
+          (click)="recordWalkover(entry.match.id, 'home')"
+          [disabled]="startBusy() || eventBusy()"
+        >
+          {{ matchControlStrings.absentTeam(entry.resolved.homeLabel) }}
+        </button>
+        <button
+          type="button"
+          (click)="recordWalkover(entry.match.id, 'away')"
+          [disabled]="startBusy() || eventBusy()"
+        >
+          {{ matchControlStrings.absentTeam(entry.resolved.awayLabel) }}
+        </button>
+        <button type="button" (click)="cancelWalkover()">
+          {{ matchControlStrings.cancelWalkover }}
+        </button>
+      </section>
+    </div>
   }
 </main>

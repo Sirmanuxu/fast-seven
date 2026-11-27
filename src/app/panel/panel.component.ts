@@ -147,6 +147,16 @@ export class PanelComponent implements OnInit {
     this.walkoverMatchId.set(this.walkoverMatchId() === matchId ? null : matchId);
   }
 
+  protected get walkoverEntry(): NonNullable<MatchControlView['next']> | null {
+    const matchId = this.walkoverMatchId();
+    if (!matchId) return null;
+
+    const control = this.matchControl();
+    return control.next?.match.id === matchId
+      ? control.next
+      : (control.following.find((candidate) => candidate.match.id === matchId) ?? null);
+  }
+
   protected cancelWalkover(): void {
     this.walkoverMatchId.set(null);
   }

@@ -39,12 +39,31 @@ button {
   gap: 1rem;
 }
 
-.walkover-picker {
+.walkover-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: rgb(0 0 0 / 40%);
+}
+
+.walkover-dialog {
   display: grid;
   gap: 0.5rem;
-  padding: 0.75rem;
+  width: min(480px, 100%);
+  padding: 1.25rem;
+  box-sizing: border-box;
   border: 1px solid var(--mat-sys-outline-variant, #cbd5e1);
   border-radius: 8px;
+  background: var(--mat-sys-surface, #ffffff);
+}
+
+.walkover-dialog button {
+  width: 100%;
+  margin: 0;
 }
 
 .live-score {
