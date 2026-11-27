@@ -764,3 +764,12 @@
   scheduling.
 - **Reason:** This records the awarded bye alongside its round while keeping the reference-case
   match count at `floor(n / 2)`; existing `ByeRules` determine its standings points and score.
+
+## 2026-11-27 - HU-54 - Swiss bye edits and standings
+
+- **Decision:** When editing a finished Swiss match, compare the regenerated next-round pairing
+  against the persisted next round and list every later Swiss round as affected only when the
+  pairings change.
+- **Reason:** Editing a score can change the table without changing qualification or pairings;
+  changing pairings requires replacing the next round and resetting later rounds through the
+  existing cascade backup and undo mechanism.
