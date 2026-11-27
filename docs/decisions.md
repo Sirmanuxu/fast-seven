@@ -477,3 +477,13 @@
   meets that target when tentative times cannot be calculated.
 - **Reason:** This uses the tournament's explicit rest setting and avoids false reassurance when
   there is no configured start time.
+
+## 2026-11-26 - HU-32 - Start tournament lock
+
+- **Decision:** Keep `TOURNAMENT_START` as the persisted backup reason, following the existing
+  `BackupReason` contract, for the backlog's `INICIO_TORNEO` intent.
+- **Reason:** The user chose to preserve the type contract rather than change the domain model.
+- **Decision:** Add the first-match start action to the fixture screen; the tournament control
+  dashboard and its additional match-start rules remain in HU-33.
+- **Reason:** HU-32 requires a usable first-start confirmation and atomic transition, while HU-33
+  owns the full control-room experience.
