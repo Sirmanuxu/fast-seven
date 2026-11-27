@@ -355,7 +355,7 @@
           <p><strong>{{ tournamentCloseStrings.runnerUp }}:</strong> {{ teamName(runnerUp) }}</p>
         }
         <h3>{{ tournamentCloseStrings.finalPositions }}</h3>
-        <ol>
+        <ul class="final-position-list">
           @for (position of final.positions; track position.teamId) {
             <li>
               {{ position.position }}° {{ teamName(position.teamId) }}
@@ -364,7 +364,7 @@
               }
             </li>
           }
-        </ol>
+        </ul>
         <h3>{{ tournamentCloseStrings.topScorers }}</h3>
         <ol>
           @for (scorer of final.topScorers; track scorer.playerId) {
