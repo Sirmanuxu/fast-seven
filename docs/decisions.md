@@ -643,3 +643,12 @@
 - **Reason:** This keeps rotation deterministic and avoids persisting derived display state or changing the domain model.
 - **Decision:** Give the most recently finished match a 15-second result view, including when that match closes the tournament; then move to the finished-tournament views or the between-match/break context.
 - **Reason:** This preserves the final score briefly without preventing the tournament’s closing views from taking over afterward.
+
+## 2026-11-27 - HU-45 - Manual projector view
+
+- **Decision:** Build manual view and scope choices from the current tournament snapshot, and persist the selected view and its group or stage identifier in `ProjectorState`.
+- **Reason:** The panel offers only views that currently have renderable data, while the existing projector model remains responsible for rendering and rotation.
+- **Decision:** Clear an unavailable forced view from persisted projector state and notify the operator.
+- **Reason:** This returns the public display to automatic rotation when its selected data disappears, without leaving a stale preference behind.
+- **Decision:** Keep the panel’s projector labels in a small shared translation module rather than importing the full projector string catalog into the panel bundle.
+- **Reason:** The production build’s initial bundle has a strict 1 MB limit, and the panel control should not pull in unrelated projector-only strings.
