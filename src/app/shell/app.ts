@@ -1,8 +1,7 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { SwUpdate } from '@angular/service-worker';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, fromEvent } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { TournamentSnapshot } from '../../domain/model';
 import {
@@ -22,8 +21,10 @@ import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { TOURNAMENT_FILE_STRINGS } from '../../i18n/tournament-file-strings';
 import { PANEL_LOCK_STRINGS } from '../../i18n/panel-lock-strings';
 import { PanelLockService } from './panel-lock.service';
+import { ServiceWorkerUpdateService } from './service-worker-update.service';
 import { showErrorPopup } from '../error-popup';
 import { TournamentFileBarComponent } from '../tournament-file-bar/tournament-file-bar.component';
+import { SERVICE_WORKER_STRINGS } from '../../i18n/service-worker-strings';
 import packageMetadata from '../../../package.json';
 
 @Component({
@@ -35,6 +36,10 @@ import packageMetadata from '../../../package.json';
 export class App implements OnInit {
   protected readonly strings = PERSISTENCE_STRINGS;
   protected readonly appVersion = packageMetadata.version;
+  protected readonly serviceWorkerStrings = SERVICE_WORKER_STRINGS;
+  protected readonly updateService = inject(ServiceWorkerUpdateService);
+  protected readonly online = signal(typeof navigator === 'undefined' || navigator.onLine);
+  protected readonly projectorRoute = signal(false);
   protected readonly ready = signal(false);
   protected readonly databaseAvailable = signal(true);
   protected readonly backupQuotaWarning = signal(false);
@@ -66,22 +71,31 @@ export class App implements OnInit {
       : PANEL_LOCK_STRINGS.unknownSaveTime;
     return PANEL_LOCK_STRINGS.unexpectedShutdown(savedAt);
   });
+  protected readonly showUpdateNotice = computed(
+    () =>
+      !this.projectorRoute() &&
+      !this.panelLock.readOnly() &&
+      !this.recoveryMessage() &&
+      !this.backupQuotaWarning() &&
+      !this.autoSaveFailure() &&
+      !this.databaseWriteFailure() &&
+      (this.updateService.updateAvailable() || this.updateService.updateFailed()),
+  );
   private readonly router = inject(Router);
-  private readonly swUpdate = inject(SwUpdate, { optional: true });
   private readonly destroyRef = inject(DestroyRef);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.panelLock.dispose());
     setDatabaseWriteAllowed(false);
-    const swUpdate = this.swUpdate;
-    if (swUpdate?.isEnabled) {
-      void swUpdate.checkForUpdate();
-      swUpdate.versionUpdates.subscribe((event) => {
-        if (event.type === 'VERSION_READY') {
-          void swUpdate.activateUpdate().then(() => window.location.reload());
-        }
-      });
-    }
+    this.online.set(typeof navigator === 'undefined' || navigator.onLine);
+    this.projectorRoute.set(this.router.url.startsWith('/proyector'));
+    this.updateService.checkForUpdates();
+    fromEvent(window, 'online')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.online.set(true));
+    fromEvent(window, 'offline')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.online.set(false));
     this.databaseAvailable.set(await tournamentRepository.isAvailable());
     if (!this.databaseAvailable()) {
       showErrorPopup(PERSISTENCE_STRINGS.databaseUnavailable);
@@ -122,6 +136,7 @@ export class App implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((event) => {
+        this.projectorRoute.set(event.urlAfterRedirects.startsWith('/proyector'));
         if (event.urlAfterRedirects === '/panel' || event.urlAfterRedirects === '/proyector') {
           localStorage.setItem('fast-seven-last-screen', event.urlAfterRedirects);
         }

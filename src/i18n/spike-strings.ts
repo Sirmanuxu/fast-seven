@@ -2,6 +2,8 @@ export const SPIKE_STRINGS = {
   offlineReady: 'Listo para usar sin conexión',
   offlinePending: 'Verificando el modo sin conexión',
   offlineDevelopment: 'Modo sin conexión disponible al ejecutar la versión publicada',
+  offlineUnavailable:
+    'No se pudo confirmar el modo sin conexión. Podés seguir usando esta versión con conexión.',
   persistenceGranted: 'Almacenamiento persistente concedido',
   persistenceDenied:
     'El navegador no confirmó almacenamiento persistente. Tus datos siguen guardándose localmente.',

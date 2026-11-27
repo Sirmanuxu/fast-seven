@@ -1,5 +1,10 @@
 # Decision log
 
+## 2026-11-27 - HU-60 - Offline and update notices
+
+- **Decision:** Never activate an available service-worker update automatically; only activate it after the organizer selects «Actualizar ahora» and confirms.
+- **Reason:** This prevents a surprise reload during tournament operation and gives the organizer a chance to save the tournament file first. The update banner is hidden in the projector route so it cannot cover the public display.
+
 ## 2026-11-27 - HU-58 - Explanation disclosures
 
 - **Decision:** Raise the production initial-bundle error budget from 1.09 MB to 1.10 MB.

@@ -1276,21 +1276,22 @@ export class PanelComponent implements OnInit {
       return;
     }
 
-    if ('serviceWorker' in navigator) {
-      void navigator.serviceWorker.ready
-        .then((registration) => {
-          if (registration.active) {
-            this.offlineStatus.set(SPIKE_STRINGS.offlineReady);
-          }
-        })
-        .catch(() => undefined);
+    if (!('serviceWorker' in navigator)) {
+      this.offlineStatus.set(SPIKE_STRINGS.offlineUnavailable);
+      return;
     }
 
-    void this.swUpdate
-      .checkForUpdate()
-      .then(() => {
+    void navigator.serviceWorker.ready
+      .then((registration) => {
+        if (!registration.active) {
+          this.offlineStatus.set(SPIKE_STRINGS.offlineUnavailable);
+          return;
+        }
         this.offlineStatus.set(SPIKE_STRINGS.offlineReady);
       })
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        console.error('Checking offline readiness failed', error);
+        this.offlineStatus.set(SPIKE_STRINGS.offlineUnavailable);
+      });
   }
 }

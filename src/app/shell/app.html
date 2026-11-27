@@ -7,6 +7,23 @@
     <h1>{{ strings.databaseUnavailableTitle }}</h1>
   </main>
 } @else {
+  @if (!projectorRoute()) {
+    <aside class="connectivity-indicator" role="status">
+      {{ online() ? serviceWorkerStrings.online : serviceWorkerStrings.offline }}
+    </aside>
+  }
+  @if (showUpdateNotice()) {
+    @if (updateService.updateAvailable()) {
+      <aside class="update-banner" role="status">
+        <p>{{ serviceWorkerStrings.updateAvailable }}</p>
+        <button type="button" (click)="updateService.updateNow()">
+          {{ serviceWorkerStrings.updateNow }}
+        </button>
+      </aside>
+    } @else if (updateService.updateFailed()) {
+      <aside class="update-banner" role="status">{{ serviceWorkerStrings.updateFailed }}</aside>
+    }
+  }
   @if (panelLock.readOnly()) {
     <aside class="persistence-error-banner" role="alert">
       <p>{{ lockMessage() }}</p>
