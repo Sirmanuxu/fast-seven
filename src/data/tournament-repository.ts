@@ -26,8 +26,10 @@ import {
   finishDetailMatch,
   finishDirectMatch,
   finishMatch as finishMatchDomain,
+  finishWalkover as finishWalkoverDomain,
   startMatch as startMatchDomain,
   switchDirectToDetail,
+  undoWalkover as undoWalkoverDomain,
 } from '../domain/match-control';
 import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
@@ -394,6 +396,72 @@ export class TournamentRepository {
         await tournamentDatabase.events.where('matchId').equals(matchId).delete();
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
+        });
+      },
+    );
+  }
+
+  async finishMatchWalkover(
+    matchId: string,
+    absentTeamId: string,
+    finishedAt: string,
+  ): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const seed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'match-control';
+        const resolved = resolveMatches(snapshot, createSeededRng(seed));
+        const finished = finishWalkoverDomain(
+          snapshot,
+          resolved,
+          matchId,
+          absentTeamId,
+          createFixedClock(Date.parse(finishedAt)),
+        );
+        if (!finished.ok) {
+          throw new Error(`Match cannot be marked as walkover: ${finished.error.code}`);
+        }
+
+        await this.writeBackup('MATCH_FINISHED', snapshot);
+        await tournamentDatabase.matches.put(finished.value);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: finishedAt,
+        });
+      },
+    );
+  }
+
+  async undoMatchWalkover(matchId: string, changedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      ['tournament', 'players', 'teams', 'stages', 'groups', 'matches', 'events', 'draws'],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const undone = undoWalkoverDomain(snapshot, matchId);
+        if (!undone.ok) {
+          throw new Error(`Walkover cannot be undone: ${undone.error.code}`);
+        }
+
+        await tournamentDatabase.matches.put(undone.value);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: changedAt,
         });
       },
     );
