@@ -20,6 +20,7 @@ export const MATCH_CONTROL_STRINGS = {
   conversion: 'Conversión',
   noAuthor: 'Sin autor',
   playerSearch: 'Buscar jugador',
+  noPlayersFound: 'No hay jugadores que coincidan con la búsqueda.',
   liveScore: 'Marcador en vivo',
   eventList: 'Eventos',
   noEvents: 'Todavía no se cargaron eventos.',

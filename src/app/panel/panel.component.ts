@@ -63,6 +63,7 @@ export class PanelComponent implements OnInit {
   protected readonly awayPlayerSearch = signal('');
   protected readonly homePlayerId = signal<string | null>(null);
   protected readonly awayPlayerId = signal<string | null>(null);
+  protected readonly activePlayerSearch = signal<'home' | 'away' | null>(null);
   protected readonly eventBusy = signal(false);
 
   async ngOnInit(): Promise<void> {
@@ -308,6 +309,47 @@ export class PanelComponent implements OnInit {
         id: player.id,
         name: `${player.firstName} ${player.lastName}${player.disambiguation ? ` (${player.disambiguation})` : ''}`,
       }));
+  }
+
+  protected playerSearchValue(side: 'home' | 'away'): string {
+    const search = side === 'home' ? this.homePlayerSearch() : this.awayPlayerSearch();
+    if (search) return search;
+
+    const playerId = side === 'home' ? this.homePlayerId() : this.awayPlayerId();
+    if (!playerId) return '';
+    const player = this.snapshot()?.players.find((candidate) => candidate.id === playerId);
+    return player
+      ? `${player.firstName} ${player.lastName}${player.disambiguation ? ` (${player.disambiguation})` : ''}`
+      : '';
+  }
+
+  protected openPlayerSearch(side: 'home' | 'away'): void {
+    this.activePlayerSearch.set(side);
+    if (side === 'home') {
+      this.homePlayerSearch.set('');
+    } else {
+      this.awayPlayerSearch.set('');
+    }
+  }
+
+  protected updatePlayerSearch(side: 'home' | 'away', value: string): void {
+    this.activePlayerSearch.set(side);
+    if (side === 'home') {
+      this.homePlayerSearch.set(value);
+    } else {
+      this.awayPlayerSearch.set(value);
+    }
+  }
+
+  protected selectPlayer(side: 'home' | 'away', playerId: string | null): void {
+    this.activePlayerSearch.set(null);
+    if (side === 'home') {
+      this.homePlayerId.set(playerId);
+      this.homePlayerSearch.set('');
+    } else {
+      this.awayPlayerId.set(playerId);
+      this.awayPlayerSearch.set('');
+    }
   }
 
   protected eventLabel(event: MatchEvent): string {

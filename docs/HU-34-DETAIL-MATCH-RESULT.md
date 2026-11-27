@@ -2,7 +2,7 @@
 
 ## Acceptance criteria
 
-- [x] The match-control screen shows two team columns with Try and Conversion actions, searchable player selectors, a no-author option, and a live score.
+- [x] The match-control screen shows two team columns with Try and Conversion actions, a searchable dropdown of that team's players, a no-author option, and a live score.
 - [x] Match events are listed with individual undo actions.
 - [x] Try and conversion events are validated and saved immediately.
 - [x] A detail result can be loaded while the match is in progress, before finalizing.
@@ -14,6 +14,7 @@
 1. Run `npm start` and open `/#/panel`.
 2. Start the tournament and put a resolved match in play.
 3. Select or search a player in each team column and add a Try.
+   Focusing the player search opens that team's roster; typing filters the visible list.
 4. Confirm the live score increases by 5 and the event appears in the event list.
 5. Add a Conversion for the team and confirm the score increases by 2.
 6. Confirm a Conversion is unavailable without an available Try.

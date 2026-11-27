@@ -24,23 +24,57 @@
           <div class="team-columns">
             <section class="team-column">
               <h3>{{ current.resolved.homeLabel }}</h3>
-              <label>
-                {{ matchControlStrings.playerSearch }}
-                <input
-                  type="search"
-                  [value]="homePlayerSearch()"
-                  (input)="homePlayerSearch.set($any($event.target).value)"
-                />
-              </label>
-              <select
-                [value]="homePlayerId() ?? ''"
-                (change)="homePlayerId.set($any($event.target).value || null)"
-              >
-                <option value="">{{ matchControlStrings.noAuthor }}</option>
-                @for (player of playersForTeam(current.resolved.homeTeamId ?? '', 'home'); track player.id) {
-                  <option [value]="player.id">{{ player.name }}</option>
-                }
-              </select>
+              <div class="player-picker">
+                <label>
+                  {{ matchControlStrings.playerSearch }}
+                  <input
+                    type="search"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="home-player-options"
+                    [attr.aria-expanded]="activePlayerSearch() === 'home'"
+                    [value]="playerSearchValue('home')"
+                    (focus)="openPlayerSearch('home')"
+                    (input)="updatePlayerSearch('home', $any($event.target).value)"
+                  />
+                </label>
+                <ul
+                  id="home-player-options"
+                  class="player-options"
+                  role="listbox"
+                  [hidden]="activePlayerSearch() !== 'home'"
+                >
+                  <li role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      [attr.aria-selected]="homePlayerId() === null"
+                      (click)="selectPlayer('home', null)"
+                    >
+                      {{ matchControlStrings.noAuthor }}
+                    </button>
+                  </li>
+                  @for (
+                    player of playersForTeam(current.resolved.homeTeamId ?? '', 'home');
+                    track player.id
+                  ) {
+                    <li role="presentation">
+                      <button
+                        type="button"
+                        role="option"
+                        [attr.aria-selected]="homePlayerId() === player.id"
+                        (click)="selectPlayer('home', player.id)"
+                      >
+                        {{ player.name }}
+                      </button>
+                    </li>
+                  } @empty {
+                    <li class="no-player-options" role="presentation">
+                      {{ matchControlStrings.noPlayersFound }}
+                    </li>
+                  }
+                </ul>
+              </div>
               <button
                 type="button"
                 (click)="addMatchEvent(current.resolved.homeTeamId ?? '', 'TRY')"
@@ -59,23 +93,57 @@
 
             <section class="team-column">
               <h3>{{ current.resolved.awayLabel }}</h3>
-              <label>
-                {{ matchControlStrings.playerSearch }}
-                <input
-                  type="search"
-                  [value]="awayPlayerSearch()"
-                  (input)="awayPlayerSearch.set($any($event.target).value)"
-                />
-              </label>
-              <select
-                [value]="awayPlayerId() ?? ''"
-                (change)="awayPlayerId.set($any($event.target).value || null)"
-              >
-                <option value="">{{ matchControlStrings.noAuthor }}</option>
-                @for (player of playersForTeam(current.resolved.awayTeamId ?? '', 'away'); track player.id) {
-                  <option [value]="player.id">{{ player.name }}</option>
-                }
-              </select>
+              <div class="player-picker">
+                <label>
+                  {{ matchControlStrings.playerSearch }}
+                  <input
+                    type="search"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-controls="away-player-options"
+                    [attr.aria-expanded]="activePlayerSearch() === 'away'"
+                    [value]="playerSearchValue('away')"
+                    (focus)="openPlayerSearch('away')"
+                    (input)="updatePlayerSearch('away', $any($event.target).value)"
+                  />
+                </label>
+                <ul
+                  id="away-player-options"
+                  class="player-options"
+                  role="listbox"
+                  [hidden]="activePlayerSearch() !== 'away'"
+                >
+                  <li role="presentation">
+                    <button
+                      type="button"
+                      role="option"
+                      [attr.aria-selected]="awayPlayerId() === null"
+                      (click)="selectPlayer('away', null)"
+                    >
+                      {{ matchControlStrings.noAuthor }}
+                    </button>
+                  </li>
+                  @for (
+                    player of playersForTeam(current.resolved.awayTeamId ?? '', 'away');
+                    track player.id
+                  ) {
+                    <li role="presentation">
+                      <button
+                        type="button"
+                        role="option"
+                        [attr.aria-selected]="awayPlayerId() === player.id"
+                        (click)="selectPlayer('away', player.id)"
+                      >
+                        {{ player.name }}
+                      </button>
+                    </li>
+                  } @empty {
+                    <li class="no-player-options" role="presentation">
+                      {{ matchControlStrings.noPlayersFound }}
+                    </li>
+                  }
+                </ul>
+              </div>
               <button
                 type="button"
                 (click)="addMatchEvent(current.resolved.awayTeamId ?? '', 'TRY')"
