@@ -1,0 +1,121 @@
+import { Clock, DomainError, Id, Match, ResolvedMatch, Result, TournamentSnapshot } from './model';
+import { formatIsoDateTime } from './schedule';
+
+export interface MatchControlView {
+  readonly current: { readonly match: Match; readonly resolved: ResolvedMatch } | null;
+  readonly next: { readonly match: Match; readonly resolved: ResolvedMatch } | null;
+  readonly following: readonly {
+    readonly match: Match;
+    readonly resolved: ResolvedMatch;
+  }[];
+}
+
+function error(
+  code: string,
+  messageKey: string,
+  params?: Readonly<Record<string, string | number>>,
+): Result<never, DomainError> {
+  return {
+    ok: false,
+    error: { code, messageKey, ...(params ? { params } : {}) },
+  };
+}
+
+export function startMatch(
+  snapshot: TournamentSnapshot,
+  resolvedMatches: readonly ResolvedMatch[],
+  matchId: Id,
+  clock: Clock,
+): Result<Match, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (match.status !== 'PENDING') {
+    return error('matchNotPending', 'matchControl.matchNotPending');
+  }
+  if (snapshot.matches.some((candidate) => candidate.status === 'IN_PROGRESS')) {
+    return error('matchAlreadyInProgress', 'matchControl.matchAlreadyInProgress');
+  }
+
+  const resolved = resolvedMatches.find((candidate) => candidate.matchId === matchId);
+  if (!resolved?.isPlayable) {
+    return error('matchNotResolved', 'matchControl.matchNotResolved');
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...match,
+      status: 'IN_PROGRESS',
+      startedAt: formatIsoDateTime(clock.nowMs()),
+    },
+  };
+}
+
+export function finishMatch(
+  snapshot: TournamentSnapshot,
+  matchId: Id,
+  clock: Clock,
+): Result<Match, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (match.status !== 'IN_PROGRESS') {
+    return error('matchNotInProgress', 'matchControl.matchNotInProgress');
+  }
+  if (match.result === null) {
+    return error('matchHasNoResult', 'matchControl.matchHasNoResult');
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...match,
+      status: 'FINISHED',
+      finishedAt: formatIsoDateTime(clock.nowMs()),
+    },
+  };
+}
+
+export function buildMatchControlView(
+  snapshot: TournamentSnapshot,
+  resolvedMatches: readonly ResolvedMatch[],
+  orderedMatchIds: readonly Id[],
+): MatchControlView {
+  const matchesById = new Map(snapshot.matches.map((match) => [match.id, match]));
+  const resolvedById = new Map(resolvedMatches.map((match) => [match.matchId, match]));
+  const currentMatch = snapshot.matches.find((match) => match.status === 'IN_PROGRESS');
+  const current =
+    currentMatch && resolvedById.get(currentMatch.id)
+      ? { match: currentMatch, resolved: resolvedById.get(currentMatch.id)! }
+      : null;
+
+  const playablePending = orderedMatchIds
+    .map((matchId) => {
+      const match = matchesById.get(matchId);
+      const resolved = resolvedById.get(matchId);
+      return match && resolved?.isPlayable && match.status === 'PENDING'
+        ? { match, resolved }
+        : null;
+    })
+    .filter(
+      (entry): entry is { readonly match: Match; readonly resolved: ResolvedMatch } =>
+        entry !== null,
+    );
+
+  return {
+    current,
+    next: playablePending[0] ?? null,
+    following: playablePending.slice(1, 4),
+  };
+}

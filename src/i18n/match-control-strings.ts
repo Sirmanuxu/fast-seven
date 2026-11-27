@@ -1,0 +1,18 @@
+export const MATCH_CONTROL_STRINGS = {
+  currentMatch: 'Partido en juego',
+  noCurrentMatch: 'No hay ningún partido en juego.',
+  nextMatch: 'Próximo partido',
+  followingMatches: 'Siguientes partidos',
+  noNextMatch: 'No hay partidos jugables pendientes.',
+  putInPlay: 'Poner en juego',
+  finish: 'Finalizar',
+  tentative: 'Hora tentativa',
+  unresolved: 'Los equipos todavía no están definidos.',
+  alreadyInProgress: 'Ya hay un partido en juego. Finalizalo antes de iniciar otro.',
+  startFailed: 'No se pudo poner el partido en juego.',
+  finishFailed: 'No se pudo finalizar el partido.',
+  noResult: 'Todavía no hay resultado cargado.',
+  confirmFinish: '¿Querés finalizar este partido?',
+  matchStarted: 'El partido quedó en juego.',
+  matchFinished: 'El partido quedó finalizado.',
+} as const;

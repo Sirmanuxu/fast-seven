@@ -110,7 +110,7 @@ function parseIsoDateTime(value: string): number | null {
   );
 }
 
-function formatIsoDateTime(epochMs: number): string {
+export function formatIsoDateTime(epochMs: number): string {
   const days = Math.floor(epochMs / DAY_MS);
   let remainingMs = epochMs - days * DAY_MS;
   const { year, month, day } = civilFromDays(days);

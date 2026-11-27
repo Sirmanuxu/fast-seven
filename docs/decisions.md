@@ -491,3 +491,19 @@
   Starting changes the tournament state and creates its backup but leaves all matches pending.
 - **Reason:** The organizer requested a clear tournament-level milestone separate from starting
   an individual match; HU-33 will own match controls.
+
+## 2026-11-27 - HU-33 - Match control panel
+
+- **Decision:** Treat `PENDING -> IN_PROGRESS` and `IN_PROGRESS -> FINISHED` as pure match
+  transitions that receive an injected clock and resolved-match snapshot.
+- **Reason:** This preserves domain purity and makes the unique-live-match and unresolved-slot
+  invariants deterministic and testable.
+- **Decision:** Build the next-match proposal from the persisted pitch order, skip unresolved or
+  non-pending matches, and expose at most three following matches.
+- **Reason:** The backlog requires the next playable match without changing fixture order; the
+  existing schedule order supplies a stable basis and the resolved-match contract identifies
+  dependencies.
+- **Decision:** Finalization requires a loaded `MatchResult`; the repository creates a
+  `MATCH_FINISHED` backup atomically with the status and real finish timestamp.
+- **Reason:** HU-33 owns match lifecycle controls, while HU-34 owns result-detail entry and should
+  supply the required result before the finish transition is enabled.

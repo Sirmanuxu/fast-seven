@@ -22,6 +22,13 @@ import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-data
 import { canCreateOrDeleteTeam, getDefaultTeamColorPair, normalizeTeamName } from '../domain/team';
 import { normalizePlayerKey } from '../domain/player';
 import { startTournament } from '../domain/start-tournament';
+import {
+  finishMatch as finishMatchDomain,
+  startMatch as startMatchDomain,
+} from '../domain/match-control';
+import { resolveMatches } from '../domain/resolve-matches';
+import { createFixedClock } from '../domain/clock';
+import { createSeededRng } from '../domain/rng';
 
 export interface MatchSaveInput {
   readonly match: Match;
@@ -141,6 +148,67 @@ export class TournamentRepository {
             updatedAt: new Date().toISOString(),
           });
         }
+      },
+    );
+  }
+
+  async setMatchInProgress(matchId: string, startedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      ['tournament', 'players', 'teams', 'stages', 'groups', 'matches', 'events', 'draws'],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const seed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'match-control';
+        const resolved = resolveMatches(snapshot, createSeededRng(seed));
+        const started = startMatchDomain(
+          snapshot,
+          resolved,
+          matchId,
+          createFixedClock(Date.parse(startedAt)),
+        );
+        if (!started.ok) throw new Error(`Match cannot start: ${started.error.code}`);
+
+        await tournamentDatabase.matches.put(started.value);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: startedAt,
+        });
+      },
+    );
+  }
+
+  async finishMatch(matchId: string, finishedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const finished = finishMatchDomain(
+          snapshot,
+          matchId,
+          createFixedClock(Date.parse(finishedAt)),
+        );
+        if (!finished.ok) throw new Error(`Match cannot finish: ${finished.error.code}`);
+
+        await this.writeBackup('MATCH_FINISHED', snapshot);
+        await tournamentDatabase.matches.put(finished.value);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: finishedAt,
+        });
       },
     );
   }

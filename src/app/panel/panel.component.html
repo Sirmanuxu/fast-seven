@@ -10,6 +10,61 @@
     </button>
   } @else if (tournament()?.status === 'RUNNING') {
     <p role="status">{{ strings.tournamentInProgress }}</p>
+    <section class="match-control">
+      <h2>{{ matchControlStrings.currentMatch }}</h2>
+      @if (matchControl().current; as current) {
+        <article>
+          <strong>{{ current.resolved.homeLabel }} - {{ current.resolved.awayLabel }}</strong>
+          <div>
+            <button
+              type="button"
+              (click)="finishControlMatch(current.match.id)"
+              [disabled]="startBusy() || current.match.result === null"
+            >
+              {{ matchControlStrings.finish }}
+            </button>
+            @if (current.match.result === null) {
+              <p role="status">{{ matchControlStrings.noResult }}</p>
+            }
+          </div>
+        </article>
+      } @else {
+        <p role="status">{{ matchControlStrings.noCurrentMatch }}</p>
+      }
+
+      <h2>{{ matchControlStrings.nextMatch }}</h2>
+      @if (matchControl().next; as next) {
+        <article>
+          <strong>{{ next.resolved.homeLabel }} - {{ next.resolved.awayLabel }}</strong>
+          @if (tentativeStart(next.match.id); as start) {
+            <span>{{ matchControlStrings.tentative }}: {{ start }}</span>
+          }
+          <button
+            type="button"
+            (click)="putMatchInPlay(next.match.id)"
+            [disabled]="startBusy() || matchControl().current !== null"
+          >
+            {{ matchControlStrings.putInPlay }}
+          </button>
+        </article>
+      } @else {
+        <p role="status">{{ matchControlStrings.noNextMatch }}</p>
+      }
+
+      @if (matchControl().following.length > 0) {
+        <h2>{{ matchControlStrings.followingMatches }}</h2>
+        <ol>
+          @for (entry of matchControl().following; track entry.match.id) {
+            <li>
+              <strong>{{ entry.resolved.homeLabel }} - {{ entry.resolved.awayLabel }}</strong>
+              @if (tentativeStart(entry.match.id); as start) {
+                <span> · {{ matchControlStrings.tentative }}: {{ start }}</span>
+              }
+            </li>
+          }
+        </ol>
+      }
+    </section>
   }
 
   <section>

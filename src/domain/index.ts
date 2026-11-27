@@ -32,3 +32,4 @@ export * from './resolve-matches';
 export * from './schedule';
 export * from './match-order';
 export * from './start-tournament';
+export * from './match-control';
