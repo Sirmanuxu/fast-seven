@@ -185,18 +185,6 @@ export class FixtureComponent implements OnInit {
     );
   }
 
-  protected canStartMatch(match: Match): boolean {
-    return (
-      this.snapshot()?.tournament.status === 'FIXTURE_GENERATED' &&
-      match.status === 'PENDING' &&
-      !match.isPhantom &&
-      !match.isConditional &&
-      this.resolvedMatches().some(
-        (resolved) => resolved.matchId === match.id && resolved.isPlayable,
-      )
-    );
-  }
-
   protected resultLabel(row: FixtureMatchRow): string | null {
     const result = row.match.result;
     return result
@@ -318,24 +306,6 @@ export class FixtureComponent implements OnInit {
       return;
     }
     await this.persistOrders(reset.value, this.strings.orderReset);
-  }
-
-  protected async startMatch(match: Match): Promise<void> {
-    const snapshot = this.snapshot();
-    if (!snapshot || this.isBusy() || !this.canStartMatch(match)) return;
-    if (!window.confirm(this.strings.confirmStart)) return;
-
-    this.isBusy.set(true);
-    try {
-      await tournamentRepository.startMatch(match.id, new Date().toISOString());
-      await this.load();
-      this.statusMessage.set(this.strings.matchStarted);
-    } catch (error) {
-      console.error('Starting tournament match failed', error);
-      showErrorPopup(this.strings.startFailed);
-    } finally {
-      this.isBusy.set(false);
-    }
   }
 
   protected openFormat(): void {

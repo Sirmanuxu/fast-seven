@@ -124,15 +124,6 @@
                     </div>
                     @if (row.match.status === 'PENDING') {
                       <div class="match-controls">
-                        @if (canStartMatch(row.match)) {
-                          <button
-                            type="button"
-                            (click)="startMatch(row.match)"
-                            [disabled]="isBusy()"
-                          >
-                            {{ strings.startMatch }}
-                          </button>
-                        }
                         <button
                           type="button"
                           (click)="moveMatch(row.match.id, 'UP')"

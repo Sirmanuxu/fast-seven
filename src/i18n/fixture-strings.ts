@@ -16,11 +16,6 @@ export const FIXTURE_STRINGS = {
   noFixture: 'Todavía no hay un fixture generado.',
   tournamentLocked:
     'El torneo ya empezó; para cambiar o regenerar el fixture, primero hay que reiniciarlo.',
-  startMatch: 'Poner en juego',
-  confirmStart:
-    'Al iniciar el partido, el torneo quedará en curso. No podrás cambiar el formato, regenerar el fixture ni agregar o quitar equipos. Para modificar esa estructura, primero hay que reiniciar el torneo. ¿Querés continuar?',
-  matchStarted: 'Partido en juego. El torneo quedó en curso.',
-  startFailed: 'No se pudo iniciar el partido. Revisá el estado del torneo y del fixture.',
   summary: 'Resumen',
   totalMatches: 'Partidos totales',
   minimumMatches: 'Partidos mínimos por equipo',

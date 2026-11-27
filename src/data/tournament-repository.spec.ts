@@ -200,7 +200,7 @@ describe('TournamentRepository.saveFixture', () => {
   });
 });
 
-describe('TournamentRepository.startMatch', () => {
+describe('TournamentRepository.startTournament', () => {
   beforeEach(() => {
     vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
       const operation = arguments_.find((argument) => typeof argument === 'function');
@@ -217,7 +217,6 @@ describe('TournamentRepository.startMatch', () => {
     vi.spyOn(tournamentDatabase.stages, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.groups, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([match('fixture-match', 1)]);
-    vi.spyOn(tournamentDatabase.matches, 'get').mockResolvedValue(match('fixture-match', 1));
     vi.spyOn(tournamentDatabase.events, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.draws, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
@@ -230,12 +229,12 @@ describe('TournamentRepository.startMatch', () => {
     vi.restoreAllMocks();
   });
 
-  it('backs up the original snapshot and starts the first match atomically', async () => {
+  it('backs up the original snapshot and starts the tournament atomically', async () => {
     const repository = new TournamentRepository();
     const existing = tournament('FIXTURE_GENERATED');
     vi.spyOn(repository, 'getTournament').mockResolvedValue(existing);
 
-    await repository.startMatch('fixture-match', '2026-11-26T12:00:00.000Z');
+    await repository.startTournament('2026-11-26T12:00:00.000Z');
 
     expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
       'rw',
@@ -248,45 +247,34 @@ describe('TournamentRepository.startMatch', () => {
         snapshot: expect.objectContaining({ tournament: existing }),
       }),
     );
-    expect(tournamentDatabase.matches.update).toHaveBeenCalledWith('fixture-match', {
-      status: 'IN_PROGRESS',
-      startedAt: '2026-11-26T12:00:00.000Z',
-    });
+    expect(tournamentDatabase.matches.update).not.toHaveBeenCalled();
     expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith('tournament', {
       status: 'RUNNING',
       updatedAt: '2026-11-26T12:00:00.000Z',
     });
   });
 
-  it('does not create another tournament-start backup after the tournament is running', async () => {
+  it('rejects repeated starts once the tournament is running', async () => {
     const repository = new TournamentRepository();
     vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('RUNNING'));
 
-    await repository.startMatch('fixture-match', '2026-11-26T12:00:00.000Z');
+    await expect(repository.startTournament('2026-11-26T12:00:00.000Z')).rejects.toThrow(
+      'Tournament cannot be started',
+    );
 
     expect(tournamentDatabase.backups.add).not.toHaveBeenCalled();
-    expect(tournamentDatabase.matches.update).toHaveBeenCalled();
-    expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith(
-      'tournament',
-      expect.objectContaining({ status: 'RUNNING' }),
-    );
+    expect(tournamentDatabase.tournament.update).not.toHaveBeenCalled();
   });
 
-  it('rejects a match that is not playable without changing the tournament', async () => {
+  it('rejects a generated tournament with an empty fixture', async () => {
     const repository = new TournamentRepository();
     vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('FIXTURE_GENERATED'));
-    const unplayableMatch = {
-      ...match('fixture-match', 1),
-      home: { kind: 'WINNER_OF', matchId: 'missing-match' },
-    } satisfies Match;
-    vi.spyOn(tournamentDatabase.matches, 'get').mockResolvedValue(unplayableMatch);
-    vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([unplayableMatch]);
+    vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([]);
 
-    await expect(
-      repository.startMatch('fixture-match', '2026-11-26T12:00:00.000Z'),
-    ).rejects.toThrow('Only playable matches');
+    await expect(repository.startTournament('2026-11-26T12:00:00.000Z')).rejects.toThrow(
+      'Tournament fixture is empty',
+    );
     expect(tournamentDatabase.backups.add).not.toHaveBeenCalled();
-    expect(tournamentDatabase.matches.update).not.toHaveBeenCalled();
     expect(tournamentDatabase.tournament.update).not.toHaveBeenCalled();
   });
 });

@@ -2,25 +2,25 @@
 
 ## Acceptance criteria
 
-- [x] Starting the first playable fixture match asks for confirmation and explains which tournament structure becomes locked.
-- [x] Confirming saves the pre-start snapshot with reason `TOURNAMENT_START`, changes the tournament to `RUNNING`, and marks the match `IN_PROGRESS`.
+- [x] The Home screen offers one **Iniciar torneo** action after fixture generation. Confirmation explains which tournament structure becomes locked.
+- [x] Confirming saves the pre-start snapshot with reason `TOURNAMENT_START` and changes the tournament to `RUNNING`. It does not start a match; the control-room flow in HU-33 handles match starts.
 - [x] While running, team creation/removal, format changes, and fixture regeneration are blocked; existing player and team-detail editing remains available. Match result persistence remains available for the result UI planned in HU-34.
 - [x] Locked controls are disabled and explain that the tournament must be restarted before changing its structure.
 
 ## How to verify manually
 
 1. Run `npm start`, configure at least two active teams, choose a supported format, and generate a fixture.
-2. Open **Fixture** and select **Poner en juego** on a playable pending match.
-3. Cancel the confirmation and verify the match remains pending and the tournament remains `FIXTURE_GENERATED`.
-4. Start that match again and confirm. Verify the match is shown as **En juego** and the tournament is now in progress.
+2. Return to **Home**. Confirm that the single **Iniciar torneo** button is available.
+3. Cancel its confirmation and verify the tournament remains `FIXTURE_GENERATED`.
+4. Start the tournament and confirm. Verify the tournament is `RUNNING`, the fixture still shows its matches as pending, and no per-match start buttons are shown.
 5. Open **Formato**, **Fixture**, and **Equipos**. Verify format controls, fixture regeneration, and team add/remove are disabled with a restart explanation.
-6. Verify existing player and team name/color/captain editing remains available. Match result UI is not part of this story and will be introduced by HU-34.
+6. Verify existing player and team name/color/captain editing remains available. The control-room match-start flow is introduced by HU-33.
 
 ## Decisions and limits
 
 - The persisted backup reason remains `TOURNAMENT_START`, as selected by the user to preserve the existing `BackupReason` type; it represents the backlog's `INICIO_TORNEO`.
-- The first-start action is placed on the fixture screen to satisfy this story. HU-33 still owns the control-room screen and its additional match-start rules.
-- The repository rejects non-playable matches and applies the backup and both status changes in one Dexie transaction.
+- The Home action starts the tournament without changing any match status. HU-33 owns starting individual matches in the control room.
+- The repository requires a generated non-empty fixture and applies the backup and tournament status change in one Dexie transaction.
 
 ## Automated verification
 

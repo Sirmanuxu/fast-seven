@@ -487,3 +487,7 @@
   dashboard and its additional match-start rules remain in HU-33.
 - **Reason:** HU-32 requires a usable first-start confirmation and atomic transition, while HU-33
   owns the full control-room experience.
+- **Decision:** Replace the per-match start action with one **Iniciar torneo** button on Home.
+  Starting changes the tournament state and creates its backup but leaves all matches pending.
+- **Reason:** The organizer requested a clear tournament-level milestone separate from starting
+  an individual match; HU-33 will own match controls.

@@ -31,4 +31,4 @@ export * from './groups-position-playoffs';
 export * from './resolve-matches';
 export * from './schedule';
 export * from './match-order';
-export * from './start-tournament-match';
+export * from './start-tournament';
