@@ -4,6 +4,11 @@
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }
+  @if (canClose()) {
+    <button type="button" (click)="closeTournament()" [disabled]="startBusy()">
+      {{ tournamentCloseStrings.closeTournament }}
+    </button>
+  }
   @if (tournament()?.status === 'FIXTURE_GENERATED') {
     <button type="button" (click)="startTournament()" [disabled]="startBusy()">
       {{ strings.startTournament }}
@@ -335,6 +340,38 @@
             </li>
           }
         </ol>
+      }
+    </section>
+  }
+
+  @else if (tournament()?.status === 'FINISHED') {
+    <section class="final-result">
+      <h2>{{ tournamentCloseStrings.tournamentFinished }}</h2>
+      @if (finalResult(); as final) {
+        @if (final.championTeamId; as champion) {
+          <p><strong>{{ tournamentCloseStrings.champion }}:</strong> {{ teamName(champion) }}</p>
+        }
+        @if (final.runnerUpTeamId; as runnerUp) {
+          <p><strong>{{ tournamentCloseStrings.runnerUp }}:</strong> {{ teamName(runnerUp) }}</p>
+        }
+        <h3>{{ tournamentCloseStrings.finalPositions }}</h3>
+        <ol>
+          @for (position of final.positions; track position.teamId) {
+            <li>
+              {{ position.position }}° {{ teamName(position.teamId) }}
+              @if (position.tied) {
+                ({{ tournamentCloseStrings.tiedPosition }})
+              }
+            </li>
+          }
+        </ol>
+        <h3>{{ tournamentCloseStrings.topScorers }}</h3>
+        <ol>
+          @for (scorer of final.topScorers; track scorer.playerId) {
+            <li>{{ playerName(scorer.playerId) }} · {{ scorer.points }}</li>
+          }
+        </ol>
+        <p>{{ tournamentCloseStrings.editFinishedResult }}</p>
       }
     </section>
   }

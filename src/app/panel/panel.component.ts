@@ -10,12 +10,18 @@ import { ProjectorChannel } from '../../sync/projector-channel';
 import { showErrorPopup } from '../error-popup';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
 import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
+import { TOURNAMENT_CLOSE_STRINGS } from '../../i18n/tournament-close-strings';
 import {
   Match,
   MatchEvent,
   ResolvedMatch,
   TournamentSnapshot,
 } from '../../domain/model';
+import {
+  canCloseTournament,
+  computeFinalTournamentResult,
+  FinalTournamentResult,
+} from '../../domain/tournament-close';
 import { resolveMatches } from '../../domain/resolve-matches';
 import { createSeededRng } from '../../domain/rng';
 import { computeScheduleDetails, ScheduleDetails } from '../../domain/schedule';
@@ -77,6 +83,9 @@ export class PanelComponent implements OnInit {
   protected readonly directHomeScore = signal(0);
   protected readonly directAwayScore = signal(0);
   protected readonly walkoverMatchId = signal<string | null>(null);
+  protected readonly tournamentCloseStrings = TOURNAMENT_CLOSE_STRINGS;
+  protected readonly canClose = signal(false);
+  protected readonly finalResult = signal<FinalTournamentResult | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
@@ -701,11 +710,44 @@ export class PanelComponent implements OnInit {
     void this.router.navigateByUrl('/panel/ajustes');
   }
 
+  protected teamName(teamId: string): string {
+    return this.snapshot()?.teams.find((team) => team.id === teamId)?.name ?? teamId;
+  }
+
+  protected playerName(playerId: string): string {
+    const player = this.snapshot()?.players.find((candidate) => candidate.id === playerId);
+    return player ? `${player.firstName} ${player.lastName}` : playerId;
+  }
+
+  protected async closeTournament(): Promise<void> {
+    if (!this.canClose() || this.startBusy()) return;
+    if (!window.confirm(TOURNAMENT_CLOSE_STRINGS.confirmCloseTournament)) return;
+    this.startBusy.set(true);
+    try {
+      await tournamentRepository.closeTournament(new Date().toISOString());
+      await this.loadMatchControl();
+      this.statusMessage.set(TOURNAMENT_CLOSE_STRINGS.tournamentFinished);
+    } catch (error) {
+      console.error('Closing tournament failed', error);
+      showErrorPopup(TOURNAMENT_CLOSE_STRINGS.closeFailed);
+    } finally {
+      this.startBusy.set(false);
+    }
+  }
+
   private async loadMatchControl(): Promise<void> {
     const snapshot = await tournamentRepository.getSnapshot();
     this.snapshot.set(snapshot);
     this.tournament.set(snapshot?.tournament ?? null);
+    this.canClose.set(snapshot ? canCloseTournament(snapshot) : false);
+    this.finalResult.set(
+      snapshot?.tournament.status === 'FINISHED'
+        ? computeFinalTournamentResult(snapshot)
+        : null,
+    );
     if (!snapshot) {
+      this.canClose.set(false);
+      this.finalResult.set(null);
       this.resolvedMatches.set([]);
       this.scheduleDetails.set({
         entries: [],
