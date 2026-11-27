@@ -78,7 +78,7 @@
         <input
           type="checkbox"
           [checked]="drawBalance()"
-          (change)="drawBalance.set($any($event.target).checked)"
+          disabled
         />
         {{ strings.drawBalance }}
       </label>

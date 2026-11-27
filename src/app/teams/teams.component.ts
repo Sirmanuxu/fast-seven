@@ -38,7 +38,7 @@ export class TeamsComponent implements OnInit {
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly unassignedSelectedIds = signal<ReadonlySet<string>>(new Set());
   protected readonly teamSelectedIds = signal<ReadonlySet<string>>(new Set());
-  protected readonly drawBalance = signal(false);
+  protected readonly drawBalance = signal(true);
   protected readonly drawSelectedExistingIds = signal<ReadonlySet<string>>(new Set());
   protected readonly drawPlan = signal<TeamDrawPlan | null>(null);
   protected readonly drawBusy = signal(false);
