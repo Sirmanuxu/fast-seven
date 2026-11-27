@@ -11,6 +11,7 @@ import {
 import { createSeededRng } from './rng';
 import { computeStandings } from './standings';
 import { resolveMatchesWithDraws } from './resolve-matches';
+import { analyzeSwissPairingEdit } from './swiss';
 
 export interface EditImpactAnalysis {
   readonly impact: EditImpact;
@@ -140,6 +141,26 @@ export function analyzeEditImpactWithDraws(
   const afterMatchById = new Map(after.matches.map((match) => [match.id, match]));
   const changedDrawPositionsByGroup = new Map<Id, ReadonlySet<number>>();
   const affectedIds = new Set<Id>();
+
+  for (const match of after.matches) {
+    const beforeMatch = before.matches.find((candidate) => candidate.id === match.id);
+    if (
+      beforeMatch &&
+      beforeMatch.result &&
+      match.result &&
+      JSON.stringify(beforeMatch.result) !== JSON.stringify(match.result)
+    ) {
+      const swissImpact = analyzeSwissPairingEdit({
+        before,
+        after,
+        sourceMatchId: match.id,
+        rng: createRng(`cascade-swiss-${match.id}`),
+      });
+      for (const affectedId of swissImpact.affectedMatchIds) {
+        affectedIds.add(affectedId);
+      }
+    }
+  }
 
   for (const group of before.groups) {
     const beforeGroup = beforeStandings.get(group.id);

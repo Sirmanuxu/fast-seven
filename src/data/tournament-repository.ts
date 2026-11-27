@@ -51,6 +51,7 @@ import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
 import { createSeededRng } from '../domain/rng';
 import { closeTournament, reopenTournamentAfterMatchEdit } from '../domain/tournament-close';
+import { analyzeSwissPairingEdit, swissPreviewMatches } from '../domain/swiss';
 import { backupCreated, backupQuotaExceeded, isQuotaExceededError } from './backup-events';
 
 export interface MatchSaveInput {
@@ -846,15 +847,63 @@ export class TournamentRepository {
         if (analysis.impact.affected.length > 0) {
           backupId = (await this.writeBackup('BEFORE_CASCADE_EDIT', snapshot)).id;
           const affectedIds = new Set(analysis.impact.affected.map((entry) => entry.matchId));
+          const swissImpact = analyzeSwissPairingEdit({
+            before: snapshot,
+            after,
+            sourceMatchId: input.matchId,
+            rng: createSeededRng(
+              `swiss-edit-${snapshot.tournament.id}-${input.matchId}-${input.changedAt}`,
+            ),
+          });
+          const sourceMatch = snapshot.matches.find((match) => match.id === input.matchId);
+          const swissStage =
+            sourceMatch &&
+            snapshot.stages.find(
+              (stage) => stage.id === sourceMatch.stageId && stage.type === 'SWISS',
+            );
+          const regeneratedNextRound =
+            swissImpact.changed && swissImpact.preview && swissStage
+              ? swissPreviewMatches(swissImpact.preview)
+              : [];
+          const existingNextRound =
+            swissStage && sourceMatch
+              ? snapshot.matches
+                  .filter(
+                    (match) =>
+                      match.stageId === swissStage.id &&
+                      match.round === sourceMatch.round + 1,
+                  )
+                  .sort((left, right) => left.order - right.order)
+              : [];
           matchesToReset = snapshot.matches
             .filter((match) => affectedIds.has(match.id) && match.id !== input.matchId)
-            .map((match) => ({
-              ...match,
-              status: 'PENDING' as const,
-              result: null,
-              startedAt: null,
-              finishedAt: null,
-            }));
+            .map((match) => {
+              const nextRoundIndex =
+                existingNextRound.findIndex((candidate) => candidate.id === match.id);
+              const replacement =
+                nextRoundIndex >= 0 ? regeneratedNextRound[nextRoundIndex] : undefined;
+              if (replacement) {
+                return {
+                  ...replacement,
+                  id: match.id,
+                  order: match.order,
+                  stageId: match.stageId,
+                  status: replacement.isPhantom ? ('FINISHED' as const) : ('PENDING' as const),
+                  result: replacement.isPhantom ? replacement.result : null,
+                  startedAt: null,
+                  finishedAt: replacement.isPhantom ? match.finishedAt : null,
+                  isPhantom: replacement.isPhantom,
+                  isConditional: false,
+                };
+              }
+              return {
+                ...match,
+                status: 'PENDING' as const,
+                result: null,
+                startedAt: null,
+                finishedAt: null,
+              };
+            });
           await tournamentDatabase.matches.bulkPut(matchesToReset);
           for (const match of matchesToReset) {
             await tournamentDatabase.events.where('matchId').equals(match.id).delete();

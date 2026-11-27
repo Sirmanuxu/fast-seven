@@ -342,6 +342,32 @@ describe('computeStandings', () => {
     expect(rows[1]).toEqual(expect.objectContaining({ teamId: 'b', played: 0, tablePoints: 0 }));
   });
 
+  it('uses Buchholz for tied Swiss teams', () => {
+    const buchholzRules: TournamentRules = {
+      ...rules,
+      tiebreakers: ['BUCHHOLZ', 'DRAW'],
+    };
+    const rows = computeStandings({
+      teamIds: ['a', 'b', 'c', 'd'],
+      matches: [
+        match('a-b', 'a', 'b', directResult(10, 0)),
+        match('c-d', 'c', 'd', directResult(10, 0)),
+      ],
+      events: [],
+      teams: ['a', 'b', 'c', 'd'].map((id) => team(id)),
+      rules: buchholzRules,
+      draws: [],
+      rng: createSeededRng('buchholz-test'),
+    }).rows;
+
+    expect(rows.filter((row) => row.teamId === 'a' || row.teamId === 'c')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ teamId: 'a', tablePoints: 3 }),
+        expect.objectContaining({ teamId: 'c', tablePoints: 3 }),
+      ]),
+    );
+  });
+
   it('keeps withdrawn teams in the table and marks them', () => {
     expect(standings(['a'], [], [team('a', 'WITHDRAWN')])[0]).toEqual(
       expect.objectContaining({ teamId: 'a', withdrawn: true }),

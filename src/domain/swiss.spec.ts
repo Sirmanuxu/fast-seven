@@ -10,9 +10,11 @@ import {
   MatchEvent,
   PRESET_POINTS_3_2_1,
   Team,
+  TournamentSnapshot,
   TournamentRules,
 } from './model';
 import { createSeededRng } from './rng';
+import { analyzeSwissPairingEdit } from './swiss';
 
 const rules: TournamentRules = {
   points: PRESET_POINTS_3_2_1,
@@ -333,5 +335,90 @@ describe('Swiss round previews', () => {
       ok: true,
       value: { requiresConfirmation: true, repeatedPairingCount: 2 },
     });
+  });
+
+  it('detects when an edited Swiss round changes the next round pairing', () => {
+    const teamRows = teams(4);
+    const initial = generateFixture({
+      teams: teamRows,
+      params: { format: 'SWISS', rounds: 3 },
+      draws: [],
+      rng: createSeededRng('swiss-edit-impact'),
+    });
+    expect(initial.ok).toBe(true);
+    if (!initial.ok) return;
+
+    const roundOne = completeRound(initial.value.matches);
+    const roundTwoPreview = previewSwissRound({
+      stageId: 'swiss-stage',
+      round: 2,
+      teams: teamRows,
+      matches: roundOne,
+      events: [],
+      rules,
+      draws: initial.value.newDraws,
+      rng: createSeededRng('swiss-edit-impact-round-two'),
+    });
+    expect(roundTwoPreview.ok).toBe(true);
+    if (!roundTwoPreview.ok) return;
+
+    const roundTwo = swissPreviewMatches(roundTwoPreview.value);
+    const snapshot = (matches: readonly Match[]): TournamentSnapshot => ({
+      tournament: {
+        id: 'tournament',
+        name: 'Tournament',
+        date: '2026-11-27T00:00:00.000Z',
+        status: 'RUNNING',
+        formatParams: { format: 'SWISS', rounds: 3 },
+        rules,
+        schedule: { startTime: null, matchDurationMin: 20, restMin: 5, breaks: [] },
+        categories: [],
+        backupIntervalMin: 5,
+        schemaVersion: 1,
+        createdAt: '2026-11-27T00:00:00.000Z',
+        updatedAt: '2026-11-27T00:00:00.000Z',
+      },
+      players: [],
+      teams: [...teamRows],
+      stages: [...initial.value.stages],
+      groups: [],
+      matches: [...matches],
+      events: [],
+      draws: [...initial.value.newDraws],
+    });
+
+    const before = snapshot([...roundOne, ...roundTwo]);
+    const source = before.matches.find(
+      (match) => match.stageId === 'swiss-stage' && match.round === 1 && match.home.kind === 'TEAM',
+    );
+    expect(source).toBeDefined();
+    if (!source) return;
+    const after = snapshot([
+      ...before.matches.map((match) =>
+        match.id === source.id
+          ? {
+              ...match,
+              result: {
+                mode: 'DIRECT' as const,
+                homePoints: 0,
+                awayPoints: 28,
+                definition: 'REGULAR' as const,
+                winnerTeamId: null,
+              },
+            }
+          : match,
+      ),
+    ]);
+
+    const impact = analyzeSwissPairingEdit({
+      before,
+      after,
+      sourceMatchId: source.id,
+      rng: createSeededRng('swiss-edit-impact-analysis'),
+    });
+    expect(impact.changed).toBe(true);
+    expect(impact.affectedMatchIds).toContain(
+      roundTwo[0].id,
+    );
   });
 });

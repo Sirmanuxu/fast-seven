@@ -46,6 +46,12 @@ export interface SwissRoundInput {
   readonly rng: Rng;
 }
 
+export interface SwissEditImpact {
+  readonly changed: boolean;
+  readonly affectedMatchIds: readonly Id[];
+  readonly preview: SwissRoundPreview | null;
+}
+
 interface PairingCandidate {
   readonly cost: number;
   readonly pairs: readonly (readonly [number, number])[];
@@ -366,5 +372,84 @@ export function swissPreviewMatches(preview: SwissRoundPreview): readonly Match[
         ]
       : []),
   ];
+}
+
+function canonicalTeamPair(leftTeamId: Id, rightTeamId: Id): string {
+  return [leftTeamId, rightTeamId].sort().join(':');
+}
+
+export function analyzeSwissPairingEdit(input: {
+  readonly before: import('./model').TournamentSnapshot;
+  readonly after: import('./model').TournamentSnapshot;
+  readonly sourceMatchId: Id;
+  readonly rng: Rng;
+}): SwissEditImpact {
+  const sourceBefore = input.before.matches.find((match) => match.id === input.sourceMatchId);
+  const sourceAfter = input.after.matches.find((match) => match.id === input.sourceMatchId);
+  if (!sourceBefore || !sourceAfter) {
+    return { changed: false, affectedMatchIds: [], preview: null };
+  }
+  const stage = input.after.stages.find((candidate) => candidate.id === sourceAfter.stageId);
+  if (stage?.type !== 'SWISS') {
+    return { changed: false, affectedMatchIds: [], preview: null };
+  }
+
+  const stageMatches = input.after.matches.filter(
+    (match) => match.stageId === stage.id && match.round <= sourceAfter.round,
+  );
+  const preview = previewSwissRound({
+    stageId: stage.id,
+    round: sourceAfter.round + 1,
+    teams: input.after.teams,
+    matches: stageMatches,
+    events: input.after.events,
+    rules: input.after.tournament.rules,
+    draws: input.after.draws,
+    rng: input.rng,
+  });
+  if (!preview.ok) {
+    return { changed: false, affectedMatchIds: [], preview: null };
+  }
+
+  const existingNextRound = input.before.matches.filter(
+    (match) => match.stageId === stage.id && match.round === sourceAfter.round + 1,
+  );
+  if (existingNextRound.length === 0) {
+    return { changed: false, affectedMatchIds: [], preview: preview.value };
+  }
+
+  const existingPairs = new Set(
+    existingNextRound
+      .filter((match) => match.home.kind === 'TEAM' && match.away.kind === 'TEAM')
+      .map((match) =>
+        canonicalTeamPair(
+          (match.home as Extract<MatchRef, { readonly kind: 'TEAM' }>).teamId,
+          (match.away as Extract<MatchRef, { readonly kind: 'TEAM' }>).teamId,
+        ),
+      )
+      .sort(),
+  );
+  const previewPairs = new Set(
+    preview.value.pairings.map((pairing) =>
+      canonicalTeamPair(pairing.homeTeamId, pairing.awayTeamId),
+    ),
+  );
+  const existingBye = existingNextRound.find(
+    (match) => match.home.kind === 'TEAM' && match.away.kind === 'BYE',
+  );
+  const existingByeTeamId =
+    existingBye?.home.kind === 'TEAM' ? existingBye.home.teamId : null;
+  const changed =
+    existingPairs.size !== previewPairs.size ||
+    [...existingPairs].some((pair) => !previewPairs.has(pair)) ||
+    existingByeTeamId !== preview.value.byeTeamId;
+  if (!changed) {
+    return { changed: false, affectedMatchIds: [], preview: preview.value };
+  }
+
+  const affectedMatchIds = input.after.matches
+    .filter((match) => match.stageId === stage.id && match.round >= sourceAfter.round + 1)
+    .map((match) => match.id);
+  return { changed: true, affectedMatchIds, preview: preview.value };
 }
 
