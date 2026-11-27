@@ -48,6 +48,70 @@
     }
   </section>
 
+  <section class="projector-timer-control" aria-labelledby="projector-timer-control-title">
+    <h2 id="projector-timer-control-title">{{ projectorStrings.timerTitle }}</h2>
+    @if (projectorState().timer; as activeTimer) {
+      <p role="status">
+        <strong>{{ activeTimer.name }}</strong>
+        · {{ activeTimerRemaining(activeTimer) }}
+      </p>
+      <div class="timer-control-actions">
+        <button type="button" (click)="adjustActiveProjectorTimer(-1)" [disabled]="timerBusy()">
+          {{ projectorStrings.timerSubtractMinute }}
+        </button>
+        <button type="button" (click)="adjustActiveProjectorTimer(1)" [disabled]="timerBusy()">
+          {{ projectorStrings.timerAddMinute }}
+        </button>
+        <button type="button" (click)="cancelProjectorTimer()" [disabled]="timerBusy()">
+          {{ projectorStrings.timerCancel }}
+        </button>
+      </div>
+    } @else {
+      <p role="status">{{ projectorStrings.timerInactive }}</p>
+    }
+
+    <div class="timer-preset-grid">
+      @for (preset of timerPresets(); track preset.id) {
+        <fieldset class="timer-preset">
+          <legend>{{ preset.name || projectorStrings.timerPreset }}</legend>
+          <label [for]="'timer-name-' + preset.id">{{ projectorStrings.timerName }}</label>
+          <input
+            [id]="'timer-name-' + preset.id"
+            type="text"
+            [value]="preset.name"
+            (input)="updateTimerPresetName(preset.id, $any($event.target).value)"
+          />
+          <label [for]="'timer-duration-' + preset.id">
+            {{ projectorStrings.timerDuration }}
+          </label>
+          <input
+            [id]="'timer-duration-' + preset.id"
+            type="number"
+            min="1"
+            step="1"
+            [value]="preset.durationMinutes"
+            (input)="updateTimerPresetDuration(preset.id, $any($event.target).value)"
+          />
+          <button
+            type="button"
+            (click)="startProjectorTimer(preset)"
+            [disabled]="timerBusy() || !isTimerPresetValid(preset)"
+          >
+            {{ projectorStrings.timerStart }}
+          </button>
+        </fieldset>
+      }
+    </div>
+    <label class="timer-sound-label">
+      <input
+        type="checkbox"
+        [checked]="timerSoundEnabled()"
+        (change)="setTimerSoundEnabled($event)"
+      />
+      {{ projectorStrings.timerSoundLabel }}
+    </label>
+  </section>
+
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }

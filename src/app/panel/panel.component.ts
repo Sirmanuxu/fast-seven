@@ -19,10 +19,17 @@ import {
   Match,
   MatchEvent,
   ProjectorState,
+  ProjectorTimer,
   ProjectorView,
   ResolvedMatch,
   TournamentSnapshot,
 } from '../../domain/model';
+import {
+  adjustProjectorTimer,
+  createProjectorTimer,
+  formatProjectorTimer,
+  isProjectorTimerExpired,
+} from '../../domain/projector-timer';
 import {
   canCloseTournament,
   computeFinalTournamentResult,
@@ -50,6 +57,14 @@ import {
   isForcedProjectorViewAvailable,
   isProjectorViewKind,
 } from './projector-view-selection';
+
+type TimerPresetId = 'break' | 'lunch' | 'awards';
+
+interface TimerPreset {
+  readonly id: TimerPresetId;
+  readonly name: string;
+  readonly durationMinutes: number;
+}
 
 @Component({
   selector: 'app-panel',
@@ -83,6 +98,15 @@ export class PanelComponent implements OnInit {
   protected readonly projectorStrings = PROJECTOR_PANEL_STRINGS;
   protected readonly projectorViewTitles = PROJECTOR_VIEW_TITLES;
   protected readonly projectorClock = signal(Date.now());
+  protected readonly timerPresets = signal<readonly TimerPreset[]>([
+    { id: 'break', name: PROJECTOR_PANEL_STRINGS.breakPreset, durationMinutes: 10 },
+    { id: 'lunch', name: PROJECTOR_PANEL_STRINGS.lunchPreset, durationMinutes: 45 },
+    { id: 'awards', name: PROJECTOR_PANEL_STRINGS.awardsPreset, durationMinutes: 10 },
+  ]);
+  protected readonly timerBusy = signal(false);
+  protected readonly timerSoundEnabled = signal(false);
+  private timerAudioContext: AudioContext | null = null;
+  private lastAlertedTimerKey: string | null = null;
   protected readonly projectorViewSelection = computed(() =>
     this.createProjectorViewSelectionData(
       this.snapshot(),
@@ -165,6 +189,11 @@ export class PanelComponent implements OnInit {
       window.clearInterval(projectorViewClock);
       window.clearInterval(stateTimer);
       window.clearInterval(heartbeatTimer);
+      if (this.timerAudioContext && this.timerAudioContext.state !== 'closed') {
+        void this.timerAudioContext.close().catch((error: unknown) => {
+          console.error('Closing the projector timer audio context failed', error);
+        });
+      }
     });
   }
 
@@ -800,6 +829,93 @@ export class PanelComponent implements OnInit {
     void this.persistForcedProjectorView(null);
   }
 
+  protected updateTimerPresetName(id: TimerPresetId, name: string): void {
+    this.timerPresets.update((presets) =>
+      presets.map((preset) => (preset.id === id ? { ...preset, name } : preset)),
+    );
+  }
+
+  protected updateTimerPresetDuration(id: TimerPresetId, duration: string): void {
+    const durationMinutes = Number(duration);
+    this.timerPresets.update((presets) =>
+      presets.map((preset) =>
+        preset.id === id ? { ...preset, durationMinutes } : preset,
+      ),
+    );
+  }
+
+  protected isTimerPresetValid(preset: TimerPreset): boolean {
+    return (
+      preset.name.trim().length > 0 &&
+      Number.isSafeInteger(preset.durationMinutes) &&
+      preset.durationMinutes >= 1
+    );
+  }
+
+  protected startProjectorTimer(preset: TimerPreset): void {
+    if (this.timerBusy()) return;
+    if (!this.isTimerPresetValid(preset)) {
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.timerInvalid);
+      return;
+    }
+
+    const created = createProjectorTimer(preset.name, preset.durationMinutes, {
+      nowMs: Date.now,
+    });
+    if (!created.ok) {
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.timerInvalid);
+      return;
+    }
+    if (
+      this.projectorState().timer &&
+      !window.confirm(PROJECTOR_PANEL_STRINGS.timerReplaceConfirm)
+    ) {
+      return;
+    }
+
+    void this.persistProjectorTimer(created.value);
+  }
+
+  protected adjustActiveProjectorTimer(minutes: -1 | 1): void {
+    const timer = this.projectorState().timer;
+    if (!timer || this.timerBusy()) return;
+    void this.persistProjectorTimer(
+      adjustProjectorTimer(timer, minutes, { nowMs: Date.now }),
+    );
+  }
+
+  protected cancelProjectorTimer(): void {
+    if (this.timerBusy() || !this.projectorState().timer) return;
+    void this.persistProjectorTimer(null);
+  }
+
+  protected activeTimerRemaining(timer: ProjectorTimer): string {
+    return formatProjectorTimer(timer, this.projectorClock());
+  }
+
+  protected async setTimerSoundEnabled(event: Event): Promise<void> {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (!input.checked) {
+      this.timerSoundEnabled.set(false);
+      return;
+    }
+    if (typeof window.AudioContext !== 'function') {
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.timerSoundUnsupported);
+      return;
+    }
+
+    try {
+      this.timerAudioContext ??= new window.AudioContext();
+      await this.timerAudioContext.resume();
+      this.timerSoundEnabled.set(true);
+    } catch (error) {
+      console.error('Enabling the projector timer sound failed', error);
+      this.timerSoundEnabled.set(false);
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.timerSoundFailed);
+    }
+  }
+
   protected canConvert(teamId: string): boolean {
     const current = this.matchControl().current;
     if (!current || !teamId) return false;
@@ -847,11 +963,75 @@ export class PanelComponent implements OnInit {
     }
   }
 
+  private async persistProjectorTimer(timer: ProjectorTimer | null): Promise<void> {
+    this.timerBusy.set(true);
+    try {
+      const current = await tournamentRepository.getProjectorState();
+      const updated = { ...current, timer };
+      await tournamentRepository.saveProjectorState(updated);
+      this.projectorState.set(updated);
+      this.lastAlertedTimerKey = null;
+      await this.publishProjectorState(true);
+    } catch (error) {
+      console.error('Updating the projector timer failed', error);
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.timerSaveFailed);
+    } finally {
+      this.timerBusy.set(false);
+    }
+  }
+
+  private updateTimerSound(timer: ProjectorTimer | null, nowEpochMs: number): void {
+    if (!timer || !isProjectorTimerExpired(timer, nowEpochMs)) {
+      this.lastAlertedTimerKey = null;
+      return;
+    }
+    if (!this.timerSoundEnabled()) return;
+
+    const timerKey = `${timer.name}:${timer.endsAtEpochMs}`;
+    if (this.lastAlertedTimerKey === timerKey) return;
+    this.lastAlertedTimerKey = timerKey;
+    this.playTimerCompletionSound();
+  }
+
+  private playTimerCompletionSound(): void {
+    const audioContext = this.timerAudioContext;
+    if (!audioContext || audioContext.state === 'closed') return;
+    if (audioContext.state === 'suspended') {
+      void audioContext
+        .resume()
+        .then(() => this.playTimerTone())
+        .catch((error: unknown) => this.handleTimerSoundFailure(error));
+      return;
+    }
+    this.playTimerTone();
+  }
+
+  private playTimerTone(): void {
+    const audioContext = this.timerAudioContext;
+    if (!audioContext || audioContext.state !== 'running') return;
+
+    try {
+      const oscillator = audioContext.createOscillator();
+      oscillator.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.75);
+    } catch (error) {
+      this.handleTimerSoundFailure(error);
+    }
+  }
+
+  private handleTimerSoundFailure(error: unknown): void {
+    console.error('Playing the projector timer sound failed', error);
+    this.timerSoundEnabled.set(false);
+    showErrorPopup(PROJECTOR_PANEL_STRINGS.timerSoundFailed);
+  }
+
   private async publishProjectorState(force: boolean): Promise<void> {
     const snapshot = await tournamentRepository.getSnapshot();
     let projectorState = await tournamentRepository.getProjectorState();
     const sourceFingerprint = JSON.stringify([snapshot, projectorState]);
     const nowEpochMs = Date.now();
+    this.updateTimerSound(projectorState.timer, nowEpochMs);
     if (!force && sourceFingerprint === this.projectorFingerprint) {
       if (projectorState.forcedView?.kind !== 'MATCH_PLATE') return;
       const context = selectProjectorContext({

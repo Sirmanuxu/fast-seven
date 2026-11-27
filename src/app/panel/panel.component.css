@@ -26,6 +26,47 @@ button {
   font: inherit;
 }
 
+.projector-timer-control {
+  max-width: 48rem;
+}
+
+.timer-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 0.75rem;
+}
+
+.timer-preset {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.timer-preset input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+}
+
+.timer-control-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.timer-control-actions button {
+  margin: 0;
+}
+
+.timer-sound-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
 .match-control {
   display: grid;
   gap: 1rem;

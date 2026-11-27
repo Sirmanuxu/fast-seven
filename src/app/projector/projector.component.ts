@@ -3,8 +3,19 @@ import { NgTemplateOutlet } from '@angular/common';
 import { PROJECTOR_STRINGS } from '../../i18n/projector-strings';
 import { ProjectorChannel, ProjectorChannelMessage } from '../../sync/projector-channel';
 import { tournamentRepository } from '../../data/tournament-repository';
-import { ProjectorState, ProjectorViewKind, Team, TournamentSnapshot } from '../../domain/model';
+import {
+  ProjectorState,
+  ProjectorTimer,
+  ProjectorViewKind,
+  Team,
+  TournamentSnapshot,
+} from '../../domain/model';
 import { selectProjectorContext } from '../../domain/projector-context';
+import {
+  formatProjectorTimer,
+  isProjectorTimerExpired,
+  isProjectorTimerVisible,
+} from '../../domain/projector-timer';
 import {
   buildProjectorViewModel,
   getTiebreakLabel,
@@ -150,9 +161,20 @@ export class ProjectorComponent implements OnInit {
   protected remainingTime(): string | null {
     const timer = this.projectorState().timer;
     if (!timer) return null;
-    const seconds = Math.max(0, Math.ceil((timer.endsAtEpochMs - this.timerNow()) / 1000));
-    const minutes = Math.floor(seconds / 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+    return formatProjectorTimer(timer, this.timerNow());
+  }
+
+  protected shouldShowTimer(timer: ProjectorTimer): boolean {
+    return isProjectorTimerVisible(
+      timer,
+      this.timerNow(),
+      this.projectorState().forcedView !== null,
+      this.rotationPlan().context,
+    );
+  }
+
+  protected isTimerExpired(timer: ProjectorTimer): boolean {
+    return isProjectorTimerExpired(timer, this.timerNow());
   }
 
   protected formatPosition(position: number, tied: boolean): string {

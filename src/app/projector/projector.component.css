@@ -395,6 +395,22 @@ tr.withdrawn {
   font-variant-numeric: tabular-nums;
 }
 
+.timer-overlay.timer-expired {
+  animation: timer-expired-flash 1s step-end infinite;
+}
+
+@keyframes timer-expired-flash {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-overlay.timer-expired {
+    animation: none;
+  }
+}
+
 .message-overlay {
   position: absolute;
   z-index: 3;
