@@ -1,8 +1,18 @@
 import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Draw, FormatParams, Match, ProjectorState, Team, Tournament } from '../domain/model';
+import {
+  Backup,
+  Draw,
+  FormatParams,
+  Match,
+  ProjectorState,
+  Team,
+  Tournament,
+  TournamentSnapshot,
+} from '../domain/model';
 import { TournamentRepository } from './tournament-repository';
 import { tournamentDatabase } from './tournament-database';
+import { backupQuotaExceeded } from './backup-events';
 
 function match(id: string, order: number, status: Match['status'] = 'PENDING'): Match {
   return {
@@ -69,6 +79,178 @@ function tournament(status: Tournament['status'] = 'SETUP'): Tournament {
     updatedAt: '2026-11-25T00:00:00.000Z',
   };
 }
+
+function snapshot(value = tournament()): TournamentSnapshot {
+  return {
+    tournament: value,
+    players: [],
+    teams: [],
+    stages: [],
+    groups: [],
+    matches: [],
+    events: [],
+    draws: [],
+  };
+}
+
+describe('TournamentRepository backups', () => {
+  beforeEach(() => {
+    vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
+      const operation = arguments_.find((argument) => typeof argument === 'function');
+      if (typeof operation !== 'function') {
+        return Dexie.Promise.reject(new Error('Transaction scope is missing'));
+      }
+      return Dexie.Promise.resolve(Reflect.apply(operation, undefined, []));
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('keeps the tournament-start backup outside the rotating set', async () => {
+    const initial: Backup = {
+      id: 'initial',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      reason: 'TOURNAMENT_START',
+      snapshot: snapshot(),
+    };
+    const regular = Array.from(
+      { length: 11 },
+      (_, index): Backup => ({
+        id: `regular-${index}`,
+        createdAt: `2026-01-${String(index + 2).padStart(2, '0')}T00:00:00.000Z`,
+        reason: 'PERIODIC',
+        snapshot: snapshot(),
+      }),
+    );
+    let created: Backup | null = null;
+    vi.spyOn(tournamentDatabase.backups, 'add').mockImplementation((backup) => {
+      created = backup;
+      return Dexie.Promise.resolve(backup.id);
+    });
+    vi.spyOn(tournamentDatabase.backups, 'toArray').mockImplementation(() =>
+      Dexie.Promise.resolve([initial, ...regular, ...(created ? [created] : [])]),
+    );
+    const deleteBackups = vi
+      .spyOn(tournamentDatabase.backups, 'bulkDelete')
+      .mockResolvedValue(undefined);
+
+    await new TournamentRepository().createBackup('PERIODIC', snapshot());
+
+    expect(deleteBackups).toHaveBeenCalledWith(expect.arrayContaining(['regular-0', 'regular-1']));
+  });
+
+  it('does not create periodic backups without changes and creates one after the interval', async () => {
+    const currentSnapshot = snapshot({
+      ...tournament('RUNNING'),
+      createdAt: '2026-11-27T00:00:00.000Z',
+      updatedAt: '2026-11-27T00:10:00.000Z',
+      backupIntervalMin: 5,
+    });
+    const recentBackup: Backup = {
+      id: 'recent',
+      createdAt: '2026-11-27T00:10:00.000Z',
+      reason: 'PERIODIC',
+      snapshot: currentSnapshot,
+    };
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getSnapshot').mockResolvedValue(currentSnapshot);
+    vi.spyOn(repository, 'getBackups').mockResolvedValue([recentBackup]);
+    const createBackup = vi.spyOn(repository, 'createBackup').mockResolvedValue(recentBackup);
+
+    await expect(
+      repository.createPeriodicBackupIfDue(Date.parse('2026-11-27T00:14:59.000Z')),
+    ).resolves.toBe(false);
+    await expect(
+      repository.createPeriodicBackupIfDue(Date.parse('2026-11-27T00:15:00.000Z')),
+    ).resolves.toBe(false);
+
+    expect(createBackup).not.toHaveBeenCalled();
+
+    vi.spyOn(repository, 'getSnapshot').mockResolvedValue({
+      ...currentSnapshot,
+      tournament: { ...currentSnapshot.tournament, updatedAt: '2026-11-27T00:15:00.000Z' },
+    });
+    await expect(
+      repository.createPeriodicBackupIfDue(Date.parse('2026-11-27T00:15:00.000Z')),
+    ).resolves.toBe(true);
+
+    expect(createBackup).toHaveBeenCalledWith(
+      'PERIODIC',
+      expect.objectContaining({
+        tournament: expect.objectContaining({ updatedAt: '2026-11-27T00:15:00.000Z' }),
+      }),
+    );
+  });
+
+  it('backs up the current state before restoring a selected snapshot', async () => {
+    const selectedBackup: Backup = {
+      id: 'selected',
+      createdAt: '2026-11-26T00:00:00.000Z',
+      reason: 'PERIODIC',
+      snapshot: snapshot(),
+    };
+    const currentSnapshot = snapshot({
+      ...tournament('RUNNING'),
+      updatedAt: '2026-11-27T00:00:00.000Z',
+    });
+    const repository = new TournamentRepository();
+    vi.spyOn(tournamentDatabase.backups, 'get').mockResolvedValue(selectedBackup);
+    vi.spyOn(repository, 'getSnapshot').mockResolvedValue(currentSnapshot);
+    vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('before-restore');
+    vi.spyOn(tournamentDatabase.backups, 'toArray').mockResolvedValue([selectedBackup]);
+    vi.spyOn(tournamentDatabase.tournament, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.players, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.teams, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.stages, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.groups, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.matches, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.events, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.draws, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.players, 'bulkPut').mockResolvedValue('players');
+    vi.spyOn(tournamentDatabase.teams, 'bulkPut').mockResolvedValue('teams');
+    vi.spyOn(tournamentDatabase.stages, 'bulkPut').mockResolvedValue('stages');
+    vi.spyOn(tournamentDatabase.groups, 'bulkPut').mockResolvedValue('groups');
+    vi.spyOn(tournamentDatabase.matches, 'bulkPut').mockResolvedValue('matches');
+    vi.spyOn(tournamentDatabase.events, 'bulkPut').mockResolvedValue('events');
+    vi.spyOn(tournamentDatabase.draws, 'bulkPut').mockResolvedValue('draws');
+    const restoredTournament = vi
+      .spyOn(tournamentDatabase.tournament, 'put')
+      .mockResolvedValue('tournament');
+
+    await repository.restoreBackup('selected', '2026-11-27T01:00:00.000Z');
+
+    expect(tournamentDatabase.backups.add).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'MANUAL', snapshot: currentSnapshot }),
+    );
+    expect(restoredTournament).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ...selectedBackup.snapshot.tournament,
+        updatedAt: '2026-11-27T01:00:00.000Z',
+      }),
+    );
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      expect.arrayContaining(['tournament', 'players', 'backups', 'draws']),
+      expect.any(Function),
+    );
+  });
+
+  it('announces quota exhaustion and rethrows the backup error', async () => {
+    const quotaError = new DOMException('Quota exceeded', 'QuotaExceededError');
+    vi.spyOn(tournamentDatabase.backups, 'add').mockRejectedValue(quotaError);
+    const warning = vi.fn();
+    const subscription = backupQuotaExceeded.subscribe(warning);
+
+    await expect(
+      new TournamentRepository().createBackup('PERIODIC', snapshot()),
+    ).rejects.toMatchObject({ name: 'QuotaExceededError' });
+
+    expect(warning).toHaveBeenCalledOnce();
+    subscription.unsubscribe();
+  });
+});
 
 describe('TournamentRepository.updateMatchOrders', () => {
   beforeEach(() => {
@@ -222,6 +404,7 @@ describe('TournamentRepository.startTournament', () => {
     vi.spyOn(tournamentDatabase.draws, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
     vi.spyOn(tournamentDatabase.backups, 'count').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.backups, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.matches, 'update').mockResolvedValue(1);
     vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
   });
@@ -393,6 +576,7 @@ describe('TournamentRepository team withdrawal', () => {
     vi.spyOn(tournamentDatabase.draws, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
     vi.spyOn(tournamentDatabase.backups, 'count').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.backups, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.teams, 'put').mockResolvedValue('retiring');
     vi.spyOn(tournamentDatabase.matches, 'bulkPut').mockResolvedValue('withdrawal-match');
     vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
@@ -494,6 +678,7 @@ describe('TournamentRepository tournament reset actions', () => {
     vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
     vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
     vi.spyOn(tournamentDatabase.backups, 'count').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.backups, 'toArray').mockResolvedValue([]);
     vi.spyOn(tournamentDatabase.backups, 'clear').mockResolvedValue(undefined);
   });
 

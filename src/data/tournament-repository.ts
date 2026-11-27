@@ -45,6 +45,7 @@ import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
 import { createSeededRng } from '../domain/rng';
 import { closeTournament, reopenTournamentAfterMatchEdit } from '../domain/tournament-close';
+import { backupQuotaExceeded, isQuotaExceededError } from './backup-events';
 
 export interface MatchSaveInput {
   readonly match: Match;
@@ -154,6 +155,99 @@ export class TournamentRepository {
     return tournament
       ? { tournament, players, teams, stages, groups, matches, events, draws }
       : null;
+  }
+
+  async getBackups(): Promise<readonly Backup[]> {
+    const backups = await tournamentDatabase.backups.toArray();
+    return backups.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+
+  async restoreBackup(backupId: string, changedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const backup = await tournamentDatabase.backups.get(backupId);
+        if (!backup) throw new Error('Backup is unavailable');
+        const current = await this.getSnapshot();
+        if (!current) throw new Error('No tournament is available');
+
+        await this.writeBackup('MANUAL', current);
+        const snapshot = backup.snapshot;
+        await Promise.all([
+          tournamentDatabase.tournament.clear(),
+          tournamentDatabase.players.clear(),
+          tournamentDatabase.teams.clear(),
+          tournamentDatabase.stages.clear(),
+          tournamentDatabase.groups.clear(),
+          tournamentDatabase.matches.clear(),
+          tournamentDatabase.events.clear(),
+          tournamentDatabase.draws.clear(),
+        ]);
+        await Promise.all([
+          tournamentDatabase.tournament.put({
+            ...snapshot.tournament,
+            updatedAt: changedAt,
+          }),
+          tournamentDatabase.players.bulkPut([...snapshot.players]),
+          tournamentDatabase.teams.bulkPut([...snapshot.teams]),
+          tournamentDatabase.stages.bulkPut([...snapshot.stages]),
+          tournamentDatabase.groups.bulkPut([...snapshot.groups]),
+          tournamentDatabase.matches.bulkPut([...snapshot.matches]),
+          tournamentDatabase.events.bulkPut([...snapshot.events]),
+          tournamentDatabase.draws.bulkPut([...snapshot.draws]),
+        ]);
+      },
+    );
+  }
+
+  async createPeriodicBackupIfDue(nowMs: number): Promise<boolean> {
+    const snapshot = await this.getSnapshot();
+    if (!snapshot) return false;
+    const backups = await this.getBackups();
+    const latestBackup = backups[0];
+    const referenceTimestamp = latestBackup
+      ? Date.parse(latestBackup.createdAt)
+      : Date.parse(snapshot.tournament.createdAt);
+    if (!Number.isFinite(referenceTimestamp)) {
+      throw new Error('The latest backup timestamp is invalid');
+    }
+
+    const intervalMs = snapshot.tournament.backupIntervalMin * 60_000;
+    if (nowMs - referenceTimestamp < intervalMs) return false;
+    if (latestBackup && JSON.stringify(latestBackup.snapshot) === JSON.stringify(snapshot)) {
+      return false;
+    }
+    if (!latestBackup && snapshot.tournament.updatedAt === snapshot.tournament.createdAt) {
+      return false;
+    }
+
+    await this.createBackup('PERIODIC', snapshot);
+    return true;
+  }
+
+  async updateBackupInterval(intervalMin: number): Promise<void> {
+    if (!Number.isInteger(intervalMin) || intervalMin < 1 || intervalMin > 60) {
+      throw new Error('Backup interval must be between 1 and 60 minutes');
+    }
+    await tournamentDatabase.transaction('rw', tournamentDatabase.tournament, async () => {
+      const tournament = await this.getTournament();
+      if (!tournament) throw new Error('No tournament is available');
+      await tournamentDatabase.tournament.update(tournament.id, {
+        backupIntervalMin: intervalMin,
+        updatedAt: new Date().toISOString(),
+      });
+    });
   }
 
   async createTournament(tournament: Tournament): Promise<void> {
@@ -769,11 +863,7 @@ export class TournamentRepository {
         const tournament = await this.getTournament();
         if (!tournament) throw new Error('No tournament is available');
         const snapshot = await this.readSnapshot(tournament);
-        const undone = undoMatchInProgress(
-          snapshot,
-          matchId,
-          preserveEvents,
-        );
+        const undone = undoMatchInProgress(snapshot, matchId, preserveEvents);
         if (!undone.ok) {
           throw new Error(`In-progress match cannot be undone: ${undone.error.code}`);
         }
@@ -1224,17 +1314,18 @@ export class TournamentRepository {
       reason,
       snapshot,
     };
-    await tournamentDatabase.backups.add(backup);
-    if ((await tournamentDatabase.backups.count()) <= 10) {
-      return backup;
-    }
-    const oldIds = await tournamentDatabase.backups
-      .orderBy('createdAt')
-      .reverse()
-      .offset(10)
-      .primaryKeys();
-    if (oldIds.length > 0) {
-      await tournamentDatabase.backups.bulkDelete(oldIds);
+    try {
+      await tournamentDatabase.backups.add(backup);
+      const rotatingBackups = (await tournamentDatabase.backups.toArray())
+        .filter((entry) => entry.reason !== 'TOURNAMENT_START')
+        .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+      const oldIds = rotatingBackups.slice(10).map((entry) => entry.id);
+      if (oldIds.length > 0) {
+        await tournamentDatabase.backups.bulkDelete(oldIds);
+      }
+    } catch (error) {
+      if (isQuotaExceededError(error)) backupQuotaExceeded.next();
+      throw error;
     }
     return backup;
   }
@@ -1490,12 +1581,7 @@ export class TournamentRepository {
           events,
           draws,
         };
-        await tournamentDatabase.backups.add({
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          reason: 'BEFORE_IMPORT',
-          snapshot,
-        });
+        await this.writeBackup('BEFORE_IMPORT', snapshot);
 
         const teamIds = new Map<string, string>();
         let createdTeamOffset = 0;
@@ -1699,22 +1785,16 @@ export class TournamentRepository {
           throw new Error('Teams cannot be deleted while the tournament is running');
         }
 
-        const backup: Backup = {
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          reason: 'BEFORE_CASCADE_EDIT',
-          snapshot: {
-            tournament,
-            players,
-            teams,
-            stages,
-            groups,
-            matches,
-            events,
-            draws,
-          },
-        };
-        await tournamentDatabase.backups.add(backup);
+        await this.writeBackup('BEFORE_CASCADE_EDIT', {
+          tournament,
+          players,
+          teams,
+          stages,
+          groups,
+          matches,
+          events,
+          draws,
+        });
 
         await tournamentDatabase.players.where('teamId').equals(teamId).modify({ teamId: null });
         await tournamentDatabase.teams.delete(teamId);
@@ -1722,14 +1802,6 @@ export class TournamentRepository {
           updatedAt: new Date().toISOString(),
         });
 
-        const oldIds = await tournamentDatabase.backups
-          .orderBy('createdAt')
-          .reverse()
-          .offset(10)
-          .primaryKeys();
-        if (oldIds.length > 0) {
-          await tournamentDatabase.backups.bulkDelete(oldIds);
-        }
       },
     );
   }
