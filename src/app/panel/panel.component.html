@@ -19,11 +19,41 @@
             @if (matchContextLabel(current.match); as context) {
               <span class="match-context">{{ context }}</span>
             }
-            @if (liveScore(); as score) {
+            @if (directMode()) {
+              <span>{{ current.resolved.homeLabel }} {{ directHomeScore() }} - {{ directAwayScore() }} {{ current.resolved.awayLabel }}</span>
+            } @else if (liveScore(); as score) {
               <span>{{ current.resolved.homeLabel }} {{ score.home }} - {{ score.away }} {{ current.resolved.awayLabel }}</span>
             }
           </div>
 
+          <button type="button" (click)="toggleDirectMode()" [disabled]="eventBusy()">
+            {{ directMode() ? matchControlStrings.detailResult : matchControlStrings.directResult }}
+          </button>
+
+          @if (directMode()) {
+            <div class="direct-score">
+              <label>
+                {{ matchControlStrings.directHomeScore }}
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  [value]="directHomeScore()"
+                  (input)="setDirectScore('home', $any($event.target).value)"
+                />
+              </label>
+              <label>
+                {{ matchControlStrings.directAwayScore }}
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  [value]="directAwayScore()"
+                  (input)="setDirectScore('away', $any($event.target).value)"
+                />
+              </label>
+            </div>
+          } @else {
           <div class="team-columns">
             <section class="team-column">
               <h3>{{ current.resolved.homeLabel }}</h3>
@@ -189,6 +219,7 @@
               <p role="status">{{ matchControlStrings.noEvents }}</p>
             }
           </section>
+          }
 
           <div>
             <button

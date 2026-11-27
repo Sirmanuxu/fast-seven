@@ -24,8 +24,10 @@ import { normalizePlayerKey } from '../domain/player';
 import { startTournament } from '../domain/start-tournament';
 import {
   finishDetailMatch,
+  finishDirectMatch,
   finishMatch as finishMatchDomain,
   startMatch as startMatchDomain,
+  switchDirectToDetail,
 } from '../domain/match-control';
 import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
@@ -340,6 +342,91 @@ export class TournamentRepository {
         await tournamentDatabase.events.bulkPut([...events]);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
+        });
+      },
+    );
+  }
+
+  async finishMatchDirect(
+    matchId: string,
+    homePoints: number,
+    awayPoints: number,
+    finishedAt: string,
+  ): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const seed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'match-control';
+        const resolved = resolveMatches(snapshot, createSeededRng(seed));
+        const finished = finishDirectMatch(
+          snapshot,
+          resolved,
+          matchId,
+          homePoints,
+          awayPoints,
+          createFixedClock(Date.parse(finishedAt)),
+        );
+        if (!finished.ok) {
+          throw new Error(`Direct match cannot finish: ${finished.error.code}`);
+        }
+
+        await this.writeBackup('MATCH_FINISHED', snapshot);
+        await tournamentDatabase.matches.put(finished.value);
+        await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: finishedAt,
+        });
+      },
+    );
+  }
+
+  async switchDirectMatchToDetail(matchId: string, changedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const switched = switchDirectToDetail(
+          snapshot,
+          matchId,
+          createFixedClock(Date.parse(changedAt)),
+        );
+        if (!switched.ok) {
+          throw new Error(`Direct match cannot switch to detail: ${switched.error.code}`);
+        }
+
+        await this.writeBackup('MATCH_FINISHED', snapshot);
+        await tournamentDatabase.matches.put(switched.value);
+        await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: changedAt,
         });
       },
     );

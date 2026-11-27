@@ -75,6 +75,26 @@ export function canAddConversion(events: readonly MatchEvent[], teamId: Id): boo
   return counts.conversions < counts.tries;
 }
 
+export function isScoreReachable(points: number): boolean {
+  if (!Number.isInteger(points) || points < 0) {
+    return false;
+  }
+
+  for (let tries = 0; tries * RUGBY_POINTS.try <= points; tries += 1) {
+    for (
+      let conversions = 0;
+      conversions <= tries && tries * RUGBY_POINTS.try + conversions * RUGBY_POINTS.conversion <= points;
+      conversions += 1
+    ) {
+      if (tries * RUGBY_POINTS.try + conversions * RUGBY_POINTS.conversion === points) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export function removeMatchEvent(
   events: readonly MatchEvent[],
   eventId: Id,

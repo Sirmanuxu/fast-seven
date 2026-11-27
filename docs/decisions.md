@@ -535,3 +535,9 @@
   the lowest cup to the highest: numbered cups, Copper, Bronze, Silver, Gold.
 - **Reason:** This closes the tournament with the highest-ranked cup while preserving the explicit
   Copper-to-Gold order and keeping each final after its dependent bracket matches.
+
+## 2026-11-26 - HU-35 direct match results
+
+- Direct-result reachability is evaluated as `5t + 2c` with `0 <= c <= t`; unreachable values remain finishable and only show an informational warning.
+- Switching from detail to direct confirms and discards existing events because direct matches do not retain event detail.
+- Switching from direct to detail clears the direct result and events, restores the match to `IN_PROGRESS`, and requires a new detail entry from zero.

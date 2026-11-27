@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildMatchControlView, finishDetailMatch, startMatch } from './match-control';
+import {
+  buildMatchControlView,
+  finishDetailMatch,
+  finishDirectMatch,
+  startMatch,
+  switchDirectToDetail,
+} from './match-control';
 import { createFixedClock } from './clock';
 import { Match, ResolvedMatch, TournamentSnapshot } from './model';
 
@@ -108,6 +114,81 @@ describe('match control', () => {
           definition: 'REGULAR',
         },
         finishedAt: '2026-11-26T12:40:00.000Z',
+      },
+    });
+  });
+
+  it('finishes a direct match with integer scores and no events', () => {
+    const live = match('one', 1, 'IN_PROGRESS');
+    const base = snapshot([live]);
+
+    const result = finishDirectMatch(
+      base,
+      [resolved('one')],
+      'one',
+      13,
+      8,
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'FINISHED',
+        result: {
+          mode: 'DIRECT',
+          homePoints: 13,
+          awayPoints: 8,
+          definition: 'REGULAR',
+        },
+        finishedAt: '2026-11-26T12:40:00.000Z',
+      },
+    });
+  });
+
+  it('rejects negative and fractional direct scores', () => {
+    const live = match('one', 1, 'IN_PROGRESS');
+
+    expect(
+      finishDirectMatch(
+        snapshot([live]),
+        [resolved('one')],
+        'one',
+        -1,
+        7.5,
+        createFixedClock(0),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { code: 'invalidDirectScore' },
+    });
+  });
+
+  it('switches a finished direct match back to detail with a cleared result and events', () => {
+    const direct = {
+      ...match('one', 1, 'FINISHED'),
+      result: {
+        mode: 'DIRECT' as const,
+        homePoints: 13,
+        awayPoints: 8,
+        definition: 'REGULAR' as const,
+        winnerTeamId: null,
+      },
+      finishedAt: '2026-11-26T12:40:00.000Z',
+    };
+
+    const result = switchDirectToDetail(
+      snapshot([direct]),
+      'one',
+      createFixedClock(Date.parse('2026-11-26T12:45:00.000Z')),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'IN_PROGRESS',
+        result: null,
+        finishedAt: null,
       },
     });
   });

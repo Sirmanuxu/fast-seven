@@ -16,6 +16,16 @@ export const MATCH_CONTROL_STRINGS = {
   matchStarted: 'El partido quedó en juego.',
   matchFinished: 'El partido quedó finalizado.',
   detailResult: 'Resultado con detalle',
+  directResult: 'Cargar marcador sin detalle',
+  directHomeScore: 'Puntos local',
+  directAwayScore: 'Puntos visitante',
+  invalidDirectScore: 'Los marcadores deben ser enteros mayores o iguales a 0.',
+  unreachableScore: 'Marcador poco habitual: el valor no se puede alcanzar con tries y conversiones.',
+  confirmDirectFinish: (homeName: string, homePoints: number, awayPoints: number, awayName: string) =>
+    `¿Finalizar ${homeName} ${homePoints} - ${awayPoints} ${awayName}?`,
+  confirmDiscardEvents: 'Al pasar a marcador directo se descartarán los eventos cargados. ¿Querés continuar?',
+  triesIncompleteWarning: (count: number) =>
+    `Tries a favor incompleto: ${count} ${count === 1 ? 'partido sin detalle' : 'partidos sin detalle'}.`,
   try: 'Try',
   conversion: 'Conversión',
   noAuthor: 'Sin autor',

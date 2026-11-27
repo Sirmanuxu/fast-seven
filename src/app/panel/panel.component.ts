@@ -25,6 +25,7 @@ import {
   computeScore,
   removeMatchEvent,
   canAddConversion,
+  isScoreReachable,
 } from '../../domain/match-events';
 
 @Component({
@@ -68,6 +69,9 @@ export class PanelComponent implements OnInit {
   protected readonly awayPlayerId = signal<string | null>(null);
   protected readonly activePlayerSearch = signal<'home' | 'away' | null>(null);
   protected readonly eventBusy = signal(false);
+  protected readonly directMode = signal(false);
+  protected readonly directHomeScore = signal(0);
+  protected readonly directAwayScore = signal(0);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
@@ -145,6 +149,11 @@ export class PanelComponent implements OnInit {
     if (!snapshot || !current || current.match.id !== matchId) return;
     if (!current.resolved.homeTeamId || !current.resolved.awayTeamId) return;
 
+    if (this.directMode()) {
+      await this.finishDirectControlMatch(matchId, current);
+      return;
+    }
+
     const score = this.liveScore();
     if (!score) {
       showErrorPopup(MATCH_CONTROL_STRINGS.eventSaveFailed);
@@ -183,6 +192,93 @@ export class PanelComponent implements OnInit {
       this.statusMessage.set(MATCH_CONTROL_STRINGS.matchFinished);
     } catch (error) {
       console.error('Finishing match failed', error);
+      showErrorPopup(MATCH_CONTROL_STRINGS.finishFailed);
+    } finally {
+      this.eventBusy.set(false);
+    }
+  }
+
+  protected toggleDirectMode(): void {
+    if (!this.directMode() && this.eventsForMatch(this.matchControl().current?.match.id ?? '').length > 0) {
+      if (!window.confirm(MATCH_CONTROL_STRINGS.confirmDiscardEvents)) return;
+    }
+    this.directMode.set(!this.directMode());
+  }
+
+  protected setDirectScore(side: 'home' | 'away', value: string): void {
+    const parsed = Number(value);
+    if (side === 'home') {
+      this.directHomeScore.set(Number.isFinite(parsed) ? parsed : 0);
+    } else {
+      this.directAwayScore.set(Number.isFinite(parsed) ? parsed : 0);
+    }
+  }
+
+  private async finishDirectControlMatch(
+    matchId: string,
+    current: NonNullable<MatchControlView['current']>,
+  ): Promise<void> {
+    const homePoints = this.directHomeScore();
+    const awayPoints = this.directAwayScore();
+    if (
+      !Number.isInteger(homePoints) ||
+      !Number.isInteger(awayPoints) ||
+      homePoints < 0 ||
+      awayPoints < 0
+    ) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.invalidDirectScore);
+      return;
+    }
+
+    if (!isScoreReachable(homePoints) || !isScoreReachable(awayPoints)) {
+      window.alert(MATCH_CONTROL_STRINGS.unreachableScore);
+    }
+
+    const snapshot = this.snapshot();
+    if (snapshot) {
+      const stage = snapshot.stages.find((candidate) => candidate.id === current.match.stageId);
+      const isElimination =
+        stage?.type === 'KNOCKOUT' ||
+        stage?.type === 'CUP' ||
+        stage?.type === 'WINNERS_BRACKET' ||
+        stage?.type === 'LOSERS_BRACKET' ||
+        stage?.type === 'GRAND_FINAL';
+      if (isElimination && homePoints === awayPoints) {
+        showErrorPopup(MATCH_CONTROL_STRINGS.eliminationTie);
+        return;
+      }
+    }
+
+    const confirmation = MATCH_CONTROL_STRINGS.confirmDirectFinish(
+      current.resolved.homeLabel,
+      homePoints,
+      awayPoints,
+      current.resolved.awayLabel,
+    );
+    if (!window.confirm(confirmation)) return;
+
+    this.eventBusy.set(true);
+    try {
+      await tournamentRepository.finishMatchDirect(
+        matchId,
+        homePoints,
+        awayPoints,
+        new Date().toISOString(),
+      );
+      await this.loadMatchControl();
+      this.directMode.set(false);
+      const updatedSnapshot = this.snapshot();
+      const usesTriesFor =
+        updatedSnapshot?.tournament.rules.tiebreakers.includes('TRIES_FOR') === true;
+      if (usesTriesFor) {
+        const directMatchCount =
+          (updatedSnapshot?.matches.filter((match) => match.result?.mode === 'DIRECT').length ?? 0);
+        this.statusMessage.set(MATCH_CONTROL_STRINGS.triesIncompleteWarning(directMatchCount));
+      } else {
+        this.statusMessage.set(MATCH_CONTROL_STRINGS.matchFinished);
+      }
+    } catch (error) {
+      console.error('Finishing direct match failed', error);
       showErrorPopup(MATCH_CONTROL_STRINGS.finishFailed);
     } finally {
       this.eventBusy.set(false);

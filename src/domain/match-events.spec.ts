@@ -4,6 +4,7 @@ import {
   computeScore,
   removeMatchEvent,
   canAddConversion,
+  isScoreReachable,
   validateMatchEventPlayer,
 } from './match-events';
 import { MatchEvent, Player } from './model';
@@ -75,6 +76,42 @@ describe('computeScore', () => {
       ok: true,
       value: { home: 7, away: 5 },
     });
+  });
+});
+
+describe('isScoreReachable', () => {
+  it.each([
+    [0, true],
+    [5, true],
+    [7, true],
+    [10, true],
+    [12, true],
+    [14, true],
+    [15, true],
+    [17, true],
+    [19, true],
+    [20, true],
+    [21, true],
+    [22, true],
+    [24, true],
+    [25, true],
+    [26, true],
+    [27, true],
+    [28, true],
+  ])('returns the reachable result for %i points', (points, expected) => {
+    expect(isScoreReachable(points)).toBe(expected);
+  });
+
+  it.each([1, 2, 3, 4, 6, 8, 9, 11, 13, 16, 18, 23])(
+    'returns false for unreachable score %i',
+    (points) => {
+      expect(isScoreReachable(points)).toBe(false);
+    },
+  );
+
+  it('rejects negative and fractional scores', () => {
+    expect(isScoreReachable(-1)).toBe(false);
+    expect(isScoreReachable(7.5)).toBe(false);
   });
 });
 
