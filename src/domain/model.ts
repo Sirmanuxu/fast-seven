@@ -80,7 +80,7 @@ export const DEFAULT_CATEGORIES: readonly Category[] = [
     code: 'PLANTEL_SUPERIOR',
     label: 'Plantel Superior',
     stage: 'ADULT',
-    aliases: ['plantel superior', 'primera', 'intermedia', 'preintermedia'],
+    aliases: ['plantel superior', 'primera', 'intermedia', 'preintermedia','Plantel Superior Masculino', 'Plantel Superior Femenino'],
   },
   { code: 'VETERANOS', label: 'Veteranos', stage: 'ADULT', aliases: ['veteranos', 'vet', '+35'] },
 ];
