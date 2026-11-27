@@ -1,10 +1,14 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
 import { Router } from '@angular/router';
 import { spikeDatabase, SpikeRecord } from '../../data/spike-database';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { Tournament } from '../../domain/model';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
+import {
+  PROJECTOR_PANEL_STRINGS,
+  PROJECTOR_VIEW_TITLES,
+} from '../../i18n/projector-panel-strings';
 import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
 import { showErrorPopup } from '../error-popup';
@@ -14,6 +18,8 @@ import { TOURNAMENT_CLOSE_STRINGS } from '../../i18n/tournament-close-strings';
 import {
   Match,
   MatchEvent,
+  ProjectorState,
+  ProjectorView,
   ResolvedMatch,
   TournamentSnapshot,
 } from '../../domain/model';
@@ -37,6 +43,13 @@ import {
   canAddConversion,
   isScoreReachable,
 } from '../../domain/match-events';
+import { selectProjectorContext } from '../../domain/projector-context';
+import {
+  buildProjectorViewSelectionData,
+  createForcedProjectorView,
+  isForcedProjectorViewAvailable,
+  isProjectorViewKind,
+} from './projector-view-selection';
 
 @Component({
   selector: 'app-panel',
@@ -61,6 +74,22 @@ export class PanelComponent implements OnInit {
   protected readonly matchControlStrings = MATCH_CONTROL_STRINGS;
   protected readonly settingsStrings = SETTINGS_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
+  protected readonly projectorState = signal<ProjectorState>({
+    forcedView: null,
+    message: null,
+    timer: null,
+  });
+  protected readonly projectorWarning = signal<string | null>(null);
+  protected readonly projectorStrings = PROJECTOR_PANEL_STRINGS;
+  protected readonly projectorViewTitles = PROJECTOR_VIEW_TITLES;
+  protected readonly projectorClock = signal(Date.now());
+  protected readonly projectorViewSelection = computed(() =>
+    this.createProjectorViewSelectionData(
+      this.snapshot(),
+      this.projectorState(),
+      this.projectorClock(),
+    ),
+  );
   protected readonly resolvedMatches = signal<readonly ResolvedMatch[]>([]);
   protected readonly scheduleDetails = signal<ScheduleDetails>({
     entries: [],
@@ -115,6 +144,7 @@ export class PanelComponent implements OnInit {
     await this.requestPersistentStorage();
     this.checkOfflineStatus();
     await this.publishProjectorState(true);
+    const projectorViewClock = window.setInterval(() => this.projectorClock.set(Date.now()), 1000);
     const stateTimer = window.setInterval(() => {
       void this.publishProjectorState(false);
     }, 500);
@@ -132,6 +162,7 @@ export class PanelComponent implements OnInit {
       this.projectorConnected.set(connected);
     }, 2000);
     this.destroyRef.onDestroy(() => {
+      window.clearInterval(projectorViewClock);
       window.clearInterval(stateTimer);
       window.clearInterval(heartbeatTimer);
     });
@@ -714,6 +745,85 @@ export class PanelComponent implements OnInit {
       : MATCH_CONTROL_STRINGS.noAuthor;
   }
 
+  protected forcedProjectorViewLabel(): string {
+    const view = this.projectorState().forcedView;
+    if (!view) return '';
+
+    if (view.kind === 'STANDINGS' && view.groupId) {
+      const standings = this.projectorViewSelection().standings.find(
+        (candidate) => candidate.id === view.groupId,
+      );
+      if (standings) return `${PROJECTOR_VIEW_TITLES[view.kind]} · ${standings.title}`;
+    }
+
+    if (view.kind === 'BRACKET' && view.stageId) {
+      const bracket = this.projectorViewSelection().brackets.find(
+        (candidate) => candidate.id === view.stageId,
+      );
+      if (bracket) return `${PROJECTOR_VIEW_TITLES[view.kind]} · ${bracket.title}`;
+    }
+
+    return PROJECTOR_VIEW_TITLES[view.kind];
+  }
+
+  protected selectProjectorView(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+
+    if (target.value === '') {
+      void this.persistForcedProjectorView(null);
+      return;
+    }
+    if (!isProjectorViewKind(target.value)) return;
+
+    const nowEpochMs = Date.now();
+    const data = this.createProjectorViewSelectionData(
+      this.snapshot(),
+      this.projectorState(),
+      nowEpochMs,
+    );
+    const view = createForcedProjectorView(target.value, data);
+    if (view) void this.persistForcedProjectorView(view);
+  }
+
+  protected selectProjectorStandings(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const choices = this.createProjectorViewSelectionData(
+      this.snapshot(),
+      this.projectorState(),
+      Date.now(),
+    );
+    if (!choices.standings.some((view) => view.id === target.value)) return;
+    void this.persistForcedProjectorView({ kind: 'STANDINGS', groupId: target.value });
+  }
+
+  protected selectProjectorBracket(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const choices = this.createProjectorViewSelectionData(
+      this.snapshot(),
+      this.projectorState(),
+      Date.now(),
+    );
+    if (!choices.brackets.some((view) => view.id === target.value)) return;
+    void this.persistForcedProjectorView({ kind: 'BRACKET', stageId: target.value });
+  }
+
+  protected selectedProjectorGroupId(): string {
+    const view = this.projectorState().forcedView;
+    return view?.kind === 'STANDINGS' ? (view.groupId ?? '') : '';
+  }
+
+  protected selectedProjectorStageId(): string {
+    const view = this.projectorState().forcedView;
+    return view?.kind === 'BRACKET' ? (view.stageId ?? '') : '';
+  }
+
+  protected returnProjectorToAutomatic(): void {
+    void this.persistForcedProjectorView(null);
+  }
+
   protected canConvert(teamId: string): boolean {
     const current = this.matchControl().current;
     if (!current || !teamId) return false;
@@ -728,13 +838,83 @@ export class PanelComponent implements OnInit {
     return date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  private createProjectorViewSelectionData(
+    snapshot: TournamentSnapshot | null,
+    state: ProjectorState,
+    nowEpochMs: number,
+  ) {
+    const context = selectProjectorContext({
+      tournamentStatus: snapshot?.tournament.status ?? null,
+      matches: snapshot?.matches ?? [],
+      timer: state.timer,
+      nowEpochMs,
+    });
+    return buildProjectorViewSelectionData(
+      snapshot,
+      context.context,
+      this.matchControl().next !== null,
+      (this.finalResult()?.positions.length ?? 0) > 0,
+    );
+  }
+
+  private async persistForcedProjectorView(forcedView: ProjectorView | null): Promise<void> {
+    try {
+      const current = await tournamentRepository.getProjectorState();
+      const updated = { ...current, forcedView };
+      await tournamentRepository.saveProjectorState(updated);
+      this.projectorState.set(updated);
+      this.projectorWarning.set(null);
+      await this.publishProjectorState(true);
+    } catch (error) {
+      console.error('Updating the forced projector view failed', error);
+      showErrorPopup(PROJECTOR_PANEL_STRINGS.viewSaveFailed);
+    }
+  }
+
   private async publishProjectorState(force: boolean): Promise<void> {
     const snapshot = await tournamentRepository.getSnapshot();
-    const projectorState = await tournamentRepository.getProjectorState();
-    const fingerprint = JSON.stringify([snapshot, projectorState]);
-    if (!force && fingerprint === this.projectorFingerprint) return;
+    let projectorState = await tournamentRepository.getProjectorState();
+    const sourceFingerprint = JSON.stringify([snapshot, projectorState]);
+    const nowEpochMs = Date.now();
+    if (!force && sourceFingerprint === this.projectorFingerprint) {
+      if (projectorState.forcedView?.kind !== 'MATCH_PLATE') return;
+      const context = selectProjectorContext({
+        tournamentStatus: snapshot?.tournament.status ?? null,
+        matches: snapshot?.matches ?? [],
+        timer: projectorState.timer,
+        nowEpochMs,
+      });
+      if (context.context === 'MATCH_IN_PROGRESS' || context.context === 'RECENT_RESULT') {
+        return;
+      }
+    }
 
-    this.projectorFingerprint = fingerprint;
+    this.snapshot.set(snapshot);
+    if (projectorState.forcedView) {
+      const selectionData = this.createProjectorViewSelectionData(
+        snapshot,
+        projectorState,
+        nowEpochMs,
+      );
+      if (!isForcedProjectorViewAvailable(projectorState.forcedView, selectionData)) {
+        const automaticState = { ...projectorState, forcedView: null };
+        try {
+          await tournamentRepository.saveProjectorState(automaticState);
+        } catch (error) {
+          this.projectorState.set(projectorState);
+          this.projectorFingerprint = sourceFingerprint;
+          console.error('Clearing the unavailable projector view failed', error);
+          showErrorPopup(PROJECTOR_PANEL_STRINGS.viewSaveFailed);
+          return;
+        }
+
+        projectorState = automaticState;
+        this.projectorWarning.set(PROJECTOR_PANEL_STRINGS.viewUnavailable);
+      }
+    }
+
+    this.projectorState.set(projectorState);
+    this.projectorFingerprint = JSON.stringify([snapshot, projectorState]);
     this.projectorSequence += 1;
     this.projectorChannel.publishState(
       this.projectorSequence,

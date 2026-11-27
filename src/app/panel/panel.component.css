@@ -15,6 +15,17 @@ button {
   margin-right: 0.75rem;
 }
 
+.projector-view-control {
+  max-width: 32rem;
+}
+
+.projector-view-control select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  font: inherit;
+}
+
 .match-control {
   display: grid;
   gap: 1rem;

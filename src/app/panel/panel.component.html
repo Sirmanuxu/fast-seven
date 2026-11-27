@@ -5,6 +5,62 @@
   </p>
   <p>{{ strings.projectorInstructions }}</p>
 
+  <section class="projector-view-control" aria-labelledby="projector-view-control-title">
+    <h2 id="projector-view-control-title">{{ projectorStrings.controlTitle }}</h2>
+    @if (projectorWarning(); as warning) {
+      <p role="alert">{{ warning }}</p>
+    }
+    @if (projectorState().forcedView) {
+      <p role="status">
+        <strong>{{ projectorStrings.pinnedStatus }}:</strong>
+        {{ forcedProjectorViewLabel() }}
+      </p>
+      <button type="button" (click)="returnProjectorToAutomatic()">
+        {{ projectorStrings.returnAutomatic }}
+      </button>
+    } @else {
+      <p role="status">{{ projectorStrings.automaticStatus }}</p>
+    }
+
+    <label for="projector-view">{{ projectorStrings.selectView }}</label>
+    <select
+      id="projector-view"
+      [value]="projectorState().forcedView?.kind ?? ''"
+      (change)="selectProjectorView($event)"
+    >
+      <option value="">{{ projectorStrings.automatic }}</option>
+      @for (view of projectorViewSelection().availableViews; track view) {
+        <option [value]="view">{{ projectorViewTitles[view] }}</option>
+      }
+    </select>
+
+    @if (projectorState().forcedView?.kind === 'STANDINGS') {
+      <label for="projector-standings">{{ projectorStrings.selectGroup }}</label>
+      <select
+        id="projector-standings"
+        [value]="selectedProjectorGroupId()"
+        (change)="selectProjectorStandings($event)"
+      >
+        @for (standing of projectorViewSelection().standings; track standing.id) {
+          <option [value]="standing.id">{{ standing.title }}</option>
+        }
+      </select>
+    }
+
+    @if (projectorState().forcedView?.kind === 'BRACKET') {
+      <label for="projector-bracket">{{ projectorStrings.selectBracket }}</label>
+      <select
+        id="projector-bracket"
+        [value]="selectedProjectorStageId()"
+        (change)="selectProjectorBracket($event)"
+      >
+        @for (bracket of projectorViewSelection().brackets; track bracket.id) {
+          <option [value]="bracket.id">{{ bracket.title }}</option>
+        }
+      </select>
+    }
+  </section>
+
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }
@@ -346,6 +402,7 @@
         </ol>
       }
     </section>
+
   }
 
   @else if (tournament()?.status === 'FINISHED') {
