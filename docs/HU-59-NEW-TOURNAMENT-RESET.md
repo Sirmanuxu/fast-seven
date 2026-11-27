@@ -21,8 +21,8 @@
 4. Create a tournament, prepare teams and a fixture, and start the tournament.
 5. In **Ajustes**, select **Reiniciar fixture** and accept both confirmations. Verify the status
    returns to setup, the fixture is gone, and players and teams remain available for configuration.
-6. Confirm the actions and retained automatic backup in IndexedDB developer tools; the current
-   app does not yet include HU-48's backup list and restore screen.
+6. Open **Copias de seguridad** and verify the pre-reset backup appears. Restore only in a
+   disposable tournament because restoring replaces the current data.
 
 ## Automated verification
 
