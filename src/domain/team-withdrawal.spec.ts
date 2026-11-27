@@ -237,6 +237,25 @@ describe('team withdrawal', () => {
     });
   });
 
+  it('rechecks pending withdrawal walkovers after editing a finalized tournament', () => {
+    const pending = match('later-round', 'T', 'X');
+    const base = {
+      ...snapshot([team('T', 'WITHDRAWN'), team('X')], [pending]),
+      tournament: {
+        ...snapshot([team('T', 'WITHDRAWN'), team('X')], [pending]).tournament,
+        status: 'FINISHED' as const,
+      },
+    };
+
+    const result = finishPendingWithdrawalWalkovers(
+      base,
+      [resolved('later-round', 'T', 'X')],
+      createFixedClock(Date.parse(changedAt)),
+    );
+
+    expect(result.ok).toBe(true);
+  });
+
   it('requires an in-progress match to be resolved before withdrawal', () => {
     const live = match('live', 'T', 'X', 'IN_PROGRESS');
     const base = snapshot([team('T'), team('X')], [live]);

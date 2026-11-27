@@ -30,7 +30,10 @@ export function finishPendingWithdrawalWalkovers(
   resolvedMatches: readonly ResolvedMatch[],
   clock: Clock,
 ): Result<WithdrawalWalkovers, DomainError> {
-  if (snapshot.tournament.status !== 'RUNNING') {
+  if (
+    snapshot.tournament.status !== 'RUNNING' &&
+    snapshot.tournament.status !== 'FINISHED'
+  ) {
     return error('tournamentNotRunning', 'teamWithdrawal.tournamentNotRunning');
   }
 

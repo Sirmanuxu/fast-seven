@@ -253,7 +253,10 @@ export function finishWalkover(
   clock: Clock,
   walkoverOrigin?: MatchResult['walkoverOrigin'],
 ): Result<Match, DomainError> {
-  if (snapshot.tournament.status !== 'RUNNING') {
+  if (
+    snapshot.tournament.status !== 'RUNNING' &&
+    snapshot.tournament.status !== 'FINISHED'
+  ) {
     return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
   }
 
