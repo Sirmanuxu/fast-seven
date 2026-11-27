@@ -1,0 +1,31 @@
+<main>
+  <button type="button" (click)="backToPanel()">{{ strings.backToPanel }}</button>
+  <h1>{{ strings.title }}</h1>
+
+  @if (statusMessage(); as status) {
+    <p role="status">{{ status }}</p>
+  }
+
+  <section>
+    <h2>{{ strings.newTournamentTitle }}</h2>
+    <p>{{ strings.newTournamentDescription }}</p>
+    <button type="button" (click)="createNewTournament()" [disabled]="busy()">
+      {{ strings.newTournament }}
+    </button>
+  </section>
+
+  <section>
+    <h2>{{ strings.resetFixtureTitle }}</h2>
+    <p>{{ strings.resetFixtureDescription }}</p>
+    @if (tournament()?.status !== 'RUNNING') {
+      <p role="status">{{ strings.resetFixtureUnavailable }}</p>
+    }
+    <button
+      type="button"
+      (click)="restartFixture()"
+      [disabled]="busy() || tournament()?.status !== 'RUNNING'"
+    >
+      {{ strings.resetFixture }}
+    </button>
+  </section>
+</main>

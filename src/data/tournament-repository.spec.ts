@@ -1,6 +1,6 @@
 import Dexie from 'dexie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FormatParams, Match, Team, Tournament } from '../domain/model';
+import { Draw, FormatParams, Match, Team, Tournament } from '../domain/model';
 import { TournamentRepository } from './tournament-repository';
 import { tournamentDatabase } from './tournament-database';
 
@@ -23,7 +23,7 @@ function match(id: string, order: number, status: Match['status'] = 'PENDING'): 
   };
 }
 
-function team(id: string): Team {
+function team(id: string, status: Team['status'] = 'ACTIVE'): Team {
   return {
     id,
     name: id,
@@ -32,7 +32,7 @@ function team(id: string): Team {
     captainId: null,
     logo: null,
     isSeed: false,
-    status: 'ACTIVE',
+    status,
   };
 }
 
@@ -360,5 +360,152 @@ describe('TournamentRepository.updateFormat', () => {
         },
       }),
     );
+  });
+});
+
+describe('TournamentRepository tournament reset actions', () => {
+  const teamDraw: Draw = {
+    id: 'team-draw',
+    seed: 'team-seed',
+    createdAt: '2026-11-25T00:00:00.000Z',
+    payload: { kind: 'TEAMS', teams: [] },
+  };
+  const groupDraw: Draw = {
+    id: 'group-draw',
+    seed: 'group-seed',
+    createdAt: '2026-11-25T00:00:00.000Z',
+    payload: { kind: 'GROUPS', groups: [] },
+  };
+
+  beforeEach(() => {
+    vi.spyOn(tournamentDatabase, 'transaction').mockImplementation((_mode, ...arguments_) => {
+      const operation = arguments_.find((argument) => typeof argument === 'function');
+      if (typeof operation !== 'function') {
+        return Dexie.Promise.reject(new Error('Transaction scope is missing'));
+      }
+      return Dexie.Promise.resolve(Reflect.apply(operation, undefined, []));
+    });
+    vi.spyOn(tournamentDatabase.players, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.teams, 'toArray').mockResolvedValue([
+      team('withdrawn', 'WITHDRAWN'),
+      team('active'),
+    ]);
+    vi.spyOn(tournamentDatabase.stages, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.groups, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.matches, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.events, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.draws, 'toArray').mockResolvedValue([teamDraw, groupDraw]);
+    vi.spyOn(tournamentDatabase.tournament, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.players, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.teams, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.stages, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.groups, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.matches, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.events, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.draws, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.teams, 'bulkPut').mockResolvedValue('active');
+    vi.spyOn(tournamentDatabase.draws, 'bulkPut').mockResolvedValue('team-draw');
+    vi.spyOn(tournamentDatabase.tournament, 'update').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
+    vi.spyOn(tournamentDatabase.backups, 'count').mockResolvedValue(1);
+    vi.spyOn(tournamentDatabase.backups, 'clear').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('backs up and removes tournament data atomically while retaining automatic backups', async () => {
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('RUNNING'));
+
+    await repository.deleteTournamentWithBackup();
+
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      expect.arrayContaining([
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ]),
+      expect.any(Function),
+    );
+    expect(tournamentDatabase.backups.add).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'BEFORE_RESET',
+        snapshot: expect.objectContaining({ tournament: tournament('RUNNING') }),
+      }),
+    );
+    expect(tournamentDatabase.tournament.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.players.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.teams.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.stages.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.groups.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.matches.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.events.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.draws.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.backups.clear).not.toHaveBeenCalled();
+  });
+
+  it('backs up and resets a running fixture while retaining teams and team draws', async () => {
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('RUNNING'));
+
+    await repository.resetFixture('2026-11-26T12:00:00.000Z');
+
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      expect.arrayContaining([
+        'tournament',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ]),
+      expect.any(Function),
+    );
+    expect(tournamentDatabase.backups.add).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'BEFORE_RESET' }),
+    );
+    expect(tournamentDatabase.stages.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.groups.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.matches.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.events.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.teams.bulkPut).toHaveBeenCalledWith([
+      team('withdrawn', 'ACTIVE'),
+      team('active', 'ACTIVE'),
+    ]);
+    expect(tournamentDatabase.draws.clear).toHaveBeenCalled();
+    expect(tournamentDatabase.draws.bulkPut).toHaveBeenCalledWith([teamDraw]);
+    expect(tournamentDatabase.tournament.update).toHaveBeenCalledWith(
+      'tournament',
+      expect.objectContaining({
+        status: 'SETUP',
+        schedule: { ...tournament('RUNNING').schedule, breaks: [] },
+        updatedAt: '2026-11-26T12:00:00.000Z',
+      }),
+    );
+  });
+
+  it('rejects fixture reset unless the tournament is running', async () => {
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getTournament').mockResolvedValue(tournament('SETUP'));
+
+    await expect(repository.resetFixture('2026-11-26T12:00:00.000Z')).rejects.toThrow(
+      'Fixture can only be reset while the tournament is running',
+    );
+
+    expect(tournamentDatabase.backups.add).not.toHaveBeenCalled();
+    expect(tournamentDatabase.matches.clear).not.toHaveBeenCalled();
+    expect(tournamentDatabase.teams.bulkPut).not.toHaveBeenCalled();
   });
 });

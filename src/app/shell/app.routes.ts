@@ -8,6 +8,7 @@ import { ImportComponent } from '../import/import.component';
 import { RulesComponent } from '../rules/rules.component';
 import { FormatComponent } from '../format/format.component';
 import { FixtureComponent } from '../fixture/fixture.component';
+import { SettingsComponent } from '../settings/settings.component';
 
 export const routes: Routes = [
   { path: 'bienvenida', component: WelcomeComponent },
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: 'panel/reglas', component: RulesComponent },
   { path: 'panel/formato', component: FormatComponent },
   { path: 'panel/fixture', component: FixtureComponent },
+  { path: 'panel/ajustes', component: SettingsComponent },
   { path: 'jugadores', component: PlayersComponent },
   { path: 'panel/jugadores/importar', component: ImportComponent },
   { path: 'importar', component: ImportComponent },

@@ -9,6 +9,7 @@ import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
 import { showErrorPopup } from '../error-popup';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
+import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
 import {
   MatchEvent,
   ResolvedMatch,
@@ -46,6 +47,7 @@ export class PanelComponent implements OnInit {
   protected readonly startBusy = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly matchControlStrings = MATCH_CONTROL_STRINGS;
+  protected readonly settingsStrings = SETTINGS_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
   protected readonly resolvedMatches = signal<readonly ResolvedMatch[]>([]);
   protected readonly scheduleDetails = signal<ScheduleDetails>({
@@ -400,6 +402,10 @@ export class PanelComponent implements OnInit {
 
   protected openFixture(): void {
     void this.router.navigateByUrl('/panel/fixture');
+  }
+
+  protected openSettings(): void {
+    void this.router.navigateByUrl('/panel/ajustes');
   }
 
   private async loadMatchControl(): Promise<void> {

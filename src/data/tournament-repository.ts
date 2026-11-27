@@ -132,6 +132,89 @@ export class TournamentRepository {
     });
   }
 
+  async deleteTournamentWithBackup(): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) {
+          throw new Error('No tournament is available');
+        }
+
+        await this.writeBackup('BEFORE_RESET', await this.readSnapshot(tournament));
+        await Promise.all([
+          tournamentDatabase.tournament.clear(),
+          tournamentDatabase.players.clear(),
+          tournamentDatabase.teams.clear(),
+          tournamentDatabase.stages.clear(),
+          tournamentDatabase.groups.clear(),
+          tournamentDatabase.matches.clear(),
+          tournamentDatabase.events.clear(),
+          tournamentDatabase.draws.clear(),
+        ]);
+      },
+    );
+  }
+
+  async resetFixture(now: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) {
+          throw new Error('No tournament is available');
+        }
+        if (tournament.status !== 'RUNNING') {
+          throw new Error('Fixture can only be reset while the tournament is running');
+        }
+
+        const snapshot = await this.readSnapshot(tournament);
+        await this.writeBackup('BEFORE_RESET', snapshot);
+        await Promise.all([
+          tournamentDatabase.stages.clear(),
+          tournamentDatabase.groups.clear(),
+          tournamentDatabase.matches.clear(),
+          tournamentDatabase.events.clear(),
+          tournamentDatabase.draws.clear(),
+          tournamentDatabase.teams.bulkPut(
+            snapshot.teams.map((team) => ({ ...team, status: 'ACTIVE' })),
+          ),
+          tournamentDatabase.tournament.update(tournament.id, {
+            status: 'SETUP',
+            schedule: { ...tournament.schedule, breaks: [] },
+            updatedAt: now,
+          }),
+        ]);
+
+        const teamDraws = snapshot.draws.filter((draw) => draw.payload.kind === 'TEAMS');
+        if (teamDraws.length > 0) {
+          await tournamentDatabase.draws.bulkPut(teamDraws);
+        }
+      },
+    );
+  }
+
   async saveMatchWithEvents(input: MatchSaveInput): Promise<void> {
     await tournamentDatabase.transaction(
       'rw',

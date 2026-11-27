@@ -251,6 +251,7 @@
   <button type="button" (click)="openRules()">Reglas</button>
   <button type="button" (click)="openFormat()">Formato</button>
   <button type="button" (click)="openFixture()">{{ strings.openFixture }}</button>
+  <button type="button" (click)="openSettings()">{{ settingsStrings.title }}</button>
 
   @if (lastRecord(); as record) {
     <p>Último dato guardado: {{ record.message }}</p>

@@ -1,0 +1,18 @@
+main {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+button {
+  min-height: 44px;
+  justify-self: start;
+  font: inherit;
+}

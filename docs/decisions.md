@@ -514,3 +514,17 @@
   `MATCH_FINISHED` backup atomically with the status and real finish timestamp.
 - **Reason:** HU-33 owns match lifecycle controls, while HU-34 owns result-detail entry and should
   supply the required result before the finish transition is enabled.
+
+## 2026-11-26 - HU-59 - New tournament and fixture reset
+
+- **Decision:** Use the existing `BEFORE_RESET` backup reason and keep automatic backups when
+  deleting the current tournament.
+- **Reason:** This avoids changing the domain model and leaves the pre-delete state available for
+  recovery after the welcome screen is shown.
+- **Decision:** Reset only a `RUNNING` tournament; remove fixture entities and all non-team draws,
+  preserve player/team records and team-assignment draws, reactivate teams, and clear scheduled
+  breaks.
+- **Reason:** This returns the existing tournament structure to setup without discarding its roster
+  or team assignments, and prevents schedule breaks from referencing removed matches.
+- **Decision:** Show the required reminder to save a tournament file, but do not add file export.
+- **Reason:** File export belongs to the prerequisite HU-49 and is not present in the current app.
