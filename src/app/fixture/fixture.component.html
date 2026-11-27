@@ -118,6 +118,19 @@
                       @if (resultLabel(row); as result) {
                         <span>{{ strings.result }}: {{ result }}</span>
                       }
+                      @if (
+                        current.tournament.status === 'RUNNING' &&
+                        row.match.status === 'FINISHED' &&
+                        row.match.result?.mode === 'WALKOVER'
+                      ) {
+                        <button
+                          type="button"
+                          (click)="undoWalkover(row)"
+                          [disabled]="isBusy()"
+                        >
+                          {{ matchControlStrings.undoWalkover }}
+                        </button>
+                      }
                       @if (row.estimatedStart; as start) {
                         <span>{{ strings.tentative }}: {{ formatTime(start) }}</span>
                       }

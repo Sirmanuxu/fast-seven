@@ -18,6 +18,7 @@ import { getRosterStatus } from '../../domain/team';
 import { resolveMatches } from '../../domain/resolve-matches';
 import { FIXTURE_STRINGS } from '../../i18n/fixture-strings';
 import { MATCH_ORDER_STRINGS } from '../../i18n/match-order-strings';
+import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
 import { showErrorPopup } from '../error-popup';
 import { assignGeneratedFixtureIds } from './fixture-id-mapping';
 
@@ -48,6 +49,7 @@ export class FixtureComponent implements OnInit {
   private readonly router = inject(Router);
 
   protected readonly strings = FIXTURE_STRINGS;
+  protected readonly matchControlStrings = MATCH_CONTROL_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
   protected readonly resolvedMatches = signal<readonly ResolvedMatch[]>([]);
   protected readonly scheduleDetails = signal<ScheduleDetails>({
@@ -196,6 +198,45 @@ export class FixtureComponent implements OnInit {
       this.snapshot()?.teams.find((team) => team.id === result.winnerTeamId)?.name ??
       'Equipo ganador';
     return `${score} (${this.strings.suddenDeath(winnerName)})`;
+  }
+
+  protected async undoWalkover(row: FixtureMatchRow): Promise<void> {
+    const snapshot = this.snapshot();
+    const result = row.match.result;
+    if (
+      !snapshot ||
+      snapshot.tournament.status !== 'RUNNING' ||
+      row.match.status !== 'FINISHED' ||
+      result?.mode !== 'WALKOVER' ||
+      this.isBusy()
+    ) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        MATCH_CONTROL_STRINGS.confirmUndoWalkover(
+          row.homeLabel,
+          result.homePoints,
+          result.awayPoints,
+          row.awayLabel,
+        ),
+      )
+    ) {
+      return;
+    }
+
+    this.isBusy.set(true);
+    try {
+      await tournamentRepository.undoMatchWalkover(row.match.id, new Date().toISOString());
+      await this.load();
+      this.statusMessage.set(MATCH_CONTROL_STRINGS.walkoverUndone);
+    } catch (error) {
+      console.error('Undoing match walkover failed', error);
+      showErrorPopup(MATCH_CONTROL_STRINGS.undoWalkoverFailed);
+    } finally {
+      this.isBusy.set(false);
+    }
   }
 
   protected consecutiveWarning(teamName: string): string {

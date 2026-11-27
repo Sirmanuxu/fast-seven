@@ -39,6 +39,14 @@ button {
   gap: 1rem;
 }
 
+.walkover-picker {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant, #cbd5e1);
+  border-radius: 8px;
+}
+
 .live-score {
   display: grid;
   gap: 0.25rem;

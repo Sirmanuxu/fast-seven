@@ -72,6 +72,7 @@ export class PanelComponent implements OnInit {
   protected readonly directMode = signal(false);
   protected readonly directHomeScore = signal(0);
   protected readonly directAwayScore = signal(0);
+  protected readonly walkoverMatchId = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
@@ -139,6 +140,64 @@ export class PanelComponent implements OnInit {
       showErrorPopup(MATCH_CONTROL_STRINGS.startFailed);
     } finally {
       this.startBusy.set(false);
+    }
+  }
+
+  protected beginWalkover(matchId: string): void {
+    this.walkoverMatchId.set(this.walkoverMatchId() === matchId ? null : matchId);
+  }
+
+  protected cancelWalkover(): void {
+    this.walkoverMatchId.set(null);
+  }
+
+  protected async recordWalkover(matchId: string, absentSide: 'home' | 'away'): Promise<void> {
+    if (this.eventBusy() || this.startBusy()) return;
+    const snapshot = this.snapshot();
+    const control = this.matchControl();
+    const entry =
+      control.next?.match.id === matchId
+        ? control.next
+        : control.following.find((candidate) => candidate.match.id === matchId);
+    if (
+      !snapshot ||
+      !entry ||
+      !entry.resolved.homeTeamId ||
+      !entry.resolved.awayTeamId
+    ) {
+      return;
+    }
+
+    const absentTeamId =
+      absentSide === 'home' ? entry.resolved.homeTeamId : entry.resolved.awayTeamId;
+    const absentName =
+      absentSide === 'home' ? entry.resolved.homeLabel : entry.resolved.awayLabel;
+    const winnerName =
+      absentSide === 'home' ? entry.resolved.awayLabel : entry.resolved.homeLabel;
+    const { winner, loser } = snapshot.tournament.rules.walkoverScore;
+    if (
+      !window.confirm(
+        MATCH_CONTROL_STRINGS.confirmWalkover(absentName, winnerName, winner, loser),
+      )
+    ) {
+      return;
+    }
+
+    this.eventBusy.set(true);
+    try {
+      await tournamentRepository.finishMatchWalkover(
+        matchId,
+        absentTeamId,
+        new Date().toISOString(),
+      );
+      await this.loadMatchControl();
+      this.walkoverMatchId.set(null);
+      this.statusMessage.set(MATCH_CONTROL_STRINGS.walkoverRecorded);
+    } catch (error) {
+      console.error('Recording match walkover failed', error);
+      showErrorPopup(MATCH_CONTROL_STRINGS.walkoverFailed);
+    } finally {
+      this.eventBusy.set(false);
     }
   }
 

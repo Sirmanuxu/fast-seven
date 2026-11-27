@@ -270,6 +270,37 @@
           >
             {{ matchControlStrings.putInPlay }}
           </button>
+          @if (!next.match.isPhantom && !next.match.isConditional) {
+            <button
+              type="button"
+              (click)="beginWalkover(next.match.id)"
+              [disabled]="startBusy() || eventBusy()"
+            >
+              {{ matchControlStrings.walkover }}
+            </button>
+            @if (walkoverMatchId() === next.match.id) {
+              <div class="walkover-picker" role="group">
+                <p>{{ matchControlStrings.walkoverQuestion }}</p>
+                <button
+                  type="button"
+                  (click)="recordWalkover(next.match.id, 'home')"
+                  [disabled]="startBusy() || eventBusy()"
+                >
+                  {{ matchControlStrings.absentTeam(next.resolved.homeLabel) }}
+                </button>
+                <button
+                  type="button"
+                  (click)="recordWalkover(next.match.id, 'away')"
+                  [disabled]="startBusy() || eventBusy()"
+                >
+                  {{ matchControlStrings.absentTeam(next.resolved.awayLabel) }}
+                </button>
+                <button type="button" (click)="cancelWalkover()">
+                  {{ matchControlStrings.cancelWalkover }}
+                </button>
+              </div>
+            }
+          }
         </article>
       } @else {
         <p role="status">{{ matchControlStrings.noNextMatch }}</p>
@@ -283,6 +314,37 @@
               <strong>{{ entry.resolved.homeLabel }} - {{ entry.resolved.awayLabel }}</strong>
               @if (tentativeStart(entry.match.id); as start) {
                 <span> · {{ matchControlStrings.tentative }}: {{ start }}</span>
+              }
+              @if (!entry.match.isPhantom && !entry.match.isConditional) {
+                <button
+                  type="button"
+                  (click)="beginWalkover(entry.match.id)"
+                  [disabled]="startBusy() || eventBusy()"
+                >
+                  {{ matchControlStrings.walkover }}
+                </button>
+                @if (walkoverMatchId() === entry.match.id) {
+                  <div class="walkover-picker" role="group">
+                    <p>{{ matchControlStrings.walkoverQuestion }}</p>
+                    <button
+                      type="button"
+                      (click)="recordWalkover(entry.match.id, 'home')"
+                      [disabled]="startBusy() || eventBusy()"
+                    >
+                      {{ matchControlStrings.absentTeam(entry.resolved.homeLabel) }}
+                    </button>
+                    <button
+                      type="button"
+                      (click)="recordWalkover(entry.match.id, 'away')"
+                      [disabled]="startBusy() || eventBusy()"
+                    >
+                      {{ matchControlStrings.absentTeam(entry.resolved.awayLabel) }}
+                    </button>
+                    <button type="button" (click)="cancelWalkover()">
+                      {{ matchControlStrings.cancelWalkover }}
+                    </button>
+                  </div>
+                }
               }
             </li>
           }

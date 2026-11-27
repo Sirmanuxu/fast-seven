@@ -550,3 +550,15 @@
 - Direct-result reachability is evaluated as `5t + 2c` with `0 <= c <= t`; unreachable values remain finishable and only show an informational warning.
 - Switching from detail to direct confirms and discards existing events because direct matches do not retain event detail.
 - Switching from direct to detail clears the direct result and events, restores the match to `IN_PROGRESS`, and requires a new detail entry from zero.
+
+## 2026-11-27 - HU-37 - Walkover match results
+
+- **Decision:** Store W.O. results with `mode = WALKOVER`, `definition = WALKOVER`, and the resolved
+  present team's ID as `winnerTeamId`; orient the configured score to the absent team's home/away
+  slot.
+- **Reason:** The model contract and reference case use the `WALKOVER` enum values, while the
+  backlog's `WO` is shorthand. Persisting the explicit winner keeps bracket advancement deterministic.
+- **Decision:** Offer W.O. for playable upcoming matches and undo finished W.O.s from the fixture
+  view, with confirmation before either state change.
+- **Reason:** The control panel exposes upcoming matches, while the fixture remains the accessible
+  list of completed matches; both actions need clear team selection and confirmation.

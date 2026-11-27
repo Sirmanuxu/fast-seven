@@ -47,6 +47,29 @@ export const MATCH_CONTROL_STRINGS = {
   confirmSuddenDeath: (teamName: string, homePoints: number, awayPoints: number) =>
     `¿Confirmás la muerte súbita: ${teamName} gana ${homePoints} - ${awayPoints}?`,
   invalidSuddenDeathWinner: 'El ganador elegido no participa en este partido.',
+  walkover: 'W.O.',
+  walkoverQuestion: '¿Qué equipo no se presentó?',
+  absentTeam: (teamName: string) => `Falta ${teamName}`,
+  cancelWalkover: 'Cancelar',
+  confirmWalkover: (
+    absentName: string,
+    winnerName: string,
+    winnerPoints: number,
+    loserPoints: number,
+  ) =>
+    `¿Confirmás el W.O.? ${absentName} no se presentó y ${winnerName} gana ${winnerPoints} - ${loserPoints}.`,
+  walkoverRecorded: 'El W.O. quedó registrado.',
+  walkoverFailed: 'No se pudo registrar el W.O.',
+  undoWalkover: 'Deshacer W.O.',
+  confirmUndoWalkover: (
+    homeName: string,
+    homePoints: number,
+    awayPoints: number,
+    awayName: string,
+  ) =>
+    `¿Deshacer el W.O. de ${homeName} ${homePoints} - ${awayPoints} ${awayName}? El partido volverá a pendiente.`,
+  walkoverUndone: 'El W.O. se deshizo y el partido volvió a pendiente.',
+  undoWalkoverFailed: 'No se pudo deshacer el W.O.',
   confirmDetailFinish: (homeName: string, homePoints: number, awayPoints: number, awayName: string) =>
     `¿Finalizar ${homeName} ${homePoints} - ${awayPoints} ${awayName}?`,
 } as const;
