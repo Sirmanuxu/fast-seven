@@ -607,3 +607,11 @@
   using the existing `BEFORE_CASCADE_EDIT` backup reason.
 - **Reason:** These changes alter team state and multiple results, so they must remain recoverable
   without adding a backup enum or changing the database schema.
+# 2026-11-27 - HU-41 - Final positions and tournament closure
+
+- **Decision:** Keep final positions derived instead of adding persisted tournament state.
+- **Reason:** The project contract requires standings, qualification and resolved results to be recomputed from stored matches and events; persisting final placement would duplicate source-of-truth data.
+- **Decision:** Exclude phantom and conditional matches when deciding whether the tournament is ready to close.
+- **Reason:** These matches represent byes or an unnecessary double-elimination reset and must not block closure.
+- **Decision:** Use elimination rounds for knockout-style position ordering and overall standings for unresolved or fallback positions.
+- **Reason:** This covers champion and runner-up directly, while preserving a deterministic table-based fallback for teams eliminated at the same stage.
