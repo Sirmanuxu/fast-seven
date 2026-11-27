@@ -43,6 +43,7 @@ import { analyzeEditImpactWithDraws } from '../domain/edit-impact';
 import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
 import { createSeededRng } from '../domain/rng';
+import { closeTournament, reopenTournamentAfterMatchEdit } from '../domain/tournament-close';
 
 export interface MatchSaveInput {
   readonly match: Match;
@@ -613,10 +614,11 @@ export class TournamentRepository {
         }
 
         let backupId: string | null = null;
+        let matchesToReset: readonly Match[] = [];
         if (analysis.impact.affected.length > 0) {
           backupId = (await this.writeBackup('BEFORE_CASCADE_EDIT', snapshot)).id;
           const affectedIds = new Set(analysis.impact.affected.map((entry) => entry.matchId));
-          const matchesToReset = snapshot.matches
+          matchesToReset = snapshot.matches
             .filter((match) => affectedIds.has(match.id) && match.id !== input.matchId)
             .map((match) => ({
               ...match,
@@ -638,7 +640,20 @@ export class TournamentRepository {
           await tournamentDatabase.draws.bulkPut([...analysis.draws]);
         }
         await this.finishReadyWithdrawalWalkovers(tournament, input.changedAt);
+        const matchesAfterEdit = snapshot.matches.map((match) => {
+          if (match.id === input.matchId) return edited.value.match;
+          if (matchesToReset.some((resetMatch) => resetMatch.id === match.id)) {
+            return matchesToReset.find((resetMatch) => resetMatch.id === match.id) ?? match;
+          }
+          return match;
+        });
+        const reopenedTournament = reopenTournamentAfterMatchEdit(
+          tournament,
+          matchesAfterEdit,
+          input.changedAt,
+        );
         await tournamentDatabase.tournament.update(tournament.id, {
+          status: reopenedTournament.status,
           updatedAt: input.changedAt,
         });
         return backupId;
@@ -1069,6 +1084,41 @@ export class TournamentRepository {
             ? { schedule: { ...tournament.schedule, breaks: [] } }
             : {}),
           updatedAt: new Date().toISOString(),
+        });
+      },
+    );
+  }
+
+  async closeTournament(closedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const closed = closeTournament(
+          tournament,
+          snapshot.matches,
+          createFixedClock(Date.parse(closedAt)),
+        );
+        if (!closed.ok) {
+          throw new Error(`Tournament cannot be closed: ${closed.error}`);
+        }
+        await this.writeBackup('MANUAL', snapshot);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          status: closed.value.status,
+          updatedAt: closed.value.updatedAt,
         });
       },
     );

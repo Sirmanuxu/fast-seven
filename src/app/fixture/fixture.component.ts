@@ -227,7 +227,8 @@ export class FixtureComponent implements OnInit {
     const result = row.match.result;
     if (
       !snapshot ||
-      snapshot.tournament.status !== 'RUNNING' ||
+      (snapshot.tournament.status !== 'RUNNING' &&
+        snapshot.tournament.status !== 'FINISHED') ||
       row.match.status !== 'FINISHED' ||
       !result ||
       this.isBusy()
@@ -502,7 +503,8 @@ export class FixtureComponent implements OnInit {
     const result = row.match.result;
     if (
       !snapshot ||
-      snapshot.tournament.status !== 'RUNNING' ||
+      (snapshot.tournament.status !== 'RUNNING' &&
+        snapshot.tournament.status !== 'FINISHED') ||
       row.match.status !== 'FINISHED' ||
       result?.mode !== 'WALKOVER' ||
       this.isBusy()

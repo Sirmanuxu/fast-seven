@@ -304,7 +304,10 @@ export function editFinalizedMatch(
   events: readonly MatchEvent[],
   clock: Clock,
 ): Result<{ readonly match: Match; readonly events: readonly MatchEvent[] }, DomainError> {
-  if (snapshot.tournament.status !== 'RUNNING') {
+  if (
+    snapshot.tournament.status !== 'RUNNING' &&
+    snapshot.tournament.status !== 'FINISHED'
+  ) {
     return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
   }
 

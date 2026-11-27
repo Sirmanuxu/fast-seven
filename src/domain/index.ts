@@ -35,3 +35,4 @@ export * from './match-order';
 export * from './start-tournament';
 export * from './match-control';
 export * from './edit-impact';
+export * from './tournament-close';

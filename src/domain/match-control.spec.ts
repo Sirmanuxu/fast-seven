@@ -308,6 +308,42 @@ describe('match control', () => {
     expect(finished.result.homePoints).toBe(7);
   });
 
+  it('allows a finalized match result to be edited after tournament closure', () => {
+    const finished = {
+      ...match('one', 1, 'FINISHED'),
+      result: {
+        mode: 'DIRECT',
+        homePoints: 7,
+        awayPoints: 0,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      } as const,
+      finishedAt: '2026-11-26T12:00:00.000Z',
+    };
+    const base = {
+      ...snapshot([finished]),
+      tournament: {
+        ...snapshot([finished]).tournament,
+        status: 'FINISHED' as const,
+      },
+    };
+    const edited = editFinalizedMatch(
+      base,
+      [resolved('one')],
+      'one',
+      {
+        mode: 'DIRECT',
+        homePoints: 12,
+        awayPoints: 5,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
+      [],
+      createFixedClock(Date.parse('2026-11-26T12:30:00.000Z')),
+    );
+    expect(edited.ok).toBe(true);
+  });
+
   it('rejects a detail edit whose events do not produce the submitted score', () => {
     const finished = {
       ...match('one', 1, 'FINISHED'),
