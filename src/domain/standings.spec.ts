@@ -348,6 +348,20 @@ describe('computeStandings', () => {
     );
   });
 
+  it('awards a finished phantom Swiss bye without counting it as a played fixture', () => {
+    const bye = { ...match('bye-phantom', 'a', null, directResult(0, 0)), isPhantom: true };
+    const rows = standings(['a', 'b'], [bye]);
+
+    expect(rows[0]).toMatchObject({
+      teamId: 'a',
+      played: 1,
+      won: 1,
+      tablePoints: 3,
+      pointsFor: 0,
+      pointsAgainst: 0,
+    });
+  });
+
   it('uses the configured head-to-head criterion for a two-team tie', () => {
     const result = compute({
       teamIds: ['a', 'b', 'c', 'd'],

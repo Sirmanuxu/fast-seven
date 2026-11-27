@@ -26,6 +26,7 @@ export {
   getStandardSeedOrder,
 } from './knockout';
 export * from './fixture';
+export * from './swiss';
 export * from './groups-knockout';
 export * from './groups-cups';
 export * from './groups-position-playoffs';

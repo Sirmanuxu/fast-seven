@@ -222,7 +222,17 @@ export const computeStandings: ComputeStandings = ({
   );
 
   for (const match of matches) {
-    if (match.status !== 'FINISHED' || match.isPhantom || match.isConditional || !match.result) {
+    const awardedBye =
+      match.isPhantom &&
+      match.home.kind === 'TEAM' &&
+      match.away.kind === 'BYE' &&
+      match.status === 'FINISHED' &&
+      match.result !== null;
+    if (
+      match.status !== 'FINISHED' ||
+      ((match.isPhantom || match.isConditional) && !awardedBye) ||
+      !match.result
+    ) {
       continue;
     }
     const homeTeamId = teamIdFromRef(match.home);
