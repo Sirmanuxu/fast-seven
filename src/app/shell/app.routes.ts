@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 import { PanelComponent } from '../panel/panel.component';
-import { ProjectorComponent } from '../projector/projector.component';
 import { WelcomeComponent } from '../welcome/welcome.component';
 import { PlayersComponent } from '../players/players.component';
 import { TeamsComponent } from '../teams/teams.component';
@@ -22,7 +21,11 @@ export const routes: Routes = [
   { path: 'importar', component: ImportComponent },
   { path: 'equipos', component: TeamsComponent },
   { path: 'importar', component: ImportComponent },
-  { path: 'proyector', component: ProjectorComponent },
+  {
+    path: 'proyector',
+    loadComponent: () =>
+      import('../projector/projector.component').then((module) => module.ProjectorComponent),
+  },
   { path: '', component: WelcomeComponent, pathMatch: 'full' },
   { path: '**', redirectTo: 'bienvenida' },
 ];

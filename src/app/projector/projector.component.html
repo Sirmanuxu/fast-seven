@@ -1,26 +1,372 @@
 <main>
-  <h1>{{ strings.projectorTitle }}</h1>
-  <button type="button" (click)="requestFullscreen()">
-    {{ strings.projectorFullscreen }}
-  </button>
+  <header class="screen-header">
+    <p class="eyebrow">{{ strings.projectorTitle }}</p>
+    <h1>{{ viewTitle(viewModel().activeView) }}</h1>
+    <button type="button" class="fullscreen-button" (click)="requestFullscreen()">
+      {{ strings.projectorFullscreen }}
+    </button>
+  </header>
 
-  @if (connected()) {
-    <p class="connection">{{ strings.projectorConnectionLive }}</p>
+  @if (viewModel().availableViews.length === 0) {
+    <p class="empty-state">{{ strings.projectorWaiting }}</p>
   } @else {
-    <p class="connection">{{ strings.projectorWaiting }}</p>
+    @switch (viewModel().activeView) {
+      @case ('TEAMS_AND_FIXTURE') {
+        <section class="view-content teams-view">
+          @if (viewModel().teams.length > 0) {
+            <section class="team-grid" [attr.aria-label]="strings.teams">
+              @for (teamCard of viewModel().teams; track teamCard.team.id) {
+                <article
+                  class="team-card"
+                  [style.background-color]="teamCard.team.primaryColor"
+                  [style.color]="teamCard.textColor"
+                  [style.border-color]="teamCard.team.secondaryColor"
+                  [title]="teamCard.team.name"
+                >
+                  <span class="team-name">{{ teamCard.team.name }}</span>
+                  @if (teamCard.team.status === 'WITHDRAWN') {
+                    <span class="team-status">{{ strings.teamWithdrawn }}</span>
+                  }
+                </article>
+              }
+            </section>
+          } @else {
+            <p class="empty-state">{{ strings.noTeams }}</p>
+          }
+
+          <section class="fixture-preview">
+            <h2>{{ strings.fixtureTitle }}</h2>
+            @if (viewModel().fixture.length > 0) {
+              @for (match of viewModel().fixture.slice(0, 8); track match.id) {
+                <ng-container
+                  [ngTemplateOutlet]="matchLine"
+                  [ngTemplateOutletContext]="{ $implicit: match }"
+                />
+              }
+            } @else {
+              <p class="empty-state">{{ strings.noFixture }}</p>
+            }
+          </section>
+        </section>
+      }
+
+      @case ('MATCH_PLATE') {
+        @if (viewModel().currentMatch; as current) {
+          <section class="view-content match-plate">
+            <p class="match-context">
+              {{ current.stageName }}
+              @if (current.groupName) {
+                · {{ strings.groupPrefix }} {{ current.groupName }}
+              }
+            </p>
+            <div class="match-teams">
+              <article
+                class="match-team"
+                [style.background-color]="current.homeTeam?.team?.primaryColor ?? '#333333'"
+                [style.color]="current.homeTeam?.textColor ?? '#ffffff'"
+                [style.border-color]="current.homeTeam?.team?.secondaryColor ?? '#777777'"
+                [title]="current.homeName"
+              >
+                <span class="team-name">{{ current.homeName }}</span>
+                <strong class="match-score">{{ current.homeScore ?? '—' }}</strong>
+              </article>
+              <span class="versus">—</span>
+              <article
+                class="match-team"
+                [style.background-color]="current.awayTeam?.team?.primaryColor ?? '#333333'"
+                [style.color]="current.awayTeam?.textColor ?? '#ffffff'"
+                [style.border-color]="current.awayTeam?.team?.secondaryColor ?? '#777777'"
+                [title]="current.awayName"
+              >
+                <span class="team-name">{{ current.awayName }}</span>
+                <strong class="match-score">{{ current.awayScore ?? '—' }}</strong>
+              </article>
+            </div>
+            @if (current.homeScore === null || current.awayScore === null) {
+              <p class="score-unavailable">{{ strings.scoreUnavailable }}</p>
+            }
+            @if (current.lastTry) {
+              <p class="last-try" [title]="current.lastTry">
+                <strong>{{ strings.lastTry }}:</strong>
+                <span class="team-name">{{ current.lastTry }}</span>
+              </p>
+            }
+          </section>
+        } @else {
+          <p class="empty-state">{{ strings.noCurrentMatch }}</p>
+        }
+      }
+
+      @case ('NEXT_MATCH') {
+        @if (viewModel().nextMatch; as next) {
+          <section class="view-content next-match">
+            <p class="match-context">
+              {{ next.stageName }}
+              @if (next.groupName) {
+                · {{ strings.groupPrefix }} {{ next.groupName }}
+              }
+            </p>
+            <ng-container
+              [ngTemplateOutlet]="matchLine"
+              [ngTemplateOutletContext]="{ $implicit: next }"
+            />
+            <p class="kickoff">
+              {{ strings.kickoff }}:
+              <strong>{{ next.estimatedStart ?? strings.toBeDefined }}</strong>
+            </p>
+          </section>
+        } @else {
+          <p class="empty-state">{{ strings.noNextMatch }}</p>
+        }
+      }
+
+      @case ('SHORT_LIST') {
+        <section class="view-content short-list">
+          @for (match of viewModel().recentMatches; track match.id) {
+            <article class="short-list-item">
+              <span class="match-status">{{ statusLabel(match.status) }}</span>
+              <ng-container
+                [ngTemplateOutlet]="matchLine"
+                [ngTemplateOutletContext]="{ $implicit: match }"
+              />
+            </article>
+          }
+          @if (viewModel().currentMatch; as current) {
+            <article class="short-list-item current-item">
+              <span class="match-status">{{ statusLabel(current.status) }}</span>
+              <ng-container
+                [ngTemplateOutlet]="matchLine"
+                [ngTemplateOutletContext]="{ $implicit: current }"
+              />
+            </article>
+          }
+          @for (match of viewModel().upcomingMatches; track match.id) {
+            <article class="short-list-item">
+              <span class="match-status">{{ statusLabel(match.status) }}</span>
+              <ng-container
+                [ngTemplateOutlet]="matchLine"
+                [ngTemplateOutletContext]="{ $implicit: match }"
+              />
+            </article>
+          }
+        </section>
+      }
+
+      @case ('STANDINGS') {
+        @if (selectedStandings(); as standings) {
+          <section class="view-content standings-view">
+            <h2>{{ standings.title }}</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>{{ strings.team }}</th>
+                  <th>{{ strings.played }}</th>
+                  <th>{{ strings.won }}</th>
+                  <th>{{ strings.drawn }}</th>
+                  <th>{{ strings.lost }}</th>
+                  <th>{{ strings.pointsFor }}</th>
+                  <th>{{ strings.pointsAgainst }}</th>
+                  <th>{{ strings.pointDifference }}</th>
+                  <th>{{ strings.triesFor }}</th>
+                  <th>{{ strings.bonusPoints }}</th>
+                  <th>{{ strings.tablePoints }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of standings.rows; track entry.row.teamId) {
+                  <tr [class.withdrawn]="entry.row.withdrawn">
+                    <td>{{ entry.row.position }}</td>
+                    <td class="team-name-cell" [title]="entry.team?.name ?? strings.toBeDefined">
+                      {{ entry.team?.name ?? strings.toBeDefined }}
+                      @if (entry.row.withdrawn) {
+                        <span class="team-status">{{ strings.teamWithdrawn }}</span>
+                      }
+                      @if (entry.tiebreakLabel) {
+                        <small class="tiebreak-detail">
+                          {{ strings.tieBreak }}: {{ entry.tiebreakLabel }}
+                        </small>
+                      }
+                    </td>
+                    <td>{{ entry.row.played }}</td>
+                    <td>{{ entry.row.won }}</td>
+                    <td>{{ entry.row.drawn }}</td>
+                    <td>{{ entry.row.lost }}</td>
+                    <td>{{ entry.row.pointsFor }}</td>
+                    <td>{{ entry.row.pointsAgainst }}</td>
+                    <td>{{ entry.row.pointDifference }}</td>
+                    <td>{{ entry.row.triesIncomplete ? '—' : entry.row.triesFor }}</td>
+                    <td>{{ entry.row.bonusPoints }}</td>
+                    <td>
+                      <strong>{{ entry.row.tablePoints }}</strong>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </section>
+        } @else {
+          <p class="empty-state">{{ strings.noStandings }}</p>
+        }
+      }
+
+      @case ('BRACKET') {
+        @if (selectedBracket(); as bracket) {
+          <section class="view-content bracket-view">
+            <h2>{{ bracket.title }}</h2>
+            @for (match of bracket.matches; track match.id) {
+              <article class="bracket-match">
+                <span class="round-label">{{ match.label }}</span>
+                <ng-container
+                  [ngTemplateOutlet]="matchLine"
+                  [ngTemplateOutletContext]="{ $implicit: match }"
+                />
+              </article>
+            }
+          </section>
+        } @else {
+          <p class="empty-state">{{ strings.noBracket }}</p>
+        }
+      }
+
+      @case ('SCORERS') {
+        <section class="view-content scorers-view">
+          @if (viewModel().scorers.length > 0) {
+            <ol>
+              @for (scorer of viewModel().scorers; track scorer.row.playerId) {
+                <li>
+                  <span class="scorer-name" [title]="scorer.playerName">{{
+                    scorer.playerName
+                  }}</span>
+                  <span class="scorer-team" [title]="scorer.teamName">{{ scorer.teamName }}</span>
+                  <span>{{ scorer.row.tries }} {{ strings.scorerTries }}</span>
+                  <span>{{ scorer.row.conversions }} {{ strings.scorerConversions }}</span>
+                  <strong>{{ scorer.row.points }} {{ strings.scorerPoints }}</strong>
+                </li>
+              }
+            </ol>
+          } @else {
+            <p class="empty-state">{{ strings.noScorers }}</p>
+          }
+          @if (viewModel().unattributedTries > 0) {
+            <p class="unattributed-tries">
+              {{ interpolateUnattributedTries(viewModel().unattributedTries) }}
+            </p>
+          }
+        </section>
+      }
+
+      @case ('FINAL_RESULT') {
+        @if (viewModel().finalResult) {
+          <section class="view-content final-result">
+            <div class="winner-cards">
+              @if (viewModel().champion; as champion) {
+                <article
+                  class="winner-card champion"
+                  [style.background-color]="champion.primaryColor"
+                  [style.color]="teamTextColor(champion)"
+                  [title]="champion.name"
+                >
+                  <span>{{ strings.champion }}</span>
+                  <strong class="team-name">{{ champion.name }}</strong>
+                </article>
+              }
+              @if (viewModel().runnerUp; as runnerUp) {
+                <article
+                  class="winner-card"
+                  [style.background-color]="runnerUp.primaryColor"
+                  [style.color]="teamTextColor(runnerUp)"
+                  [title]="runnerUp.name"
+                >
+                  <span>{{ strings.runnerUp }}</span>
+                  <strong class="team-name">{{ runnerUp.name }}</strong>
+                </article>
+              }
+            </div>
+            <div class="podium">
+              <h2>{{ strings.podium }}</h2>
+              @for (position of viewModel().finalPositions; track position.teamId) {
+                @if (position.position <= 3) {
+                  <p>
+                    <strong>{{ formatPosition(position.position, position.tied) }}</strong>
+                    <span class="team-name" [title]="position.team?.name ?? strings.toBeDefined">
+                      {{ position.team?.name ?? strings.toBeDefined }}
+                    </span>
+                  </p>
+                }
+              }
+            </div>
+          </section>
+        } @else {
+          <p class="empty-state">{{ strings.noResults }}</p>
+        }
+      }
+
+      @case ('FINAL_STANDINGS') {
+        <section class="view-content final-standings">
+          <h2>{{ strings.finalPositions }}</h2>
+          @for (position of viewModel().finalPositions; track position.teamId) {
+            <article class="final-position-row">
+              <strong>{{ formatPosition(position.position, position.tied) }}</strong>
+              <span class="team-name" [title]="position.team?.name ?? strings.toBeDefined">
+                {{ position.team?.name ?? strings.toBeDefined }}
+              </span>
+              @if (position.tieBreakReason) {
+                <small>{{ strings.tieBreak }}: {{ tiebreakLabel(position.tieBreakReason) }}</small>
+              }
+            </article>
+          }
+        </section>
+      }
+    }
   }
 
-  @if (snapshot(); as tournamentSnapshot) {
-    <p class="tournament-name">{{ tournamentSnapshot.tournament.name }}</p>
+  @if (projectorState().timer; as timer) {
+    <aside class="timer-overlay" aria-live="off">
+      <span>{{ timer.name }}</span>
+      <strong>{{ remainingTime() }}</strong>
+    </aside>
   }
 
   @if (projectorState().message; as publicMessage) {
-    <p class="public-message">{{ publicMessage.text }}</p>
-  }
-
-  @if (legacyMessage(); as currentMessage) {
-    <p>{{ currentMessage }}</p>
-  } @else {
-    <p>{{ strings.projectorWaiting }}</p>
+    <aside
+      class="message-overlay"
+      [class.fullscreen-message]="publicMessage.mode === 'FULLSCREEN'"
+      [class.banner-message]="publicMessage.mode === 'BANNER'"
+      aria-live="polite"
+    >
+      {{ publicMessage.text }}
+    </aside>
   }
 </main>
+
+<ng-template #matchLine let-match>
+  <div class="match-line">
+    <span
+      class="match-team-name"
+      [style.background-color]="match.homeTeam?.team?.primaryColor ?? null"
+      [style.color]="match.homeTeam?.textColor ?? null"
+      [title]="match.homeName"
+    >
+      {{ match.homeName }}
+    </span>
+    <strong class="scoreline">
+      @if (match.homeScore !== null && match.awayScore !== null) {
+        {{ match.homeScore }} – {{ match.awayScore }}
+      } @else {
+        {{ strings.versus }}
+      }
+    </strong>
+    <span
+      class="match-team-name"
+      [style.background-color]="match.awayTeam?.team?.primaryColor ?? null"
+      [style.color]="match.awayTeam?.textColor ?? null"
+      [title]="match.awayName"
+    >
+      {{ match.awayName }}
+    </span>
+    @if (match.estimatedStart) {
+      <time class="match-time">{{ match.estimatedStart }}</time>
+    }
+  </div>
+</ng-template>
