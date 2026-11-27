@@ -13,6 +13,13 @@ export const SPIKE_STRINGS = {
   projectorWaiting: 'Esperando mensajes del panel',
   saveTest: 'Guardar prueba',
   openProjector: 'Abrir proyector',
-  panelTitle: 'Panel de prueba',
+  openFixture: 'Fixture',
+  panelTitle: 'Panel',
+  startTournament: 'Iniciar torneo',
+  confirmTournamentStart:
+    'Al iniciar el torneo, quedarán bloqueados el formato, la regeneración del fixture y el alta o baja de equipos. Para cambiar esa estructura, primero habrá que reiniciarlo. ¿Querés continuar?',
+  tournamentStarted: 'Torneo iniciado. La estructura quedó bloqueada.',
+  startTournamentFailed: 'No se pudo iniciar el torneo. Revisá que el fixture esté generado.',
+  tournamentInProgress: 'El torneo está en curso.',
   projectorTitle: 'Proyector de prueba',
 } as const;

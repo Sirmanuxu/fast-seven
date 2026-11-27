@@ -1,0 +1,156 @@
+<main>
+  <header>
+    <button type="button" (click)="goBack()">{{ strings.back }}</button>
+    <h1>{{ strings.title }}</h1>
+    <button type="button" (click)="openFormat()">{{ strings.openFormat }}</button>
+  </header>
+
+  @if (statusMessage(); as status) {
+    <p role="status">{{ status }}</p>
+  }
+
+  @if (snapshot(); as current) {
+    <section class="actions">
+      <button
+        type="button"
+        (click)="generate()"
+        [disabled]="
+          isBusy() ||
+          !canModifyFixture ||
+          activeTeams.length < 2 ||
+          !current.tournament.formatParams
+        "
+      >
+        {{ hasFixture ? strings.regenerate : strings.generate }}
+      </button>
+      @if (activeTeams.length < 2) {
+        <p role="status">{{ strings.noTeams }}</p>
+      }
+      @if (!current.tournament.formatParams) {
+        <p role="status">{{ strings.noFormat }}</p>
+      }
+      @if (!canModifyFixture) {
+        <p role="status">{{ strings.tournamentLocked }}</p>
+      }
+    </section>
+
+    @if (hasFixture) {
+      <section class="summary">
+        <h2>{{ strings.summary }}</h2>
+        <dl>
+          <div>
+            <dt>{{ strings.totalMatches }}</dt>
+            <dd>{{ totalMatches }}</dd>
+          </div>
+          @if (formatOption; as option) {
+            <div>
+              <dt>{{ strings.minimumMatches }}</dt>
+              <dd>{{ option.minMatchesPerTeam }}</dd>
+            </div>
+            <div>
+              <dt>{{ strings.estimatedDuration }}</dt>
+              <dd>{{ formatDuration(option.estimatedDurationMin) }}</dd>
+            </div>
+          }
+        </dl>
+
+        <h3>{{ strings.shortRest }}</h3>
+        @if (scheduleDetails().entries.length > 0) {
+          @if (shortRestTeams.length > 0) {
+            <ul>
+              @for (team of shortRestTeams; track team.name) {
+                <li>{{ team.name }}: {{ team.rest }} {{ strings.minutes }}</li>
+              }
+            </ul>
+          } @else {
+            <p>{{ strings.noShortRest }}</p>
+          }
+        } @else {
+          <p>{{ strings.scheduleUnavailable }}</p>
+        }
+        @if (consecutiveAppearances.length > 0) {
+          <ul>
+            @for (
+              appearance of consecutiveAppearances;
+              track appearance.firstMatchId + appearance.secondMatchId
+            ) {
+              <li>{{ consecutiveWarning(appearance.teamName) }}</li>
+            }
+          </ul>
+        }
+      </section>
+
+      @if (underMinimumTeams.length > 0) {
+        <section class="warning" role="status">
+          <h2>{{ strings.rosterWarning }}</h2>
+          <ul>
+            @for (team of underMinimumTeams; track team.name) {
+              <li>{{ team.name }}: {{ team.count }} {{ strings.players }}</li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="fixture">
+        <header class="fixture-actions">
+          <h2>{{ strings.title }}</h2>
+          <button type="button" (click)="resetOrder()" [disabled]="isBusy() || !canModifyFixture">
+            {{ strings.resetOrder }}
+          </button>
+        </header>
+        @for (stage of stageViews; track stage.stage.id) {
+          <article class="stage">
+            <h3>{{ stage.stage.name }}</h3>
+            @if (stage.rounds.length === 0) {
+              <p>{{ strings.noMatches }}</p>
+            }
+            @for (round of stage.rounds; track round.number) {
+              <section class="round">
+                <h4>{{ strings.round }} {{ round.number }}</h4>
+                @for (row of round.matches; track row.match.id) {
+                  <article class="match">
+                    <div class="match-info">
+                      <strong>{{ row.homeLabel }} - {{ row.awayLabel }}</strong>
+                      @if (row.groupLabel) {
+                        <span>{{ row.groupLabel }}</span>
+                      }
+                      <span>{{ statusLabel(row.match.status) }}</span>
+                      @if (resultLabel(row); as result) {
+                        <span>{{ strings.result }}: {{ result }}</span>
+                      }
+                      @if (row.estimatedStart; as start) {
+                        <span>{{ strings.tentative }}: {{ formatTime(start) }}</span>
+                      }
+                    </div>
+                    @if (row.match.status === 'PENDING') {
+                      <div class="match-controls">
+                        <button
+                          type="button"
+                          (click)="moveMatch(row.match.id, 'UP')"
+                          [disabled]="isBusy() || !canMoveMatch(row.match, 'UP')"
+                        >
+                          {{ strings.up }}
+                        </button>
+                        <button
+                          type="button"
+                          (click)="moveMatch(row.match.id, 'DOWN')"
+                          [disabled]="isBusy() || !canMoveMatch(row.match, 'DOWN')"
+                        >
+                          {{ strings.down }}
+                        </button>
+                      </div>
+                    }
+                  </article>
+                }
+              </section>
+            }
+          </article>
+        }
+      </section>
+    } @else {
+      <section>
+        <p>{{ strings.noFixture }}</p>
+      </section>
+    }
+  }
+</main>

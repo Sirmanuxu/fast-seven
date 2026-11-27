@@ -36,6 +36,22 @@ const groupSizes = (teamCount: number, groupCount: number): readonly number[] =>
 const groupMatches = (sizes: readonly number[]): number =>
   sizes.reduce((total, size) => total + (size * (size - 1)) / 2, 0);
 
+const positionLevelParticipants = (sizes: readonly number[], level: number): number =>
+  sizes.filter((size) => size >= level).length;
+
+const positionLevelMatchCount = (participants: number): number => {
+  if (participants < 2) return 0;
+  return participants <= 4 ? (participants * (participants - 1)) / 2 : participants - 1;
+};
+
+const positionLevelMatchBounds = (participants: number): { min: number; max: number } => {
+  if (participants < 2) return { min: 0, max: 0 };
+  if (participants <= 4) return { min: participants - 1, max: participants - 1 };
+  const bracketSize = nextPowerOfTwo(participants);
+  const rounds = Math.log2(bracketSize);
+  return { min: rounds - (bracketSize > participants ? 1 : 0), max: rounds };
+};
+
 const warning = (
   code: string,
   messageKey: string,
@@ -152,11 +168,19 @@ export const calculateTotals = (
       const cupCount = Math.max(...sizes);
       const warnings: Warning[] = [];
       if (new Set(sizes).size > 1) warnings.push(warning('UNEVEN_GROUPS', 'format.unevenGroups'));
+      const cupMatches = Array.from(
+        { length: cupCount },
+        (_, index) => sizes.filter((size) => size > index).length,
+      ).reduce(
+        (total, participants) =>
+          total +
+          (participants >= 2
+            ? participants - 1 + (params.thirdPlaceMatch && participants >= 4 ? 1 : 0)
+            : 0),
+        0,
+      );
       return {
-        totalMatches:
-          groupMatches(sizes) +
-          cupCount * (params.groupCount - 1) +
-          (params.thirdPlaceMatch ? cupCount : 0),
+        totalMatches: groupMatches(sizes) + cupMatches,
         minMatchesPerTeam: Math.min(...sizes) - 1 + 1,
         maxMatchesPerTeam: Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)),
         warnings,
@@ -164,14 +188,30 @@ export const calculateTotals = (
     }
     case 'GROUPS_POSITION_PLAYOFFS': {
       const sizes = groupSizes(teamCount, params.groupCount);
-      const playoffMatches = Math.max(...sizes) * (nextPowerOfTwo(params.groupCount) - 1);
+      const maxGroupSize = Math.max(...sizes);
+      const levels = Array.from({ length: maxGroupSize }, (_, index) => index + 1).map((level) =>
+        positionLevelParticipants(sizes, level),
+      );
+      const playoffMatches = levels.reduce(
+        (total, participants) => total + positionLevelMatchCount(participants),
+        0,
+      );
+      const teamMatchBounds = sizes.flatMap((size) =>
+        Array.from({ length: size }, (_, index) => {
+          const participants = positionLevelParticipants(sizes, index + 1);
+          const playoffBounds = positionLevelMatchBounds(participants);
+          return {
+            min: size - 1 + playoffBounds.min,
+            max: size - 1 + playoffBounds.max,
+          };
+        }),
+      );
       const warnings =
         new Set(sizes).size > 1 ? [warning('UNEVEN_GROUPS', 'format.unevenGroups')] : [];
       return {
         totalMatches: groupMatches(sizes) + playoffMatches,
-        minMatchesPerTeam: Math.min(...sizes),
-        maxMatchesPerTeam:
-          Math.max(...sizes) - 1 + Math.log2(nextPowerOfTwo(params.groupCount)) + 1,
+        minMatchesPerTeam: Math.min(...teamMatchBounds.map((bounds) => bounds.min)),
+        maxMatchesPerTeam: Math.max(...teamMatchBounds.map((bounds) => bounds.max)),
         warnings,
       };
     }

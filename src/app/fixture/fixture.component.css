@@ -1,0 +1,74 @@
+main {
+  min-height: 100dvh;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+header,
+.fixture-actions,
+.match {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+section,
+.stage,
+.match {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+button {
+  min-height: 44px;
+  margin: 0.25rem;
+  font: inherit;
+}
+
+dl {
+  display: grid;
+  gap: 0.5rem;
+}
+
+dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+dt,
+dd {
+  margin: 0;
+}
+
+.warning {
+  border-style: dashed;
+}
+
+.round {
+  padding: 0;
+  border: 0;
+}
+
+.match-info {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.match-controls {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 36rem) {
+  header,
+  .match {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

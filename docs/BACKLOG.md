@@ -723,8 +723,8 @@ Criterios de aceptación:
 
 Criterios de aceptación:
 
-- Al poner por primera vez un partido en juego se muestra una confirmación que explica el candado.
-- Al confirmar: estado EN\_CURSO, respaldo con motivo `INICIO_TORNEO` y el partido pasa a EN\_JUEGO.
+- En el Home, «Iniciar torneo» pide confirmación y explica el candado; solo está disponible con un fixture generado.
+- Al confirmar: estado EN\_CURSO y respaldo con motivo `INICIO_TORNEO`. No cambia el estado de ningún partido; la mesa de control los pone en juego (HU-33).
 - Con el torneo EN\_CURSO: no se agregan ni quitan equipos, no se cambia el formato y no se regenera el fixture. Siguen editables jugadores, capitanes, colores, nombres y resultados.
 - Los controles bloqueados se ven deshabilitados con una explicación («para cambiar esto hay que reiniciar el torneo», ver HU-59).
 

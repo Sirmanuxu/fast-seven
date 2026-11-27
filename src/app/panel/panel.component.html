@@ -1,6 +1,17 @@
 <main>
   <h1>{{ strings.panelTitle }}</h1>
 
+  @if (statusMessage(); as status) {
+    <p role="status">{{ status }}</p>
+  }
+  @if (tournament()?.status === 'FIXTURE_GENERATED') {
+    <button type="button" (click)="startTournament()" [disabled]="startBusy()">
+      {{ strings.startTournament }}
+    </button>
+  } @else if (tournament()?.status === 'RUNNING') {
+    <p role="status">{{ strings.tournamentInProgress }}</p>
+  }
+
   <section>
     <p>{{ offlineStatus() }}</p>
     <p>{{ persistenceStatus() }}</p>
@@ -15,9 +26,9 @@
   <button type="button" (click)="openTeams()">Equipos</button>
   <button type="button" (click)="openRules()">Reglas</button>
   <button type="button" (click)="openFormat()">Formato</button>
+  <button type="button" (click)="openFixture()">{{ strings.openFixture }}</button>
 
   @if (lastRecord(); as record) {
     <p>Último dato guardado: {{ record.message }}</p>
   }
-
 </main>

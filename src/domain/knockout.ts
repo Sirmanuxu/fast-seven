@@ -130,7 +130,11 @@ export function generateKnockoutMatches(
     input.slotRefs === undefined
       ? getKnockoutBracketSize(input.teamIds.length)
       : input.slotRefs.length;
-  if (!Number.isInteger(bracketSize) || bracketSize < 2 || (bracketSize & (bracketSize - 1)) !== 0) {
+  if (
+    !Number.isInteger(bracketSize) ||
+    bracketSize < 2 ||
+    (bracketSize & (bracketSize - 1)) !== 0
+  ) {
     return error('invalidTeamCount');
   }
   if (bracketSize === 0) {
@@ -206,7 +210,9 @@ export function generateKnockoutMatches(
     slots = nextSlots;
   }
 
-  if (input.thirdPlaceMatch === true && input.teamIds.length >= 4 && semifinalIds.length === 2) {
+  const participantCount =
+    input.slotRefs?.filter((slot) => slot.kind !== 'BYE').length ?? input.teamIds.length;
+  if (input.thirdPlaceMatch === true && participantCount >= 4 && semifinalIds.length === 2) {
     matches.push({
       id: `${prefix}-third-place`,
       stageId,

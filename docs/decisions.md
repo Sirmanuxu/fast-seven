@@ -1,5 +1,49 @@
 # Decision log
 
+## 2026-11-24 - HU-28 - Resolve match references
+
+- **Decision:** Recompute resolved teams from the complete tournament snapshot and expose
+  unresolved slots as `ResolvedMatch` labels plus an `isPlayable` flag.
+- **Reason:** The model contract defines resolved teams as derived data; a single resolution pass
+  keeps every display consistent and gives match-control code a clear start guard.
+- **Decision:** Keep the existing `ResolveMatches` return shape and add a richer
+  `resolveMatchesWithDraws` helper for callers that must persist newly generated group tiebreak
+  draws.
+- **Reason:** Changing `model.ts` would violate its contract, but dropping new draws would make a
+  group-position resolution unstable after reload.
+- **Decision:** Resolve a cross-group level only after groups containing that position are
+  complete, while reusing the existing `compareAcrossGroups` ranking implementation.
+- **Reason:** Groups with fewer teams cannot contribute to that level, and the shared comparator
+  already applies HU-18's uneven-group comparison rule.
+
+## 2026-11-24 - HU-27 - Groups plus position playoffs
+
+- **Decision:** Use round robin for placement levels with up to four participants and seeded
+  knockout for larger levels.
+- **Reason:** This follows the rule proposed in backlog section 2.5 and yields a complete ranking
+  without requiring a bracket larger than necessary for small groups.
+- **Decision:** Keep each position level in its own stage and retain singleton uneven levels with
+  no matches.
+- **Reason:** Stage boundaries preserve level-by-level final placements, while the named empty
+  stage explains a last group-position level that contains only one team.
+- **Decision:** Use `GROUP_POSITION` for direct/small-level matches and `LEVEL_POSITION` for
+  knockout seeds.
+- **Reason:** Direct levels do not need cross-group ranking; larger brackets need HU-18 rankings
+  to determine seeded positions once group results are available.
+
+## 2026-11-24 - HU-26 - Groups plus cups
+
+- **Decision:** Represent each cup participant with an ordered `LEVEL_POSITION` reference, then
+  reuse the knockout generator's standard seed order and bye placement.
+- **Reason:** The teams that finish at a given group position are unknown when the fixture is
+  generated. Resolving the cross-group ranking after group results preserves seeding without
+  storing guessed teams in bracket slots.
+- **Decision:** Explain an uneven final playable cup in its stage name and calculate totals from
+  each level's actual participant count.
+- **Reason:** The existing fixture contract has no explanation field, and a one-team cup is not
+  generated; the stage name keeps the accepted explanation with the smaller cup without changing
+  the model contract.
+
 ## 2026-11-24 - HU-25 - Groups plus knockout fixture
 
 - **Decision:** Add a dedicated pure-domain groups-knockout generator that composes the round-robin
@@ -383,3 +427,67 @@
 - **Decision:** Increment the patch version before every commit and update `package.json`,
   `package-lock.json` and `src/index.html` together.
 - **Reason:** It prevents the visible application badge from lagging behind the committed code.
+
+## 2026-11-25 - HU-29 - Tentative schedule
+
+- **Decision:** Order pending matches by phase and round, then preserve winner/loser dependencies.
+  Optimize each contiguous round block by minimizing consecutive appearances first and maximizing
+  the minimum and total match gaps second; use exhaustive search for blocks up to eight matches
+  and a greedy heuristic for larger blocks.
+- **Reason:** This gives exact court ordering for the reference cases while bounding computation
+  for larger tournaments, and it keeps bracket matches in dependency-safe order.
+- **Decision:** Calculate UTC timestamps with pure civil-date arithmetic rather than browser date
+  APIs, and represent future Swiss rounds as synthetic schedule-only entries.
+- **Reason:** Domain code must remain environment-independent, and future Swiss pairings do not
+  exist in the persisted fixture.
+- **Decision:** Treat pending matches marked `isConditional` as not schedulable, while allowing a
+  finished conditional match to establish the next schedule base.
+- **Reason:** The current resolver marks conditional matches non-playable and the model has no
+  separate derived flag distinguishing a needed reset from an unneeded one. Revisit this when
+  double-elimination generation is implemented.
+
+## 2026-11-25 - HU-30 - Reorder pending matches
+
+- **Decision:** Expose adjacent up/down moves and suggested-order reset as pure domain operations.
+  Only pending, non-phantom, non-conditional matches can move; finished and in-progress matches
+  remain fixed boundaries, and a move that creates a winner/loser dependency violation is rejected.
+- **Reason:** The fixture has one persisted `order` sequence, so adjacent moves are easy to reverse
+  and preserve every other match's order while enforcing the referee and bracket constraints.
+- **Decision:** Persist batches of order-only changes with one Dexie transaction and re-check
+  current match statuses and order uniqueness inside that transaction.
+- **Reason:** The panel may have stale state by the time it saves; transaction-time validation
+  prevents writing a move after a match has started or finished.
+- **Decision:** Keep suggested schedule computation separate from persisted-order schedule
+  computation, and defer the fixture screen controls until HU-31 creates the fixture view.
+- **Reason:** The repository has no fixture route or screen yet; keeping both scheduling modes
+  explicit lets the future view reset to a suggestion without overwriting manual order on refresh.
+
+## 2026-11-25 - HU-31 - Fixture generation and view
+
+- **Decision:** Convert fixture generator placeholder IDs to UUIDs at the application persistence
+  boundary and remap all stage, group, match, draw and bracket references together.
+- **Reason:** The model contract requires UUID entity IDs, while changing the pure domain generators
+  or `model.ts` would expand this story's scope and violate the existing type contract.
+- **Decision:** Regeneration uses a fresh persisted seed and drops fixture-associated draws, while
+  preserving team-assignment draws. Format changes and fixture replacement also clear scheduled
+  breaks that reference deleted match IDs.
+- **Reason:** Reusing old bracket or group draws would make a confirmed regeneration appear new
+  while retaining stale randomness; breaks must not point at entities that no longer exist.
+- **Decision:** Define short rest as less than the configured `restMin`, and do not claim a team
+  meets that target when tentative times cannot be calculated.
+- **Reason:** This uses the tournament's explicit rest setting and avoids false reassurance when
+  there is no configured start time.
+
+## 2026-11-26 - HU-32 - Start tournament lock
+
+- **Decision:** Keep `TOURNAMENT_START` as the persisted backup reason, following the existing
+  `BackupReason` contract, for the backlog's `INICIO_TORNEO` intent.
+- **Reason:** The user chose to preserve the type contract rather than change the domain model.
+- **Decision:** Add the first-match start action to the fixture screen; the tournament control
+  dashboard and its additional match-start rules remain in HU-33.
+- **Reason:** HU-32 requires a usable first-start confirmation and atomic transition, while HU-33
+  owns the full control-room experience.
+- **Decision:** Replace the per-match start action with one **Iniciar torneo** button on Home.
+  Starting changes the tournament state and creates its backup but leaves all matches pending.
+- **Reason:** The organizer requested a clear tournament-level milestone separate from starting
+  an individual match; HU-33 will own match controls.

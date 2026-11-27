@@ -3,6 +3,7 @@ import { SwUpdate } from '@angular/service-worker';
 import { Router } from '@angular/router';
 import { spikeDatabase, SpikeRecord } from '../../data/spike-database';
 import { tournamentRepository } from '../../data/tournament-repository';
+import { Tournament } from '../../domain/model';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
@@ -25,10 +26,14 @@ export class PanelComponent implements OnInit {
   protected readonly persistenceStatus = signal<string>(SPIKE_STRINGS.persistenceUnsupported);
   protected readonly offlineStatus = signal<string>(SPIKE_STRINGS.offlinePending);
   protected readonly savedAt = signal<string | null>(null);
+  protected readonly tournament = signal<Tournament | null>(null);
+  protected readonly startBusy = signal(false);
+  protected readonly statusMessage = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
     await this.loadLastRecord();
+    this.tournament.set(await tournamentRepository.getTournament());
     await this.requestPersistentStorage();
     this.checkOfflineStatus();
   }
@@ -57,6 +62,23 @@ export class PanelComponent implements OnInit {
     }
   }
 
+  protected async startTournament(): Promise<void> {
+    if (this.tournament()?.status !== 'FIXTURE_GENERATED' || this.startBusy()) return;
+    if (!window.confirm(this.strings.confirmTournamentStart)) return;
+
+    this.startBusy.set(true);
+    try {
+      await tournamentRepository.startTournament(new Date().toISOString());
+      this.tournament.set(await tournamentRepository.getTournament());
+      this.statusMessage.set(this.strings.tournamentStarted);
+    } catch (error) {
+      console.error('Starting tournament failed', error);
+      showErrorPopup(this.strings.startTournamentFailed);
+    } finally {
+      this.startBusy.set(false);
+    }
+  }
+
   protected openProjector(): void {
     const target = new URL('#/proyector', window.location.href);
     const projector = window.open(target.href, 'fast-seven-projector', 'popup=yes');
@@ -79,6 +101,10 @@ export class PanelComponent implements OnInit {
 
   protected openFormat(): void {
     void this.router.navigateByUrl('/panel/formato');
+  }
+
+  protected openFixture(): void {
+    void this.router.navigateByUrl('/panel/fixture');
   }
 
   private async loadLastRecord(): Promise<void> {

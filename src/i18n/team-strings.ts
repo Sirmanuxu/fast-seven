@@ -18,7 +18,8 @@ export const TEAM_STRINGS = {
   mixedRoster: 'Equipo mixto en categoría o género.',
   similarColors: 'Los colores son muy parecidos y pueden tener poca legibilidad.',
   fixtureDelete: 'El equipo tiene fixture generado. Al borrarlo, el fixture deberá regenerarse.',
-  runningCreateDelete: 'El torneo está en curso: no se pueden crear ni borrar equipos.',
+  runningCreateDelete:
+    'No podés agregar ni borrar equipos con el torneo en curso. Para cambiar esto, primero hay que reiniciarlo.',
   deleteQuestion: '¿Querés borrar este equipo? Sus jugadores quedarán sueltos.',
   deleteFailed: 'No se pudo borrar el equipo.',
   saveFailed: 'No se pudo guardar el equipo.',
@@ -44,7 +45,8 @@ export const TEAM_STRINGS = {
   drawRepeat: 'Repetir sorteo',
   drawConfirm: 'Confirmar sorteo',
   drawCancel: 'Cancelar',
-  drawDisabledRunning: 'El sorteo está deshabilitado con el torneo en curso.',
+  drawDisabledRunning:
+    'El sorteo está deshabilitado con el torneo en curso. Para cambiar la estructura, primero hay que reiniciarlo.',
   drawNoPlayers: 'No hay jugadores sueltos para sortear.',
   drawInvalidCount: 'Ingresá una cantidad válida de equipos nuevos.',
   drawPreviewTitle: 'Vista previa del sorteo',
@@ -59,5 +61,6 @@ export const TEAM_STRINGS = {
   rosterSettingsSave: 'Guardar límites',
   rosterSettingsSaved: 'Límites de plantel guardados.',
   rosterSettingsInvalid: 'Ingresá un mínimo positivo y un máximo mayor o igual (o dejalo vacío).',
-  rosterSettingsDisabled: 'No se pueden cambiar los límites con el torneo en curso.',
+  rosterSettingsDisabled:
+    'No se pueden cambiar los límites con el torneo en curso. Para modificarlos, primero hay que reiniciarlo.',
 } as const;

@@ -47,6 +47,11 @@ export class FormatComponent implements OnInit {
 
   private readonly router = inject(Router);
 
+  protected get formatLocked(): boolean {
+    const status = this.tournament()?.status;
+    return status === 'RUNNING' || status === 'FINISHED';
+  }
+
   protected get options(): readonly FormatOption[] {
     const tournament = this.tournament();
     if (!tournament) return [];
@@ -384,11 +389,28 @@ export class FormatComponent implements OnInit {
     if (!tournament || !params || validateFormatParams(this.teamCount(), params).length > 0) return;
     const format = this.options.find((option) => option.format === params.format && option.viable);
     if (!format) return;
+    const formatChanged =
+      tournament.formatParams !== null &&
+      JSON.stringify(tournament.formatParams) !== JSON.stringify(params);
+    if (
+      tournament.status === 'FIXTURE_GENERATED' &&
+      formatChanged &&
+      !window.confirm(this.strings.fixtureResetConfirmation)
+    ) {
+      return;
+    }
     this.isSaving.set(true);
     try {
-      await tournamentRepository.updateFormat(params);
-      this.statusMessage.set(this.strings.saved);
-      this.tournament.set({ ...tournament, formatParams: params });
+      await tournamentRepository.updateFormat(params, {
+        matchDurationMin: this.matchDuration(),
+        restMin: this.restDuration(),
+      });
+      const updatedTournament = await tournamentRepository.getTournament();
+      this.tournament.set(updatedTournament);
+      this.teams.set(await tournamentRepository.getTeams());
+      this.drawnGroups.set(await tournamentRepository.getGroups());
+      this.groupStageId.set(this.drawnGroups()[0]?.stageId ?? null);
+      this.statusMessage.set(formatChanged ? this.strings.fixtureReset : this.strings.saved);
     } catch {
       showErrorPopup(this.strings.saveFailed);
     } finally {
