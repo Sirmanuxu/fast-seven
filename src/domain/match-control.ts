@@ -4,6 +4,7 @@ import {
   Id,
   Match,
   MatchEvent,
+  MatchResult,
   ResolvedMatch,
   Result,
   TournamentSnapshot,
@@ -154,9 +155,7 @@ export function finishDetailMatch(
   }
 
   const isSuddenDeath =
-    isEliminationStage &&
-    score.value.home === score.value.away &&
-    suddenDeathWinnerTeamId !== null;
+    isEliminationStage && score.value.home === score.value.away && suddenDeathWinnerTeamId !== null;
   return {
     ok: true,
     value: {
@@ -194,7 +193,12 @@ export function finishDirectMatch(
   if (match.status !== 'IN_PROGRESS') {
     return error('matchNotInProgress', 'matchControl.matchNotInProgress');
   }
-  if (!Number.isInteger(homePoints) || !Number.isInteger(awayPoints) || homePoints < 0 || awayPoints < 0) {
+  if (
+    !Number.isInteger(homePoints) ||
+    !Number.isInteger(awayPoints) ||
+    homePoints < 0 ||
+    awayPoints < 0
+  ) {
     return error('invalidDirectScore', 'matchControl.invalidDirectScore');
   }
 
@@ -223,9 +227,7 @@ export function finishDirectMatch(
   }
 
   const isSuddenDeath =
-    isEliminationStage &&
-    homePoints === awayPoints &&
-    suddenDeathWinnerTeamId !== null;
+    isEliminationStage && homePoints === awayPoints && suddenDeathWinnerTeamId !== null;
   return {
     ok: true,
     value: {
@@ -288,6 +290,113 @@ export function finishWalkover(
         winnerTeamId: absentIsHome ? resolved.awayTeamId : resolved.homeTeamId,
       },
       finishedAt: formatIsoDateTime(clock.nowMs()),
+    },
+  };
+}
+
+export function editFinalizedMatch(
+  snapshot: TournamentSnapshot,
+  resolvedMatches: readonly ResolvedMatch[],
+  matchId: Id,
+  result: MatchResult,
+  events: readonly MatchEvent[],
+  clock: Clock,
+): Result<{ readonly match: Match; readonly events: readonly MatchEvent[] }, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (match.status !== 'FINISHED' || match.result === null) {
+    return error('matchNotFinished', 'matchControl.matchNotFinished');
+  }
+  if (
+    !Number.isInteger(result.homePoints) ||
+    !Number.isInteger(result.awayPoints) ||
+    result.homePoints < 0 ||
+    result.awayPoints < 0
+  ) {
+    return error('invalidEditedScore', 'matchControl.invalidEditedScore');
+  }
+
+  const resolved = resolvedMatches.find((candidate) => candidate.matchId === matchId);
+  if (!resolved?.isPlayable || resolved.homeTeamId === null || resolved.awayTeamId === null) {
+    return error('matchNotResolved', 'matchControl.matchNotResolved');
+  }
+  if (
+    events.some((event) => event.matchId !== matchId) ||
+    new Set(events.map((event) => event.id)).size !== events.length
+  ) {
+    return error('invalidEditedEvents', 'matchControl.invalidEditedEvents');
+  }
+  for (const event of events) {
+    const playerResult = validateMatchEventPlayer(event, snapshot.players);
+    if (!playerResult.ok) return playerResult;
+  }
+
+  if (result.mode === 'DETAIL') {
+    const score = computeScore(events, resolved.homeTeamId, resolved.awayTeamId);
+    if (
+      !score.ok ||
+      score.value.home !== result.homePoints ||
+      score.value.away !== result.awayPoints
+    ) {
+      return error('editedEventsDoNotMatchScore', 'matchControl.editedEventsDoNotMatchScore');
+    }
+  } else if (events.length > 0) {
+    return error('invalidEditedEvents', 'matchControl.invalidEditedEvents');
+  }
+
+  const stage = snapshot.stages.find((candidate) => candidate.id === match.stageId);
+  const isEliminationStage =
+    stage?.type === 'KNOCKOUT' ||
+    stage?.type === 'CUP' ||
+    stage?.type === 'WINNERS_BRACKET' ||
+    stage?.type === 'LOSERS_BRACKET' ||
+    stage?.type === 'GRAND_FINAL';
+  const isTied = result.homePoints === result.awayPoints;
+  const isParticipantWinner =
+    result.winnerTeamId === resolved.homeTeamId || result.winnerTeamId === resolved.awayTeamId;
+
+  if (result.mode === 'WALKOVER') {
+    const absentAtHome = result.winnerTeamId === resolved.awayTeamId;
+    const expectedHome = absentAtHome
+      ? snapshot.tournament.rules.walkoverScore.loser
+      : snapshot.tournament.rules.walkoverScore.winner;
+    const expectedAway = absentAtHome
+      ? snapshot.tournament.rules.walkoverScore.winner
+      : snapshot.tournament.rules.walkoverScore.loser;
+    if (
+      result.definition !== 'WALKOVER' ||
+      !isParticipantWinner ||
+      result.homePoints !== expectedHome ||
+      result.awayPoints !== expectedAway
+    ) {
+      return error('invalidEditedWalkover', 'matchControl.invalidEditedWalkover');
+    }
+  } else if (
+    result.definition === 'WALKOVER' ||
+    (result.definition === 'SUDDEN_DEATH' &&
+      (!isEliminationStage || !isTied || !isParticipantWinner)) ||
+    (result.definition === 'REGULAR' && result.winnerTeamId !== null) ||
+    (result.definition === 'SUDDEN_DEATH' && result.winnerTeamId === null) ||
+    (isEliminationStage && isTied && result.definition !== 'SUDDEN_DEATH')
+  ) {
+    return error('invalidEditedDefinition', 'matchControl.invalidEditedDefinition');
+  }
+
+  return {
+    ok: true,
+    value: {
+      match: {
+        ...match,
+        result,
+        finishedAt: formatIsoDateTime(clock.nowMs()),
+      },
+      events: [...events],
     },
   };
 }

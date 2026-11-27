@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildMatchControlView,
+  editFinalizedMatch,
   finishDetailMatch,
   finishDirectMatch,
   finishWalkover,
@@ -144,6 +145,126 @@ describe('match control', () => {
           winnerTeamId: 'home-one',
         },
       },
+    });
+  });
+
+  it('edits a finalized direct result while preserving the original match inputs', () => {
+    const finished = {
+      ...match('one', 1, 'FINISHED'),
+      result: {
+        mode: 'DIRECT',
+        homePoints: 7,
+        awayPoints: 0,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      } as const,
+      finishedAt: '2026-11-26T12:00:00.000Z',
+    };
+    const base = snapshot([finished]);
+    const edited = editFinalizedMatch(
+      base,
+      [resolved('one')],
+      'one',
+      {
+        mode: 'DIRECT',
+        homePoints: 10,
+        awayPoints: 5,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
+      [],
+      createFixedClock(Date.parse('2026-11-26T12:30:00.000Z')),
+    );
+
+    expect(edited).toMatchObject({
+      ok: true,
+      value: {
+        match: {
+          status: 'FINISHED',
+          result: { homePoints: 10, awayPoints: 5 },
+          finishedAt: '2026-11-26T12:30:00.000Z',
+        },
+        events: [],
+      },
+    });
+    expect(finished.result.homePoints).toBe(7);
+  });
+
+  it('rejects a detail edit whose events do not produce the submitted score', () => {
+    const finished = {
+      ...match('one', 1, 'FINISHED'),
+      result: {
+        mode: 'DIRECT',
+        homePoints: 7,
+        awayPoints: 0,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      } as const,
+    };
+    const edited = editFinalizedMatch(
+      snapshot([finished]),
+      [resolved('one')],
+      'one',
+      {
+        mode: 'DETAIL',
+        homePoints: 7,
+        awayPoints: 0,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
+      [],
+      createFixedClock(0),
+    );
+
+    expect(edited).toMatchObject({
+      ok: false,
+      error: { code: 'editedEventsDoNotMatchScore' },
+    });
+  });
+
+  it('rejects a regular tied result for a knockout match', () => {
+    const finished = {
+      ...match('one', 1, 'FINISHED'),
+      stageId: 'knockout',
+      result: {
+        mode: 'DIRECT',
+        homePoints: 10,
+        awayPoints: 5,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      } as const,
+    };
+    const base = snapshot([finished]);
+    const knockout = {
+      ...base,
+      stages: [
+        {
+          id: 'knockout',
+          name: 'Final',
+          type: 'KNOCKOUT' as const,
+          order: 1,
+          cup: null,
+        },
+      ],
+    };
+    const edited = editFinalizedMatch(
+      knockout,
+      [resolved('one')],
+      'one',
+      {
+        mode: 'DIRECT',
+        homePoints: 10,
+        awayPoints: 10,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
+      [],
+      createFixedClock(0),
+    );
+
+    expect(edited).toMatchObject({
+      ok: false,
+      error: { code: 'invalidEditedDefinition' },
     });
   });
 
@@ -433,9 +554,7 @@ describe('match control', () => {
     const live = { ...match('one', 1, 'IN_PROGRESS'), stageId: 'knockout' };
     const base = {
       ...snapshot([live]),
-      stages: [
-        { id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null },
-      ],
+      stages: [{ id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null }],
     };
 
     const result = finishDirectMatch(

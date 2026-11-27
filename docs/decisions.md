@@ -1,5 +1,14 @@
 # Decision log
 
+## 2026-11-26 - HU-38 - Result editing and cascade
+
+- **Decision:** Add finalized-result editing to the existing fixture screen, including score, mode, definition, and event author/team/type changes.
+- **Reason:** The fixture is already the single place that displays all matches and their resolved participants; the operator can review changes in context without adding a separate route.
+- **Decision:** Preserve `AnalyzeEditImpact(before, after)` as declared in `model.ts` and derive a deterministic RNG seed from the existing snapshot for newly generated tiebreak draws.
+- **Reason:** The model contract is explicitly protected, while repeatable draw generation is necessary for the preview and atomic repository save to report the same impact.
+- **Decision:** Create `BEFORE_CASCADE_EDIT` backup and reset affected matches/events in one Dexie transaction; restore that exact backup for the immediate undo action.
+- **Reason:** A partial reset could leave downstream references inconsistent, and restoring the complete snapshot recovers all tournament state changed by the cascade.
+
 ## 2026-11-27 - HU-36 - Sudden death for knockout ties
 
 - **Decision:** Require an explicit resolved-team winner before a tied detail or direct elimination match can be finalized, and store it with `definition = SUDDEN_DEATH`.
