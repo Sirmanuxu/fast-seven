@@ -4,6 +4,7 @@ import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { TournamentSnapshot } from '../../domain/model';
+import type { TournamentFileValidationError } from '../../data/tournament-file-validation';
 import {
   checksumTournamentData,
   createTournamentFile,
@@ -121,6 +122,53 @@ export class TournamentFileBarComponent implements OnInit {
     }
   }
 
+  protected async onTournamentFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const selectedFile = input.files?.[0];
+    if (!selectedFile) return;
+
+    this.saving.set(true);
+    this.statusMessage.set(null);
+    try {
+      const { validateTournamentFileText } = await import('../../data/tournament-file-validation');
+      const validation = await validateTournamentFileText(await selectedFile.text());
+      if (!validation.ok) {
+        showErrorPopup(this.validationMessage(validation.error));
+        return;
+      }
+
+      const { file, migrated } = validation.value;
+      const finishedMatches = file.data.matches.filter(
+        (match) => match.status === 'FINISHED',
+      ).length;
+      const accepted = window.confirm(
+        TOURNAMENT_FILE_STRINGS.confirmLoad(
+          file.data.tournament.name,
+          new Date(file.data.tournament.date).toLocaleDateString('es-AR'),
+          file.data.teams.length,
+          finishedMatches,
+          migrated,
+          validation.value.warnings.map(
+            (warning) => TOURNAMENT_FILE_STRINGS.invariantWarnings[warning],
+          ),
+        ),
+      );
+      if (!accepted) return;
+
+      await tournamentRepository.loadTournamentFile(file);
+      this.lastObservedSnapshot = null;
+      await this.refreshStatus();
+      this.statusMessage.set(TOURNAMENT_FILE_STRINGS.loaded);
+      await this.router.navigateByUrl('/panel');
+    } catch (error) {
+      console.error('Loading tournament file failed', error);
+      showErrorPopup(TOURNAMENT_FILE_STRINGS.loadFailed);
+    } finally {
+      input.value = '';
+      this.saving.set(false);
+    }
+  }
+
   private async refreshStatus(): Promise<void> {
     if (this.refreshing) return;
     this.refreshing = true;
@@ -144,9 +192,7 @@ export class TournamentFileBarComponent implements OnInit {
       const stateMatchesTournament = fileState.tournamentId === snapshot.tournament.id;
       this.savedChecksum = stateMatchesTournament ? fileState.checksum : null;
       const savedAt =
-        stateMatchesTournament && fileState.exportedAt
-          ? Date.parse(fileState.exportedAt)
-          : null;
+        stateMatchesTournament && fileState.exportedAt ? Date.parse(fileState.exportedAt) : null;
       this.lastSavedAtMs.set(savedAt !== null && Number.isFinite(savedAt) ? savedAt : null);
 
       const serializedSnapshot = JSON.stringify(snapshot);
@@ -190,5 +236,26 @@ export class TournamentFileBarComponent implements OnInit {
     }
     const changedAt = Date.parse(lastChangedAt);
     this.unsavedSinceMs.set(Number.isFinite(changedAt) ? changedAt : Date.now());
+  }
+
+  private validationMessage(error: TournamentFileValidationError): string {
+    switch (error) {
+      case 'INVALID_JSON':
+        return TOURNAMENT_FILE_STRINGS.invalidJson;
+      case 'INVALID_FORMAT':
+        return TOURNAMENT_FILE_STRINGS.invalidFormat;
+      case 'NEWER_SCHEMA':
+        return TOURNAMENT_FILE_STRINGS.newerSchema;
+      case 'UNSUPPORTED_SCHEMA':
+        return TOURNAMENT_FILE_STRINGS.unsupportedSchema;
+      case 'CHECKSUM_MISMATCH':
+        return TOURNAMENT_FILE_STRINGS.checksumMismatch;
+      case 'INVALID_STRUCTURE':
+        return TOURNAMENT_FILE_STRINGS.invalidStructure;
+      case 'MISSING_IDS':
+        return TOURNAMENT_FILE_STRINGS.missingIds;
+      case 'INVALID_REFERENCES':
+        return TOURNAMENT_FILE_STRINGS.invalidReferences;
+    }
   }
 }

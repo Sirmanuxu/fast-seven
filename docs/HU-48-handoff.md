@@ -12,8 +12,7 @@
 - [x] Backup listing and restore are asynchronous; the UI remains usable while IndexedDB work is
   pending.
 - [x] Quota exhaustion raises a persistent warning recommending an external tournament file.
-- [ ] HU-50's file-loading operation does not exist yet. The `BEFORE_LOAD_FILE` reason is already
-  available, but HU-50 must create that backup in the same transaction as loading the file.
+- [x] HU-50 creates the `BEFORE_LOAD_FILE` backup in the same transaction as loading the file.
 
 ## Verification
 

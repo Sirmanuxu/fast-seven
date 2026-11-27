@@ -704,3 +704,21 @@
 - **Decision:** Raise the initial bundle error budget to 1.03 MB.
 - **Reason:** The required global export control exceeded the existing 1.02 MB limit by 4.84 kB;
   retaining the old limit would make the production build fail.
+
+## 2026-11-27 - HU-50 - Load tournament from a file
+
+- **Decision:** Migrate schema version 1 by restoring `backupIntervalMin` to 5 and setting the
+  tournament schema marker to version 2.
+- **Reason:** HU-48 introduced the backup interval, and 5 minutes is the existing default for new
+  tournaments.
+- **Decision:** Reject missing or duplicate entity IDs and broken references; surface other
+  checkable invariant violations as warnings in the confirmation prompt.
+- **Reason:** Invalid references threaten data integrity, while the referee rule says to warn
+  rather than block non-critical issues.
+- **Decision:** Save the pre-load backup, replace all tournament records, reset projector state,
+  and record the loaded file metadata in one Dexie transaction.
+- **Reason:** A load must be recoverable and must not leave the projector pointing to entities in
+  the replaced tournament.
+- **Decision:** Raise the initial bundle error budget to 1.06 MB.
+- **Reason:** The required load flow exceeded the HU-49 1.03 MB limit by 16.80 kB; retaining that
+  limit would make the production build fail.

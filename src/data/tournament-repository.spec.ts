@@ -237,6 +237,84 @@ describe('TournamentRepository backups', () => {
     );
   });
 
+  it('backs up and replaces every tournament table atomically when loading a file', async () => {
+    const currentSnapshot = snapshot({
+      ...tournament('RUNNING'),
+      updatedAt: '2026-11-27T00:00:00.000Z',
+    });
+    const importedSnapshot = snapshot({
+      ...tournament('SETUP'),
+      id: 'imported',
+      name: 'Imported',
+    });
+    const file = {
+      kind: 'rugby7-tournament' as const,
+      schemaVersion: 2,
+      appVersion: '0.49.0',
+      exportedAt: '2026-11-26T00:00:00.000Z',
+      checksum: 'a'.repeat(64),
+      data: importedSnapshot,
+    };
+    const repository = new TournamentRepository();
+    vi.spyOn(repository, 'getSnapshot').mockResolvedValue(currentSnapshot);
+    vi.spyOn(repository, 'getTournamentFileState').mockResolvedValue({
+      id: 'current',
+      tournamentId: currentSnapshot.tournament.id,
+      exportedAt: '2026-11-25T00:00:00.000Z',
+      checksum: 'b'.repeat(64),
+      warningIntervalMin: 30,
+    });
+    const savedBackup = vi.spyOn(tournamentDatabase.backups, 'add').mockResolvedValue('backup');
+    vi.spyOn(tournamentDatabase.backups, 'toArray').mockResolvedValue([]);
+    vi.spyOn(tournamentDatabase.tournament, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.players, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.teams, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.stages, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.groups, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.matches, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.events, 'clear').mockResolvedValue(undefined);
+    vi.spyOn(tournamentDatabase.draws, 'clear').mockResolvedValue(undefined);
+    const savedTournament = vi.spyOn(tournamentDatabase.tournament, 'put').mockResolvedValue('t');
+    vi.spyOn(tournamentDatabase.players, 'bulkPut').mockResolvedValue('players');
+    vi.spyOn(tournamentDatabase.teams, 'bulkPut').mockResolvedValue('teams');
+    vi.spyOn(tournamentDatabase.stages, 'bulkPut').mockResolvedValue('stages');
+    vi.spyOn(tournamentDatabase.groups, 'bulkPut').mockResolvedValue('groups');
+    vi.spyOn(tournamentDatabase.matches, 'bulkPut').mockResolvedValue('matches');
+    vi.spyOn(tournamentDatabase.events, 'bulkPut').mockResolvedValue('events');
+    vi.spyOn(tournamentDatabase.draws, 'bulkPut').mockResolvedValue('draws');
+    const savedProjectorState = vi
+      .spyOn(tournamentDatabase.projectorState, 'put')
+      .mockResolvedValue('current');
+    const savedFileState = vi
+      .spyOn(tournamentDatabase.tournamentFileState, 'put')
+      .mockResolvedValue('current');
+
+    await repository.loadTournamentFile(file);
+
+    expect(savedBackup).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'BEFORE_LOAD_FILE', snapshot: currentSnapshot }),
+    );
+    expect(savedTournament).toHaveBeenCalledWith(importedSnapshot.tournament);
+    expect(savedProjectorState).toHaveBeenCalledWith({
+      id: 'current',
+      forcedView: null,
+      message: null,
+      timer: null,
+    });
+    expect(savedFileState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tournamentId: 'imported',
+        exportedAt: file.exportedAt,
+        checksum: file.checksum,
+      }),
+    );
+    expect(tournamentDatabase.transaction).toHaveBeenCalledWith(
+      'rw',
+      expect.arrayContaining(['backups', 'projectorState', 'tournamentFileState']),
+      expect.any(Function),
+    );
+  });
+
   it('announces quota exhaustion and rethrows the backup error', async () => {
     const quotaError = new DOMException('Quota exceeded', 'QuotaExceededError');
     vi.spyOn(tournamentDatabase.backups, 'add').mockRejectedValue(quotaError);

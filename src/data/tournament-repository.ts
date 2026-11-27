@@ -19,6 +19,7 @@ import {
   TournamentRules,
   TournamentSnapshot,
   FormatParams,
+  TournamentFile,
 } from '../domain/model';
 import {
   StoredTournamentFileState,
@@ -200,6 +201,67 @@ export class TournamentRepository {
           exportedAt,
           checksum,
         });
+      },
+    );
+  }
+
+  async loadTournamentFile(file: TournamentFile): Promise<void> {
+    const snapshot = file.data;
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+        'projectorState',
+        'tournamentFileState',
+      ],
+      async () => {
+        const current = await this.getSnapshot();
+        if (current) await this.writeBackup('BEFORE_LOAD_FILE', current);
+
+        await Promise.all([
+          tournamentDatabase.tournament.clear(),
+          tournamentDatabase.players.clear(),
+          tournamentDatabase.teams.clear(),
+          tournamentDatabase.stages.clear(),
+          tournamentDatabase.groups.clear(),
+          tournamentDatabase.matches.clear(),
+          tournamentDatabase.events.clear(),
+          tournamentDatabase.draws.clear(),
+        ]);
+        await Promise.all([
+          tournamentDatabase.tournament.put(snapshot.tournament),
+          tournamentDatabase.players.bulkPut([...snapshot.players]),
+          tournamentDatabase.teams.bulkPut([...snapshot.teams]),
+          tournamentDatabase.stages.bulkPut([...snapshot.stages]),
+          tournamentDatabase.groups.bulkPut([...snapshot.groups]),
+          tournamentDatabase.matches.bulkPut([...snapshot.matches]),
+          tournamentDatabase.events.bulkPut([...snapshot.events]),
+          tournamentDatabase.draws.bulkPut([...snapshot.draws]),
+        ]);
+
+        const fileState = await this.getTournamentFileState();
+        await Promise.all([
+          tournamentDatabase.projectorState.put({
+            id: 'current',
+            forcedView: null,
+            message: null,
+            timer: null,
+          }),
+          tournamentDatabase.tournamentFileState.put({
+            ...fileState,
+            tournamentId: snapshot.tournament.id,
+            exportedAt: file.exportedAt,
+            checksum: file.checksum,
+          }),
+        ]);
       },
     );
   }
@@ -1856,7 +1918,6 @@ export class TournamentRepository {
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: new Date().toISOString(),
         });
-
       },
     );
   }

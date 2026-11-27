@@ -2,11 +2,17 @@ import { TournamentFile, TournamentSnapshot } from '../domain/model';
 import { TOURNAMENT_SCHEMA_VERSION } from './tournament-database';
 
 export async function checksumTournamentData(data: TournamentSnapshot): Promise<string> {
+  return checksumTournamentValue(data);
+}
+
+export async function checksumTournamentValue(data: unknown): Promise<string> {
   const cryptoApi = globalThis.crypto;
   if (!cryptoApi?.subtle) {
     throw new Error('Secure checksum support is unavailable in this browser');
   }
-  const bytes = new TextEncoder().encode(JSON.stringify(data));
+  const serialized = JSON.stringify(data);
+  if (serialized === undefined) throw new Error('Tournament data cannot be serialized');
+  const bytes = new TextEncoder().encode(serialized);
   const digest = await cryptoApi.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

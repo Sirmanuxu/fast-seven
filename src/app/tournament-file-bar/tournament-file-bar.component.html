@@ -3,6 +3,16 @@
     <button type="button" (click)="saveTournamentFile()" [disabled]="saving()">
       {{ saving() ? strings.saving : strings.save }}
     </button>
+    <button type="button" (click)="tournamentFileInput.click()" [disabled]="saving()">
+      {{ strings.load }}
+    </button>
+    <input
+      #tournamentFileInput
+      class="file-input"
+      type="file"
+      accept="application/json,.json"
+      (change)="onTournamentFileSelected($event)"
+    />
     <p role="status">{{ lastSavedLabel() }}</p>
     @if (unsavedWarningVisible()) {
       <p role="alert">{{ strings.unsavedWarning(warningIntervalMin()) }}</p>

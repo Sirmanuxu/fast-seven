@@ -9,3 +9,7 @@
 .tournament-file-bar p {
   margin: 0;
 }
+
+.file-input {
+  display: none;
+}
