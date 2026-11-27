@@ -1,7 +1,15 @@
 <main>
   <header class="screen-header">
     <p class="eyebrow">{{ strings.projectorTitle }}</p>
-    <h1>{{ viewTitle(viewModel().activeView) }}</h1>
+    <h1>
+      @if (
+        viewModel().activeView === 'MATCH_PLATE' && viewModel().currentMatch?.status === 'FINISHED'
+      ) {
+        {{ strings.finalMatchResult }}
+      } @else {
+        {{ viewTitle(viewModel().activeView) }}
+      }
+    </h1>
     <button type="button" class="fullscreen-button" (click)="requestFullscreen()">
       {{ strings.projectorFullscreen }}
     </button>

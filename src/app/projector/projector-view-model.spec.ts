@@ -127,6 +127,40 @@ describe('projector view model', () => {
     });
   });
 
+  it('can display a recently finished match and its final score', () => {
+    const finishedSnapshot: TournamentSnapshot = {
+      ...snapshot,
+      matches: [
+        {
+          ...currentMatch,
+          status: 'FINISHED',
+          result: {
+            mode: 'DIRECT',
+            homePoints: 12,
+            awayPoints: 7,
+            definition: 'REGULAR',
+            winnerTeamId: null,
+          },
+          finishedAt: '2026-11-27T12:01:00.000Z',
+        },
+      ],
+    };
+    const view = buildProjectorViewModel(
+      finishedSnapshot,
+      null,
+      Date.parse('2026-11-27T12:02:00.000Z'),
+      'match',
+    );
+
+    expect(view.currentMatch).toMatchObject({
+      id: 'match',
+      status: 'FINISHED',
+      homeScore: 12,
+      awayScore: 7,
+    });
+    expect(view.availableViews).toContain('MATCH_PLATE');
+  });
+
   it('omits a forced scorer view when there are no scorers and falls back to context', () => {
     const noScorersSnapshot = { ...snapshot, events: [] };
     const view = buildProjectorViewModel(

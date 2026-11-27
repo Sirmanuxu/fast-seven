@@ -37,6 +37,7 @@ export const PROJECTOR_STRINGS = {
   versus: 'vs.',
   matchInProgress: 'En juego',
   matchFinished: 'Finalizado',
+  finalMatchResult: 'Resultado final',
   matchPending: 'Pendiente',
   matchLabel: 'Partido',
   kickoff: 'Hora tentativa',

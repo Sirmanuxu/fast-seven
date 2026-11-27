@@ -4,6 +4,7 @@ import { PROJECTOR_STRINGS } from '../../i18n/projector-strings';
 import { ProjectorChannel, ProjectorChannelMessage } from '../../sync/projector-channel';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { ProjectorState, ProjectorViewKind, Team, TournamentSnapshot } from '../../domain/model';
+import { selectProjectorContext } from '../../domain/projector-context';
 import {
   buildProjectorViewModel,
   getTiebreakLabel,
@@ -32,11 +33,39 @@ export class ProjectorComponent implements OnInit {
   protected readonly connected = signal(false);
   protected readonly legacyMessage = signal<string | null>(null);
   protected readonly timerNow = signal(Date.now());
+  protected readonly contextNow = signal(Date.now());
   protected readonly subviewIndex = signal(0);
-  protected readonly viewModel = computed(() =>
-    buildProjectorViewModel(this.snapshot(), this.projectorState().forcedView, Date.now()),
-  );
+  protected readonly rotationIndex = signal(0);
+  protected readonly rotationPlan = computed(() => {
+    const snapshot = this.snapshot();
+    return selectProjectorContext({
+      tournamentStatus: snapshot?.tournament.status ?? null,
+      matches: snapshot?.matches ?? [],
+      timer: this.projectorState().timer,
+      nowEpochMs: this.contextNow(),
+    });
+  });
+  protected readonly viewModel = computed(() => {
+    const plan = this.rotationPlan();
+    const state = this.projectorState();
+    const model = buildProjectorViewModel(
+      this.snapshot(),
+      state.forcedView,
+      this.contextNow(),
+      plan.resultMatchId,
+    );
+    if (state.forcedView) return model;
+
+    const availableViews = plan.views.filter((view) => model.availableViews.includes(view.kind));
+    const selectedView =
+      availableViews.length > 0
+        ? availableViews[this.rotationIndex() % availableViews.length]
+        : undefined;
+    return selectedView ? { ...model, activeView: selectedView.kind } : model;
+  });
   private latestSequence = 0;
+  private rotationContextKey: string | null = null;
+  private rotationDeadlineEpochMs = 0;
   private readonly senderId =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -45,6 +74,7 @@ export class ProjectorComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.snapshot.set(await tournamentRepository.getSnapshot());
     this.projectorState.set(await tournamentRepository.getProjectorState());
+    this.updateAutomaticRotation(Date.now());
 
     const stopListening = this.projectorChannel.listen((message) => {
       this.applyMessage(message);
@@ -61,7 +91,11 @@ export class ProjectorComponent implements OnInit {
     }, 2000);
     this.destroyRef.onDestroy(() => window.clearInterval(heartbeatTimer));
 
-    const timerTick = window.setInterval(() => this.timerNow.set(Date.now()), 250);
+    const timerTick = window.setInterval(() => {
+      const now = Date.now();
+      this.timerNow.set(now);
+      this.updateAutomaticRotation(now);
+    }, 250);
     this.destroyRef.onDestroy(() => window.clearInterval(timerTick));
 
     const subviewRotation = window.setInterval(() => {
@@ -150,6 +184,7 @@ export class ProjectorComponent implements OnInit {
   private async resync(): Promise<void> {
     this.snapshot.set(await tournamentRepository.getSnapshot());
     this.projectorState.set(await tournamentRepository.getProjectorState());
+    this.updateAutomaticRotation(Date.now());
     this.projectorChannel.requestResync(this.senderId);
   }
 
@@ -160,9 +195,42 @@ export class ProjectorComponent implements OnInit {
       this.snapshot.set(message.snapshot);
       this.projectorState.set(message.projectorState);
       this.connected.set(true);
+      this.updateAutomaticRotation(Date.now());
     } else if (message.type === 'LEGACY_PING') {
       this.legacyMessage.set(message.text);
       this.connected.set(true);
     }
+  }
+
+  private updateAutomaticRotation(nowEpochMs: number): void {
+    const snapshot = this.snapshot();
+    const state = this.projectorState();
+    const plan = selectProjectorContext({
+      tournamentStatus: snapshot?.tournament.status ?? null,
+      matches: snapshot?.matches ?? [],
+      timer: state.timer,
+      nowEpochMs,
+    });
+
+    if (plan.contextKey !== this.rotationContextKey) {
+      this.rotationContextKey = plan.contextKey;
+      this.rotationIndex.set(0);
+      this.rotationDeadlineEpochMs = nowEpochMs + plan.viewDurationMs;
+      this.contextNow.set(nowEpochMs);
+      return;
+    }
+
+    if (nowEpochMs < this.rotationDeadlineEpochMs) return;
+
+    if (!state.forcedView) {
+      const model = buildProjectorViewModel(snapshot, null, nowEpochMs, plan.resultMatchId);
+      const availableViews = plan.views.filter((view) => model.availableViews.includes(view.kind));
+      if (availableViews.length > 1) {
+        this.rotationIndex.update((index) => (index + 1) % availableViews.length);
+      }
+    }
+
+    this.rotationDeadlineEpochMs = nowEpochMs + plan.viewDurationMs;
+    this.contextNow.set(nowEpochMs);
   }
 }

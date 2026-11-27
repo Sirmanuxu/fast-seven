@@ -183,6 +183,7 @@ export function buildProjectorViewModel(
   snapshot: TournamentSnapshot | null,
   forcedView: ProjectorView | null,
   nowEpochMs: number,
+  highlightedMatchId: string | null = null,
 ): ProjectorViewModel {
   const empty: ProjectorViewModel = {
     activeView: 'TEAMS_AND_FIXTURE',
@@ -277,7 +278,12 @@ export function buildProjectorViewModel(
       return (leftMatch?.order ?? 0) - (rightMatch?.order ?? 0);
     });
 
-  const currentMatch = fixture.find((match) => match.status === 'IN_PROGRESS') ?? null;
+  const currentMatch =
+    fixture.find((match) => match.status === 'IN_PROGRESS') ??
+    (highlightedMatchId
+      ? (fixture.find((match) => match.id === highlightedMatchId && match.status === 'FINISHED') ??
+        null)
+      : null);
   const upcomingMatches = [...fixture]
     .filter(
       (match) =>
