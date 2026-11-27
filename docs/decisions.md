@@ -673,3 +673,21 @@
 
 - **Decision:** Show every group’s independent standings table together in the projector’s standings view, and stop rotating between groups.
 - **Reason:** The operator can see all group positions at once without implying that teams from different groups share one ranking. Bracket-stage subview rotation remains unchanged.
+
+## 2026-11-27 - HU-48 - Rotating backups
+
+- **Decision:** Keep `TOURNAMENT_START` outside the rotating set and cap every other backup reason at
+  the newest 10 snapshots.
+- **Reason:** The initial tournament state must remain recoverable even after periodic and
+  event-triggered backups rotate.
+- **Decision:** Create periodic backups only after the configured interval and only when the full
+  tournament snapshot differs from the latest backup.
+- **Reason:** Comparing persisted snapshots avoids relying on every mutation path to update a
+  separate dirty flag.
+- **Decision:** Restore the selected snapshot in one Dexie transaction after saving the current
+  snapshot as a `MANUAL` backup; leave projector state unchanged because it is not part of a
+  tournament backup.
+- **Reason:** This preserves a rollback path and follows the existing snapshot contract.
+- **Decision:** Publish quota exhaustion through a data-layer event so the application shell can
+  keep a visible warning while the repository still rejects the failed write.
+- **Reason:** Backup failure must be surfaced without disguising it as a successful save.
