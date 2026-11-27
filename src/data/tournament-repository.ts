@@ -8,6 +8,7 @@ import {
   Group,
   Match,
   MatchEvent,
+  MatchResult,
   Player,
   RosterLimits,
   ScheduleConfig,
@@ -27,10 +28,12 @@ import {
   finishDirectMatch,
   finishMatch as finishMatchDomain,
   finishWalkover as finishWalkoverDomain,
+  editFinalizedMatch as editFinalizedMatchDomain,
   startMatch as startMatchDomain,
   switchDirectToDetail,
   undoWalkover as undoWalkoverDomain,
 } from '../domain/match-control';
+import { analyzeEditImpactWithDraws } from '../domain/edit-impact';
 import { resolveMatches } from '../domain/resolve-matches';
 import { createFixedClock } from '../domain/clock';
 import { createSeededRng } from '../domain/rng';
@@ -38,6 +41,14 @@ import { createSeededRng } from '../domain/rng';
 export interface MatchSaveInput {
   readonly match: Match;
   readonly events: readonly MatchEvent[];
+}
+
+export interface EditFinalizedMatchInput {
+  readonly matchId: string;
+  readonly result: MatchResult;
+  readonly events: readonly MatchEvent[];
+  readonly expectedAffectedMatchIds: readonly string[];
+  readonly changedAt: string;
 }
 
 export interface MatchOrderUpdate {
@@ -442,6 +453,142 @@ export class TournamentRepository {
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
         });
+      },
+    );
+  }
+
+  async editFinalizedMatch(input: EditFinalizedMatchInput): Promise<string | null> {
+    return tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const seed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'match-control';
+        const resolved = resolveMatches(snapshot, createSeededRng(seed));
+        const edited = editFinalizedMatchDomain(
+          snapshot,
+          resolved,
+          input.matchId,
+          input.result,
+          input.events,
+          createFixedClock(Date.parse(input.changedAt)),
+        );
+        if (!edited.ok) {
+          throw new Error(`Finalized match cannot be edited: ${edited.error.code}`);
+        }
+
+        const after: TournamentSnapshot = {
+          ...snapshot,
+          matches: snapshot.matches.map((match) =>
+            match.id === input.matchId ? edited.value.match : match,
+          ),
+          events: [
+            ...snapshot.events.filter((event) => event.matchId !== input.matchId),
+            ...edited.value.events,
+          ],
+        };
+        const analysis = analyzeEditImpactWithDraws(snapshot, after);
+        const expectedIds = [...input.expectedAffectedMatchIds].sort();
+        const actualIds = analysis.impact.affected.map((entry) => entry.matchId).sort();
+        if (
+          expectedIds.length !== actualIds.length ||
+          expectedIds.some((matchId, index) => matchId !== actualIds[index])
+        ) {
+          throw new Error(
+            'Match edit impact changed; refresh the fixture and review the edit again',
+          );
+        }
+
+        let backupId: string | null = null;
+        if (analysis.impact.affected.length > 0) {
+          backupId = (await this.writeBackup('BEFORE_CASCADE_EDIT', snapshot)).id;
+          const affectedIds = new Set(analysis.impact.affected.map((entry) => entry.matchId));
+          const matchesToReset = snapshot.matches
+            .filter((match) => affectedIds.has(match.id) && match.id !== input.matchId)
+            .map((match) => ({
+              ...match,
+              status: 'PENDING' as const,
+              result: null,
+              startedAt: null,
+              finishedAt: null,
+            }));
+          await tournamentDatabase.matches.bulkPut(matchesToReset);
+          for (const match of matchesToReset) {
+            await tournamentDatabase.events.where('matchId').equals(match.id).delete();
+          }
+        }
+
+        await tournamentDatabase.matches.put(edited.value.match);
+        await tournamentDatabase.events.where('matchId').equals(input.matchId).delete();
+        await tournamentDatabase.events.bulkPut([...edited.value.events]);
+        if (analysis.draws.length > 0) {
+          await tournamentDatabase.draws.bulkPut([...analysis.draws]);
+        }
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: input.changedAt,
+        });
+        return backupId;
+      },
+    );
+  }
+
+  async restoreCascadeEdit(backupId: string, changedAt: string): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const backup = await tournamentDatabase.backups.get(backupId);
+        if (!backup || backup.reason !== 'BEFORE_CASCADE_EDIT') {
+          throw new Error('Cascade edit backup is unavailable');
+        }
+        const snapshot = backup.snapshot;
+        await Promise.all([
+          tournamentDatabase.tournament.clear(),
+          tournamentDatabase.players.clear(),
+          tournamentDatabase.teams.clear(),
+          tournamentDatabase.stages.clear(),
+          tournamentDatabase.groups.clear(),
+          tournamentDatabase.matches.clear(),
+          tournamentDatabase.events.clear(),
+          tournamentDatabase.draws.clear(),
+        ]);
+        await Promise.all([
+          tournamentDatabase.tournament.put({
+            ...snapshot.tournament,
+            updatedAt: changedAt,
+          }),
+          tournamentDatabase.players.bulkPut([...snapshot.players]),
+          tournamentDatabase.teams.bulkPut([...snapshot.teams]),
+          tournamentDatabase.stages.bulkPut([...snapshot.stages]),
+          tournamentDatabase.groups.bulkPut([...snapshot.groups]),
+          tournamentDatabase.matches.bulkPut([...snapshot.matches]),
+          tournamentDatabase.events.bulkPut([...snapshot.events]),
+          tournamentDatabase.draws.bulkPut([...snapshot.draws]),
+          tournamentDatabase.backups.delete(backupId),
+        ]);
       },
     );
   }
