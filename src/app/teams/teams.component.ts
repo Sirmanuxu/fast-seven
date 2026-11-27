@@ -38,7 +38,6 @@ export class TeamsComponent implements OnInit {
   protected readonly selectedTeamId = signal<string | null>(null);
   protected readonly unassignedSelectedIds = signal<ReadonlySet<string>>(new Set());
   protected readonly teamSelectedIds = signal<ReadonlySet<string>>(new Set());
-  protected readonly drawNewTeamCount = signal(1);
   protected readonly drawBalance = signal(false);
   protected readonly drawSelectedExistingIds = signal<ReadonlySet<string>>(new Set());
   protected readonly drawPlan = signal<TeamDrawPlan | null>(null);
@@ -263,14 +262,8 @@ export class TeamsComponent implements OnInit {
       showErrorPopup(TEAM_STRINGS.drawNoPlayers);
       return;
     }
-    const newTeamCount = Math.trunc(this.drawNewTeamCount());
-    if (!Number.isInteger(newTeamCount) || newTeamCount < 0) {
-      showErrorPopup(TEAM_STRINGS.drawInvalidCount);
-      return;
-    }
-
     const selectedExistingIds = this.drawSelectedExistingIds();
-    if (newTeamCount === 0 && selectedExistingIds.size === 0) {
+    if (selectedExistingIds.size === 0) {
       showErrorPopup(TEAM_STRINGS.drawInvalidCount);
       return;
     }
@@ -280,10 +273,6 @@ export class TeamsComponent implements OnInit {
         id: team.id,
         currentPlayerCount: this.teamPlayers(team).length,
       }));
-    const newTargets = Array.from({ length: newTeamCount }, (_, index) => ({
-      id: `new-team-${index}`,
-      currentPlayerCount: 0,
-    }));
     const tournament = this.tournament();
     if (!tournament) {
       showErrorPopup(TEAM_STRINGS.drawFailed);
@@ -293,7 +282,7 @@ export class TeamsComponent implements OnInit {
     const seed = crypto.randomUUID();
     const result = createTeamDrawPlan({
       players: this.unassignedPlayers,
-      targets: [...existingTargets, ...newTargets],
+      targets: existingTargets,
       roster: tournament.rules.roster,
       balanceByCategoryGender: this.drawBalance(),
       drawId: crypto.randomUUID(),
@@ -315,63 +304,20 @@ export class TeamsComponent implements OnInit {
     }
     this.drawBusy.set(true);
     try {
-      const newAssignments = plan.assignments.filter((assignment) =>
-        assignment.targetId.startsWith('new-team-'),
-      );
-      const singleCategory =
-        new Set(
-          this.unassignedPlayers
-            .filter((player) =>
-              newAssignments.some((assignment) => assignment.playerIds.includes(player.id)),
-            )
-            .map((player) => player.category),
-        ).size === 1;
-      const category = singleCategory
-        ? this.unassignedPlayers.find((player) =>
-            newAssignments.some((assignment) => assignment.playerIds.includes(player.id)),
-          )?.category
-        : null;
-      const newTeams = newAssignments.map((assignment, index) => {
-        const id = crypto.randomUUID();
-        const colors = getDefaultTeamColorPair(this.teams(), index);
-        return {
-          targetId: assignment.targetId,
-          team: {
-            id,
-            name: category
-              ? `${category} ${String.fromCharCode(65 + index)}`
-              : `Equipo ${index + 1}`,
-            primaryColor: colors.primary,
-            secondaryColor: colors.secondary,
-            captainId: null,
-            logo: null,
-            isSeed: false,
-            status: 'ACTIVE' as const,
-          },
-        };
-      });
-      const replacementIds = new Map(
-        newTeams.map(({ targetId, team }) => [targetId, team.id] as const),
-      );
-      const assignments = plan.assignments.map((assignment) => ({
-        targetId: replacementIds.get(assignment.targetId) ?? assignment.targetId,
-        playerIds: assignment.playerIds,
-      }));
       await tournamentRepository.applyTeamDraw({
-        assignments,
-        newTeams: newTeams.map(({ team }) => team),
+        assignments: plan.assignments,
+        newTeams: [],
         draw: {
           ...plan.draw,
           payload: {
             kind: 'TEAMS',
-            teams: assignments.map((assignment) => assignment.playerIds),
+            teams: plan.assignments.map((assignment) => assignment.playerIds),
           },
         },
       });
       await this.load();
       this.drawPlan.set(null);
       this.drawSelectedExistingIds.set(new Set());
-      this.drawNewTeamCount.set(1);
       this.statusMessage.set(TEAM_STRINGS.drawSaved);
     } catch (error) {
       console.error('Team draw failed', error);
@@ -395,10 +341,6 @@ export class TeamsComponent implements OnInit {
   }
 
   protected drawTargetName(targetId: string): string {
-    if (targetId.startsWith('new-team-')) {
-      const index = Number.parseInt(targetId.replace('new-team-', ''), 10);
-      return `Equipo ${index + 1}`;
-    }
     return this.teams().find((team) => team.id === targetId)?.name ?? targetId;
   }
 
