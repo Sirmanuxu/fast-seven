@@ -20,5 +20,28 @@
     @if (statusMessage(); as status) {
       <p role="status">{{ status }}</p>
     }
+    @if (autoSaveSupported()) {
+      @switch (autoSaveStatus()) {
+        @case ('READY') {
+          <p role="status">{{ strings.autoSaveDirectoryReady }}</p>
+          <button type="button" (click)="stopAutoSaveToFolder()" [disabled]="autoSaveBusy()">
+            {{ strings.removeAutoSaveDirectory }}
+          </button>
+        }
+        @case ('PERMISSION_REQUIRED') {
+          <p role="status">{{ strings.autoSavePermissionRequired }}</p>
+          <button type="button" (click)="grantAutoSaveFolderAccess()" [disabled]="autoSaveBusy()">
+            {{ strings.grantAutoSavePermission }}
+          </button>
+        }
+        @default {
+          <button type="button" (click)="chooseAutoSaveFolder()" [disabled]="autoSaveBusy()">
+            {{ strings.chooseAutoSaveDirectory }}
+          </button>
+        }
+      }
+    } @else {
+      <p role="status">{{ strings.autoSaveUnsupported }}</p>
+    }
   </header>
 }

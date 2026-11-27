@@ -13,3 +13,7 @@
 .file-input {
   display: none;
 }
+
+button {
+  min-height: 44px;
+}

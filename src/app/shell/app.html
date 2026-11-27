@@ -10,6 +10,9 @@
   @if (backupQuotaWarning()) {
     <aside role="alert">{{ backupQuotaWarningMessage }}</aside>
   }
+  @if (autoSaveFailure()) {
+    <aside role="alert">{{ fileStrings.autoSaveFailed }}</aside>
+  }
   <app-tournament-file-bar />
   <router-outlet />
 }

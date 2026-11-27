@@ -4,9 +4,17 @@ import { SwUpdate } from '@angular/service-worker';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
-import { backupQuotaExceeded, isQuotaExceededError } from '../../data/backup-events';
+import {
+  autoSaveWriteFailed,
+  autoSaveWriteSucceeded,
+  backupCreated,
+  backupQuotaExceeded,
+  isQuotaExceededError,
+} from '../../data/backup-events';
+import { getAutoSaveDirectoryHandle, saveSnapshotToAutoSaveDirectory } from '../../data/auto-save-directory';
 import { BACKUP_STRINGS } from '../../i18n/backup-strings';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
+import { TOURNAMENT_FILE_STRINGS } from '../../i18n/tournament-file-strings';
 import { showErrorPopup } from '../error-popup';
 import { TournamentFileBarComponent } from '../tournament-file-bar/tournament-file-bar.component';
 import packageMetadata from '../../../package.json';
@@ -24,6 +32,8 @@ export class App implements OnInit {
   protected readonly databaseAvailable = signal(true);
   protected readonly backupQuotaWarning = signal(false);
   protected readonly backupQuotaWarningMessage = BACKUP_STRINGS.quotaWarning;
+  protected readonly autoSaveFailure = signal(false);
+  protected readonly fileStrings = TOURNAMENT_FILE_STRINGS;
   private readonly router = inject(Router);
   private readonly swUpdate = inject(SwUpdate, { optional: true });
   private readonly destroyRef = inject(DestroyRef);
@@ -47,6 +57,16 @@ export class App implements OnInit {
 
     backupQuotaExceeded.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.backupQuotaWarning.set(true);
+    });
+    autoSaveWriteFailed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.autoSaveFailure.set(true);
+    });
+    autoSaveWriteSucceeded.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.autoSaveFailure.set(false);
+    });
+    backupCreated.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.router.url.startsWith('/proyector')) return;
+      window.setTimeout(() => void this.saveLatestTournamentToFolder(), 0);
     });
 
     const tournament = await tournamentRepository.getTournament();
@@ -76,5 +96,22 @@ export class App implements OnInit {
     }, 60_000);
     this.destroyRef.onDestroy(() => window.clearInterval(backupTimer));
     this.ready.set(true);
+  }
+
+  private async saveLatestTournamentToFolder(): Promise<void> {
+    try {
+      const handle = await getAutoSaveDirectoryHandle();
+      if (!handle) return;
+      const snapshot = await tournamentRepository.getSnapshot();
+      if (!snapshot) return;
+      const result = await saveSnapshotToAutoSaveDirectory(
+        snapshot,
+        packageMetadata.version,
+        handle,
+      );
+      if (result === 'SAVED') this.autoSaveFailure.set(false);
+    } catch (error) {
+      console.error('Saving the tournament to the selected folder failed', error);
+    }
   }
 }
