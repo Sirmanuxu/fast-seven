@@ -636,3 +636,10 @@
 - **Reason:** Choosing the higher-contrast foreground gives a consistent readable label without modifying team colors.
 - **Decision:** Lazy-load the projector route.
 - **Reason:** The multi-view presentation is independent of panel workflows and should not further increase the initial bundle.
+
+## 2026-11-27 - HU-44 - Contextual projector rotation
+
+- **Decision:** Select automatic projector contexts in a pure domain function from tournament status, matches, timer, and an injected current time. Keep the 12-second view duration configurable through the function argument rather than changing the persisted `ProjectorState` contract.
+- **Reason:** This keeps rotation deterministic and avoids persisting derived display state or changing the domain model.
+- **Decision:** Give the most recently finished match a 15-second result view, including when that match closes the tournament; then move to the finished-tournament views or the between-match/break context.
+- **Reason:** This preserves the final score briefly without preventing the tournament’s closing views from taking over afterward.
