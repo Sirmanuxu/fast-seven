@@ -161,61 +161,63 @@
       }
 
       @case ('STANDINGS') {
-        @if (selectedStandings(); as standings) {
-          <section class="view-content standings-view">
-            <h2>{{ standings.title }}</h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>{{ strings.team }}</th>
-                  <th>{{ strings.played }}</th>
-                  <th>{{ strings.won }}</th>
-                  <th>{{ strings.drawn }}</th>
-                  <th>{{ strings.lost }}</th>
-                  <th>{{ strings.pointsFor }}</th>
-                  <th>{{ strings.pointsAgainst }}</th>
-                  <th>{{ strings.pointDifference }}</th>
-                  <th>{{ strings.triesFor }}</th>
-                  <th>{{ strings.bonusPoints }}</th>
-                  <th>{{ strings.tablePoints }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (entry of standings.rows; track entry.row.teamId) {
-                  <tr [class.withdrawn]="entry.row.withdrawn">
-                    <td>{{ entry.row.position }}</td>
-                    <td class="team-name-cell" [title]="entry.team?.name ?? strings.toBeDefined">
-                      {{ entry.team?.name ?? strings.toBeDefined }}
-                      @if (entry.row.withdrawn) {
-                        <span class="team-status">{{ strings.teamWithdrawn }}</span>
-                      }
-                      @if (entry.tiebreakLabel) {
-                        <small class="tiebreak-detail">
-                          {{ strings.tieBreak }}: {{ entry.tiebreakLabel }}
-                        </small>
-                      }
-                    </td>
-                    <td>{{ entry.row.played }}</td>
-                    <td>{{ entry.row.won }}</td>
-                    <td>{{ entry.row.drawn }}</td>
-                    <td>{{ entry.row.lost }}</td>
-                    <td>{{ entry.row.pointsFor }}</td>
-                    <td>{{ entry.row.pointsAgainst }}</td>
-                    <td>{{ entry.row.pointDifference }}</td>
-                    <td>{{ entry.row.triesIncomplete ? '—' : entry.row.triesFor }}</td>
-                    <td>{{ entry.row.bonusPoints }}</td>
-                    <td>
-                      <strong>{{ entry.row.tablePoints }}</strong>
-                    </td>
+        <section class="view-content standings-view">
+          @for (standings of viewModel().standings; track standings.id) {
+            <section class="standings-group">
+              <h2>{{ standings.title }}</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>{{ strings.team }}</th>
+                    <th>{{ strings.played }}</th>
+                    <th>{{ strings.won }}</th>
+                    <th>{{ strings.drawn }}</th>
+                    <th>{{ strings.lost }}</th>
+                    <th>{{ strings.pointsFor }}</th>
+                    <th>{{ strings.pointsAgainst }}</th>
+                    <th>{{ strings.pointDifference }}</th>
+                    <th>{{ strings.triesFor }}</th>
+                    <th>{{ strings.bonusPoints }}</th>
+                    <th>{{ strings.tablePoints }}</th>
                   </tr>
-                }
-              </tbody>
-            </table>
-          </section>
-        } @else {
-          <p class="empty-state">{{ strings.noStandings }}</p>
-        }
+                </thead>
+                <tbody>
+                  @for (entry of standings.rows; track entry.row.teamId) {
+                    <tr [class.withdrawn]="entry.row.withdrawn">
+                      <td>{{ entry.row.position }}</td>
+                      <td class="team-name-cell" [title]="entry.team?.name ?? strings.toBeDefined">
+                        {{ entry.team?.name ?? strings.toBeDefined }}
+                        @if (entry.row.withdrawn) {
+                          <span class="team-status">{{ strings.teamWithdrawn }}</span>
+                        }
+                        @if (entry.tiebreakLabel) {
+                          <small class="tiebreak-detail">
+                            {{ strings.tieBreak }}: {{ entry.tiebreakLabel }}
+                          </small>
+                        }
+                      </td>
+                      <td>{{ entry.row.played }}</td>
+                      <td>{{ entry.row.won }}</td>
+                      <td>{{ entry.row.drawn }}</td>
+                      <td>{{ entry.row.lost }}</td>
+                      <td>{{ entry.row.pointsFor }}</td>
+                      <td>{{ entry.row.pointsAgainst }}</td>
+                      <td>{{ entry.row.pointDifference }}</td>
+                      <td>{{ entry.row.triesIncomplete ? '—' : entry.row.triesFor }}</td>
+                      <td>{{ entry.row.bonusPoints }}</td>
+                      <td>
+                        <strong>{{ entry.row.tablePoints }}</strong>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </section>
+          } @empty {
+            <p class="empty-state">{{ strings.noStandings }}</p>
+          }
+        </section>
       }
 
       @case ('BRACKET') {

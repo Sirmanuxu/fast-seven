@@ -10,7 +10,6 @@ import {
   getTiebreakLabel,
   ProjectorBracketView,
   ProjectorMatchCard,
-  ProjectorStandingsView,
 } from './projector-view-model';
 
 @Component({
@@ -101,11 +100,12 @@ export class ProjectorComponent implements OnInit {
     const subviewRotation = window.setInterval(() => {
       const forcedView = this.projectorState().forcedView;
       const hasForcedSubview =
-        (forcedView?.kind === 'STANDINGS' && forcedView.groupId !== undefined) ||
         (forcedView?.kind === 'BRACKET' && forcedView.stageId !== undefined);
-      if (!hasForcedSubview && this.viewModel().activeView === 'STANDINGS' && this.viewModel().standings.length > 1) {
-        this.subviewIndex.update((index) => index + 1);
-      } else if (!hasForcedSubview && this.viewModel().activeView === 'BRACKET' && this.viewModel().brackets.length > 1) {
+      if (
+        !hasForcedSubview &&
+        this.viewModel().activeView === 'BRACKET' &&
+        this.viewModel().brackets.length > 1
+      ) {
         this.subviewIndex.update((index) => index + 1);
       }
     }, 12_000);
@@ -131,14 +131,6 @@ export class ProjectorComponent implements OnInit {
 
   protected tiebreakLabel(criterion: string): string {
     return getTiebreakLabel(criterion);
-  }
-
-  protected selectedStandings(): ProjectorStandingsView | null {
-    const standings = this.viewModel().standings;
-    const forcedView = this.projectorState().forcedView;
-    const groupId = forcedView?.kind === 'STANDINGS' ? forcedView.groupId : undefined;
-    if (groupId) return standings.find((view) => view.id === groupId) ?? null;
-    return standings.length > 0 ? standings[this.subviewIndex() % standings.length] : null;
   }
 
   protected selectedBracket(): ProjectorBracketView | null {

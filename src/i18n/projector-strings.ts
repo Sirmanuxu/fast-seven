@@ -1,4 +1,4 @@
-import { PROJECTOR_PANEL_STRINGS, PROJECTOR_VIEW_TITLES } from './projector-panel-strings';
+import { PROJECTOR_VIEW_TITLES } from './projector-panel-strings';
 
 export const PROJECTOR_STRINGS = {
   projectorTitle: 'Pantalla pública',
@@ -21,8 +21,8 @@ export const PROJECTOR_STRINGS = {
   team: 'Equipo',
   teams: 'Equipos',
   matchPrefix: 'Partido',
-  groupPrefix: PROJECTOR_PANEL_STRINGS.groupPrefix,
-  generalStandingsTitle: PROJECTOR_PANEL_STRINGS.generalStandingsTitle,
+  groupPrefix: 'Grupo',
+  generalStandingsTitle: 'Tabla general',
   unassignedPlayer: 'Sin autor',
   unassignedTeam: 'Sin equipo',
   unknownPlayer: 'Jugador',

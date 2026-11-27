@@ -13,7 +13,6 @@ export const PROJECTOR_VIEW_TITLES = {
 export const PROJECTOR_PANEL_STRINGS = {
   controlTitle: 'Control del proyector',
   selectView: 'Elegí una vista',
-  selectGroup: 'Elegí un grupo',
   selectBracket: 'Elegí una copa o etapa',
   automatic: 'Automática',
   automaticStatus: 'La pantalla está en modo automático.',
@@ -21,6 +20,4 @@ export const PROJECTOR_PANEL_STRINGS = {
   returnAutomatic: 'Volver al automático',
   viewUnavailable: 'La vista fijada ya no tiene datos. Volvimos al modo automático.',
   viewSaveFailed: 'No se pudo actualizar la vista del proyector.',
-  groupPrefix: 'Grupo',
-  generalStandingsTitle: 'Tabla general',
 } as const;

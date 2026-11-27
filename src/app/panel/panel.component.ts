@@ -749,13 +749,6 @@ export class PanelComponent implements OnInit {
     const view = this.projectorState().forcedView;
     if (!view) return '';
 
-    if (view.kind === 'STANDINGS' && view.groupId) {
-      const standings = this.projectorViewSelection().standings.find(
-        (candidate) => candidate.id === view.groupId,
-      );
-      if (standings) return `${PROJECTOR_VIEW_TITLES[view.kind]} · ${standings.title}`;
-    }
-
     if (view.kind === 'BRACKET' && view.stageId) {
       const bracket = this.projectorViewSelection().brackets.find(
         (candidate) => candidate.id === view.stageId,
@@ -786,18 +779,6 @@ export class PanelComponent implements OnInit {
     if (view) void this.persistForcedProjectorView(view);
   }
 
-  protected selectProjectorStandings(event: Event): void {
-    const target = event.target;
-    if (!(target instanceof HTMLSelectElement)) return;
-    const choices = this.createProjectorViewSelectionData(
-      this.snapshot(),
-      this.projectorState(),
-      Date.now(),
-    );
-    if (!choices.standings.some((view) => view.id === target.value)) return;
-    void this.persistForcedProjectorView({ kind: 'STANDINGS', groupId: target.value });
-  }
-
   protected selectProjectorBracket(event: Event): void {
     const target = event.target;
     if (!(target instanceof HTMLSelectElement)) return;
@@ -808,11 +789,6 @@ export class PanelComponent implements OnInit {
     );
     if (!choices.brackets.some((view) => view.id === target.value)) return;
     void this.persistForcedProjectorView({ kind: 'BRACKET', stageId: target.value });
-  }
-
-  protected selectedProjectorGroupId(): string {
-    const view = this.projectorState().forcedView;
-    return view?.kind === 'STANDINGS' ? (view.groupId ?? '') : '';
   }
 
   protected selectedProjectorStageId(): string {

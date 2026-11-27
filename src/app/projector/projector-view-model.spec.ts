@@ -205,6 +205,25 @@ describe('projector view model', () => {
     expect(view.scorers[0]?.playerName).toBe('Ana Pérez (2)');
   });
 
+  it('keeps all group tables available to the unified projector standings view', () => {
+    const groupedSnapshot: TournamentSnapshot = {
+      ...snapshot,
+      groups: [
+        { id: 'group-a', stageId: 'league', name: 'A', teamIds: ['home'] },
+        { id: 'group-b', stageId: 'league', name: 'B', teamIds: ['away'] },
+      ],
+    };
+
+    const view = buildProjectorViewModel(
+      groupedSnapshot,
+      null,
+      Date.parse('2026-11-27T12:02:00.000Z'),
+    );
+
+    expect(view.availableViews).toContain('STANDINGS');
+    expect(view.standings.map((standing) => standing.title)).toEqual(['Grupo A', 'Grupo B']);
+  });
+
   it('chooses a champion and runner-up from final standings when there is no knockout final', () => {
     const finishedSnapshot: TournamentSnapshot = {
       ...snapshot,

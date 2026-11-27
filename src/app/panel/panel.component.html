@@ -34,19 +34,6 @@
       }
     </select>
 
-    @if (projectorState().forcedView?.kind === 'STANDINGS') {
-      <label for="projector-standings">{{ projectorStrings.selectGroup }}</label>
-      <select
-        id="projector-standings"
-        [value]="selectedProjectorGroupId()"
-        (change)="selectProjectorStandings($event)"
-      >
-        @for (standing of projectorViewSelection().standings; track standing.id) {
-          <option [value]="standing.id">{{ standing.title }}</option>
-        }
-      </select>
-    }
-
     @if (projectorState().forcedView?.kind === 'BRACKET') {
       <label for="projector-bracket">{{ projectorStrings.selectBracket }}</label>
       <select

@@ -8,10 +8,6 @@ import {
 
 const data: ProjectorViewSelectionData = {
   availableViews: ['STANDINGS', 'BRACKET', 'SCORERS'],
-  standings: [
-    { id: 'group-a', title: 'Grupo A' },
-    { id: 'group-b', title: 'Grupo B' },
-  ],
   brackets: [
     { id: 'cup-a', title: 'Copa de Oro' },
     { id: 'cup-b', title: 'Copa de Plata' },
@@ -19,11 +15,8 @@ const data: ProjectorViewSelectionData = {
 };
 
 describe('projector view selection', () => {
-  it('creates a group- or stage-specific forced view', () => {
-    expect(createForcedProjectorView('STANDINGS', data)).toEqual({
-      kind: 'STANDINGS',
-      groupId: 'group-a',
-    });
+  it('pins all group standings together and keeps bracket scopes specific', () => {
+    expect(createForcedProjectorView('STANDINGS', data)).toEqual({ kind: 'STANDINGS' });
     expect(createForcedProjectorView('BRACKET', data)).toEqual({
       kind: 'BRACKET',
       stageId: 'cup-a',
@@ -37,13 +30,10 @@ describe('projector view selection', () => {
     expect(isProjectorViewKind('NOT_A_VIEW')).toBe(false);
   });
 
-  it('invalidates a pinned view if its group or stage disappears', () => {
-    expect(isForcedProjectorViewAvailable({ kind: 'STANDINGS', groupId: 'group-a' }, data)).toBe(
-      true,
-    );
+  it('keeps legacy group-scoped pins while standings remain, but removes deleted brackets', () => {
     expect(
       isForcedProjectorViewAvailable({ kind: 'STANDINGS', groupId: 'removed-group' }, data),
-    ).toBe(false);
+    ).toBe(true);
     expect(isForcedProjectorViewAvailable({ kind: 'BRACKET', stageId: 'removed-cup' }, data)).toBe(
       false,
     );
