@@ -5,8 +5,12 @@ import { computeFormatOption } from '../../domain/format-options';
 import { generateFixture } from '../../domain/fixture';
 import { movePendingMatch, resetSuggestedMatchOrder } from '../../domain/match-order';
 import {
+  EditImpact,
   FormatOption,
   Match,
+  MatchEvent,
+  MatchResult,
+  Player,
   ResolvedMatch,
   Stage,
   Team,
@@ -16,6 +20,10 @@ import { createSeededRng } from '../../domain/rng';
 import { computeScheduleDetails, ScheduleDetails } from '../../domain/schedule';
 import { getRosterStatus } from '../../domain/team';
 import { resolveMatches } from '../../domain/resolve-matches';
+import { analyzeEditImpact } from '../../domain/edit-impact';
+import { editFinalizedMatch as editFinalizedMatchDomain } from '../../domain/match-control';
+import { createFixedClock } from '../../domain/clock';
+import { canAddConversion, computeScore } from '../../domain/match-events';
 import { FIXTURE_STRINGS } from '../../i18n/fixture-strings';
 import { MATCH_ORDER_STRINGS } from '../../i18n/match-order-strings';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
@@ -61,6 +69,20 @@ export class FixtureComponent implements OnInit {
   protected readonly suggestedOrderIds = signal<readonly string[]>([]);
   protected readonly isBusy = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
+  protected readonly editingMatchId = signal<string | null>(null);
+  protected readonly editMode = signal<MatchResult['mode']>('DIRECT');
+  protected readonly editDefinition = signal<MatchResult['definition']>('REGULAR');
+  protected readonly editHomePoints = signal(0);
+  protected readonly editAwayPoints = signal(0);
+  protected readonly editWinnerTeamId = signal<string | null>(null);
+  protected readonly editEvents = signal<readonly MatchEvent[]>([]);
+  protected readonly pendingResultEdit = signal<{
+    readonly matchId: string;
+    readonly result: MatchResult;
+    readonly events: readonly MatchEvent[];
+  } | null>(null);
+  protected readonly editImpact = signal<EditImpact | null>(null);
+  protected readonly cascadeBackupId = signal<string | null>(null);
 
   async ngOnInit(): Promise<void> {
     await this.load();
@@ -198,6 +220,281 @@ export class FixtureComponent implements OnInit {
       this.snapshot()?.teams.find((team) => team.id === result.winnerTeamId)?.name ??
       'Equipo ganador';
     return `${score} (${this.strings.suddenDeath(winnerName)})`;
+  }
+
+  protected beginResultEdit(row: FixtureMatchRow): void {
+    const snapshot = this.snapshot();
+    const result = row.match.result;
+    if (
+      !snapshot ||
+      snapshot.tournament.status !== 'RUNNING' ||
+      row.match.status !== 'FINISHED' ||
+      !result ||
+      this.isBusy()
+    ) {
+      return;
+    }
+
+    this.editingMatchId.set(row.match.id);
+    this.editMode.set(result.mode);
+    this.editDefinition.set(result.definition);
+    this.editHomePoints.set(result.homePoints);
+    this.editAwayPoints.set(result.awayPoints);
+    this.editWinnerTeamId.set(result.winnerTeamId);
+    this.editEvents.set(snapshot.events.filter((event) => event.matchId === row.match.id));
+    this.pendingResultEdit.set(null);
+    this.editImpact.set(null);
+  }
+
+  protected cancelResultEdit(): void {
+    this.editingMatchId.set(null);
+    this.editEvents.set([]);
+  }
+
+  protected setEditMode(value: string): void {
+    if (value === 'DETAIL' || value === 'DIRECT' || value === 'WALKOVER') {
+      this.editMode.set(value);
+      if (value === 'WALKOVER') {
+        this.editDefinition.set('WALKOVER');
+      } else if (this.editDefinition() === 'WALKOVER') {
+        this.editDefinition.set('REGULAR');
+        this.editWinnerTeamId.set(null);
+      }
+    }
+  }
+
+  protected setEditDefinition(value: string): void {
+    if (value === 'REGULAR' || value === 'SUDDEN_DEATH' || value === 'WALKOVER') {
+      this.editDefinition.set(value);
+    }
+  }
+
+  protected setEditWinner(value: string): void {
+    this.editWinnerTeamId.set(value || null);
+  }
+
+  protected setEditScore(side: 'home' | 'away', value: string): void {
+    const score = value.trim() === '' ? Number.NaN : Number(value);
+    if (side === 'home') {
+      this.editHomePoints.set(score);
+    } else {
+      this.editAwayPoints.set(score);
+    }
+  }
+
+  protected updateEditEventType(eventId: string, value: string): void {
+    if (value !== 'TRY' && value !== 'CONVERSION') return;
+    this.editEvents.update((events) =>
+      events.map((event) => (event.id === eventId ? { ...event, type: value } : event)),
+    );
+  }
+
+  protected updateEditEventTeam(eventId: string, teamId: string): void {
+    this.editEvents.update((events) =>
+      events.map((event) =>
+        event.id === eventId
+          ? { ...event, teamId, playerId: event.teamId === teamId ? event.playerId : null }
+          : event,
+      ),
+    );
+  }
+
+  protected updateEditEventAuthor(eventId: string, playerId: string): void {
+    this.editEvents.update((events) =>
+      events.map((event) =>
+        event.id === eventId ? { ...event, playerId: playerId || null } : event,
+      ),
+    );
+  }
+
+  protected removeEditEvent(eventId: string): void {
+    this.editEvents.update((events) => events.filter((event) => event.id !== eventId));
+  }
+
+  protected addEditEvent(matchId: string, teamId: string | null, type: MatchEvent['type']): void {
+    if (!teamId) return;
+    const event: MatchEvent = {
+      id: crypto.randomUUID(),
+      matchId,
+      teamId,
+      type,
+      playerId: null,
+      createdAt: new Date().toISOString(),
+    };
+    this.editEvents.update((events) => [...events, event]);
+  }
+
+  protected canAddEditConversion(teamId: string | null): boolean {
+    return !!teamId && canAddConversion(this.editEvents(), teamId);
+  }
+
+  protected playersForEventTeam(teamId: string): readonly Player[] {
+    return this.snapshot()?.players.filter((player) => player.teamId === teamId) ?? [];
+  }
+
+  protected playerName(player: Player): string {
+    return `${player.firstName} ${player.lastName}${player.disambiguation ?? ''}`;
+  }
+
+  protected teamName(teamId: string | null): string {
+    return (
+      this.snapshot()?.teams.find((team) => team.id === teamId)?.name ?? this.strings.unresolvedTeam
+    );
+  }
+
+  protected matchTeamId(matchId: string, side: 'home' | 'away'): string | null {
+    const resolved = this.resolvedMatches().find((entry) => entry.matchId === matchId);
+    return side === 'home' ? (resolved?.homeTeamId ?? null) : (resolved?.awayTeamId ?? null);
+  }
+
+  protected affectedMatchLabel(matchId: string): string {
+    const match = this.snapshot()?.matches.find((entry) => entry.id === matchId);
+    return match?.label ?? this.strings.matchNumber.replace('{number}', String(match?.order ?? ''));
+  }
+
+  protected teamsBeforeAfter(affected: EditImpact['affected'][number]): string {
+    return this.strings.teamsBeforeAfter
+      .replace('{beforeHome}', this.teamName(affected.beforeHomeTeamId))
+      .replace('{beforeAway}', this.teamName(affected.beforeAwayTeamId))
+      .replace('{afterHome}', this.teamName(affected.afterHomeTeamId))
+      .replace('{afterAway}', this.teamName(affected.afterAwayTeamId));
+  }
+
+  protected async reviewResultEdit(row: FixtureMatchRow): Promise<void> {
+    const snapshot = this.snapshot();
+    const resolved = this.resolvedMatches().find((entry) => entry.matchId === row.match.id);
+    if (
+      !snapshot ||
+      !resolved?.homeTeamId ||
+      !resolved.awayTeamId ||
+      this.isBusy() ||
+      this.editingMatchId() !== row.match.id
+    ) {
+      return;
+    }
+
+    const events = this.editMode() === 'DETAIL' ? this.editEvents() : [];
+    let homePoints = this.editHomePoints();
+    let awayPoints = this.editAwayPoints();
+    if (this.editMode() === 'DETAIL') {
+      const score = computeScore(events, resolved.homeTeamId, resolved.awayTeamId);
+      if (!score.ok) {
+        showErrorPopup(this.strings.resultEditInvalid);
+        return;
+      }
+      homePoints = score.value.home;
+      awayPoints = score.value.away;
+    }
+    const result: MatchResult = {
+      mode: this.editMode(),
+      homePoints,
+      awayPoints,
+      definition: this.editDefinition(),
+      winnerTeamId: this.editWinnerTeamId(),
+    };
+    const validated = editFinalizedMatchDomain(
+      snapshot,
+      this.resolvedMatches(),
+      row.match.id,
+      result,
+      events,
+      createFixedClock(Date.now()),
+    );
+    if (!validated.ok) {
+      showErrorPopup(this.strings.resultEditInvalid);
+      return;
+    }
+
+    const after: TournamentSnapshot = {
+      ...snapshot,
+      matches: snapshot.matches.map((match) =>
+        match.id === row.match.id ? validated.value.match : match,
+      ),
+      events: [
+        ...snapshot.events.filter((event) => event.matchId !== row.match.id),
+        ...validated.value.events,
+      ],
+    };
+    const impact = analyzeEditImpact(snapshot, after);
+    if (impact.affected.length === 0) {
+      await this.persistResultEdit(row.match.id, result, events, []);
+      return;
+    }
+    this.pendingResultEdit.set({ matchId: row.match.id, result, events });
+    this.editImpact.set(impact);
+  }
+
+  protected cancelCascadeConfirmation(): void {
+    this.pendingResultEdit.set(null);
+    this.editImpact.set(null);
+  }
+
+  protected async confirmCascadeEdit(): Promise<void> {
+    const pending = this.pendingResultEdit();
+    const impact = this.editImpact();
+    if (!pending || !impact) return;
+    await this.persistResultEdit(
+      pending.matchId,
+      pending.result,
+      pending.events,
+      impact.affected.map((entry) => entry.matchId),
+    );
+  }
+
+  protected async undoCascadeEdit(): Promise<void> {
+    const backupId = this.cascadeBackupId();
+    if (!backupId || this.isBusy()) return;
+    if (!window.confirm(this.strings.confirmUndoCascadeEdit)) return;
+    this.isBusy.set(true);
+    try {
+      await tournamentRepository.restoreCascadeEdit(backupId, new Date().toISOString());
+      this.cascadeBackupId.set(null);
+      await this.load();
+      this.statusMessage.set(this.strings.cascadeEditUndone);
+    } catch (error) {
+      console.error('Restoring cascade edit failed', error);
+      showErrorPopup(this.strings.undoCascadeEditFailed);
+    } finally {
+      this.isBusy.set(false);
+    }
+  }
+
+  private async persistResultEdit(
+    matchId: string,
+    result: MatchResult,
+    events: readonly MatchEvent[],
+    expectedAffectedMatchIds: readonly string[],
+  ): Promise<void> {
+    if (this.isBusy()) return;
+    this.isBusy.set(true);
+    try {
+      const backupId = await tournamentRepository.editFinalizedMatch({
+        matchId,
+        result,
+        events,
+        expectedAffectedMatchIds,
+        changedAt: new Date().toISOString(),
+      });
+      this.cascadeBackupId.set(backupId);
+      this.pendingResultEdit.set(null);
+      this.editImpact.set(null);
+      this.editingMatchId.set(null);
+      this.editEvents.set([]);
+      await this.load();
+      this.statusMessage.set(
+        backupId ? this.strings.cascadeEditSaved : this.strings.resultEditSaved,
+      );
+    } catch (error) {
+      console.error('Editing finalized match failed', error);
+      const staleImpact =
+        error instanceof Error && error.message.startsWith('Match edit impact changed');
+      showErrorPopup(
+        staleImpact ? this.strings.resultEditImpactChanged : this.strings.resultEditFailed,
+      );
+      await this.load();
+    } finally {
+      this.isBusy.set(false);
+    }
   }
 
   protected async undoWalkover(row: FixtureMatchRow): Promise<void> {

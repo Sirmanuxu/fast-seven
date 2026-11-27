@@ -65,10 +65,98 @@ dd {
   flex-wrap: wrap;
 }
 
+.result-editor {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.result-editor label,
+.edit-score label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.result-editor input,
+.result-editor select {
+  min-height: 44px;
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+}
+
+.edit-score,
+.event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.edit-score label {
+  flex: 1 1 10rem;
+}
+
+.event-editor {
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.event-editor ul,
+.cascade-dialog ul {
+  display: grid;
+  gap: 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.event-editor li {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) repeat(2, minmax(8rem, 1fr)) auto;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.cascade-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: rgb(0 0 0 / 40%);
+}
+
+.cascade-dialog {
+  display: grid;
+  gap: 0.5rem;
+  width: min(640px, 100%);
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 1.25rem;
+  box-sizing: border-box;
+  border: 1px solid var(--mat-sys-outline-variant, currentColor);
+  border-radius: 8px;
+  background: var(--mat-sys-surface, white);
+}
+
+.cascade-dialog li {
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.5rem;
+}
+
+.cascade-dialog .in-progress-warning {
+  border-width: 2px;
+}
+
 @media (max-width: 36rem) {
   header,
   .match {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .event-editor li {
+    grid-template-columns: 1fr;
   }
 }

@@ -8,6 +8,11 @@
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
   }
+  @if (cascadeBackupId(); as backupId) {
+    <button type="button" (click)="undoCascadeEdit()" [disabled]="isBusy() || !backupId">
+      {{ strings.undoCascadeEdit }}
+    </button>
+  }
 
   @if (snapshot(); as current) {
     <section class="actions">
@@ -123,18 +128,222 @@
                         row.match.status === 'FINISHED' &&
                         row.match.result?.mode === 'WALKOVER'
                       ) {
-                        <button
-                          type="button"
-                          (click)="undoWalkover(row)"
-                          [disabled]="isBusy()"
-                        >
+                        <button type="button" (click)="undoWalkover(row)" [disabled]="isBusy()">
                           {{ matchControlStrings.undoWalkover }}
+                        </button>
+                      }
+                      @if (
+                        current.tournament.status === 'RUNNING' && row.match.status === 'FINISHED'
+                      ) {
+                        <button type="button" (click)="beginResultEdit(row)" [disabled]="isBusy()">
+                          {{ strings.editResult }}
                         </button>
                       }
                       @if (row.estimatedStart; as start) {
                         <span>{{ strings.tentative }}: {{ formatTime(start) }}</span>
                       }
                     </div>
+                    @if (editingMatchId() === row.match.id) {
+                      <form
+                        class="result-editor"
+                        (submit)="$event.preventDefault(); reviewResultEdit(row)"
+                      >
+                        <h5>{{ strings.editResultTitle }}</h5>
+                        <label>
+                          {{ strings.resultMode }}
+                          <select
+                            [value]="editMode()"
+                            (change)="setEditMode($any($event.target).value)"
+                          >
+                            <option value="DETAIL">{{ strings.detailMode }}</option>
+                            <option value="DIRECT">{{ strings.directMode }}</option>
+                            <option value="WALKOVER">{{ strings.walkoverMode }}</option>
+                          </select>
+                        </label>
+                        @if (editMode() === 'DETAIL') {
+                          <section class="event-editor">
+                            <h6>{{ strings.matchEvents }}</h6>
+                            <ul>
+                              @for (event of editEvents(); track event.id) {
+                                <li>
+                                  <label>
+                                    {{ strings.eventTeam }}
+                                    <select
+                                      [value]="event.teamId"
+                                      (change)="
+                                        updateEditEventTeam(event.id, $any($event.target).value)
+                                      "
+                                    >
+                                      <option [value]="matchTeamId(row.match.id, 'home')">
+                                        {{ row.homeLabel }}
+                                      </option>
+                                      <option [value]="matchTeamId(row.match.id, 'away')">
+                                        {{ row.awayLabel }}
+                                      </option>
+                                    </select>
+                                  </label>
+                                  <label>
+                                    {{ strings.eventType }}
+                                    <select
+                                      [value]="event.type"
+                                      (change)="
+                                        updateEditEventType(event.id, $any($event.target).value)
+                                      "
+                                    >
+                                      <option value="TRY">{{ strings.tryEvent }}</option>
+                                      <option value="CONVERSION">
+                                        {{ strings.conversionEvent }}
+                                      </option>
+                                    </select>
+                                  </label>
+                                  <label>
+                                    {{ strings.eventAuthor }}
+                                    <select
+                                      [value]="event.playerId ?? ''"
+                                      (change)="
+                                        updateEditEventAuthor(event.id, $any($event.target).value)
+                                      "
+                                    >
+                                      <option value="">{{ strings.noAuthor }}</option>
+                                      @for (
+                                        player of playersForEventTeam(event.teamId);
+                                        track player.id
+                                      ) {
+                                        <option [value]="player.id">
+                                          {{ playerName(player) }}
+                                        </option>
+                                      }
+                                    </select>
+                                  </label>
+                                  <button type="button" (click)="removeEditEvent(event.id)">
+                                    {{ strings.removeEvent }}
+                                  </button>
+                                </li>
+                              } @empty {
+                                <li>{{ strings.noEvents }}</li>
+                              }
+                            </ul>
+                            <div class="event-actions">
+                              <button
+                                type="button"
+                                (click)="
+                                  addEditEvent(
+                                    row.match.id,
+                                    matchTeamId(row.match.id, 'home'),
+                                    'TRY'
+                                  )
+                                "
+                              >
+                                {{ strings.addHomeTry.replace('{team}', row.homeLabel) }}
+                              </button>
+                              <button
+                                type="button"
+                                (click)="
+                                  addEditEvent(
+                                    row.match.id,
+                                    matchTeamId(row.match.id, 'away'),
+                                    'TRY'
+                                  )
+                                "
+                              >
+                                {{ strings.addAwayTry.replace('{team}', row.awayLabel) }}
+                              </button>
+                              <button
+                                type="button"
+                                (click)="
+                                  addEditEvent(
+                                    row.match.id,
+                                    matchTeamId(row.match.id, 'home'),
+                                    'CONVERSION'
+                                  )
+                                "
+                                [disabled]="
+                                  !canAddEditConversion(matchTeamId(row.match.id, 'home'))
+                                "
+                              >
+                                {{ strings.addHomeConversion.replace('{team}', row.homeLabel) }}
+                              </button>
+                              <button
+                                type="button"
+                                (click)="
+                                  addEditEvent(
+                                    row.match.id,
+                                    matchTeamId(row.match.id, 'away'),
+                                    'CONVERSION'
+                                  )
+                                "
+                                [disabled]="
+                                  !canAddEditConversion(matchTeamId(row.match.id, 'away'))
+                                "
+                              >
+                                {{ strings.addAwayConversion.replace('{team}', row.awayLabel) }}
+                              </button>
+                            </div>
+                          </section>
+                        } @else {
+                          <div class="edit-score">
+                            <label>
+                              {{ strings.homeScore.replace('{team}', row.homeLabel) }}
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                [value]="editHomePoints()"
+                                (input)="setEditScore('home', $any($event.target).value)"
+                              />
+                            </label>
+                            <label>
+                              {{ strings.awayScore.replace('{team}', row.awayLabel) }}
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                [value]="editAwayPoints()"
+                                (input)="setEditScore('away', $any($event.target).value)"
+                              />
+                            </label>
+                          </div>
+                        }
+                        <label>
+                          {{ strings.resultDefinition }}
+                          <select
+                            [value]="editDefinition()"
+                            (change)="setEditDefinition($any($event.target).value)"
+                          >
+                            <option value="REGULAR">{{ strings.regularDefinition }}</option>
+                            <option value="SUDDEN_DEATH">
+                              {{ strings.suddenDeathDefinition }}
+                            </option>
+                            <option value="WALKOVER">{{ strings.walkoverDefinition }}</option>
+                          </select>
+                        </label>
+                        @if (editDefinition() !== 'REGULAR') {
+                          <label>
+                            {{ strings.resultWinner }}
+                            <select
+                              [value]="editWinnerTeamId() ?? ''"
+                              (change)="setEditWinner($any($event.target).value)"
+                            >
+                              <option value="">{{ strings.selectWinner }}</option>
+                              <option [value]="matchTeamId(row.match.id, 'home')">
+                                {{ row.homeLabel }}
+                              </option>
+                              <option [value]="matchTeamId(row.match.id, 'away')">
+                                {{ row.awayLabel }}
+                              </option>
+                            </select>
+                          </label>
+                        }
+                        <div>
+                          <button type="submit" [disabled]="isBusy()">
+                            {{ strings.reviewResultEdit }}
+                          </button>
+                          <button type="button" (click)="cancelResultEdit()" [disabled]="isBusy()">
+                            {{ strings.cancelResultEdit }}
+                          </button>
+                        </div>
+                      </form>
+                    }
                     @if (row.match.status === 'PENDING') {
                       <div class="match-controls">
                         <button
@@ -164,6 +373,45 @@
       <section>
         <p>{{ strings.noFixture }}</p>
       </section>
+    }
+  }
+
+  @if (pendingResultEdit()) {
+    @if (editImpact(); as impact) {
+      <div class="cascade-backdrop">
+        <section
+          class="cascade-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cascade-dialog-title"
+        >
+          <h2 id="cascade-dialog-title">{{ strings.cascadeDialogTitle }}</h2>
+          <p>{{ strings.cascadeDialogIntro }}</p>
+          <ul>
+            @for (affected of impact.affected; track affected.matchId) {
+              <li [class.in-progress-warning]="affected.status === 'IN_PROGRESS'">
+                <strong>{{ affectedMatchLabel(affected.matchId) }}</strong>
+                <p>{{ teamsBeforeAfter(affected) }}</p>
+                <p>{{ strings.currentStatus }}: {{ statusLabel(affected.status) }}</p>
+                @if (affected.losesResult) {
+                  <p>{{ strings.resultWillBeLost }}</p>
+                } @else {
+                  <p>{{ strings.noResultToLose }}</p>
+                }
+                @if (affected.status === 'IN_PROGRESS') {
+                  <strong role="alert">{{ strings.inProgressCascadeWarning }}</strong>
+                }
+              </li>
+            }
+          </ul>
+          <button type="button" (click)="confirmCascadeEdit()" [disabled]="isBusy()">
+            {{ strings.confirmCascadeEdit }}
+          </button>
+          <button type="button" (click)="cancelCascadeConfirmation()" [disabled]="isBusy()">
+            {{ strings.cancelCascadeEdit }}
+          </button>
+        </section>
+      </div>
     }
   }
 </main>
