@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { Tournament } from '../../domain/model';
+import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
 import { SettingsComponent } from './settings.component';
 
 function tournament(status: Tournament['status']): Tournament {
@@ -59,9 +60,7 @@ describe('SettingsComponent destructive actions', () => {
   });
 
   function button(label: string): HTMLButtonElement {
-    const buttons = Array.from(
-      (fixture.nativeElement as HTMLElement).querySelectorAll('button'),
-    );
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
     const match = buttons.find((candidate) => candidate.textContent?.trim() === label);
     if (!match) throw new Error(`Button not found: ${label}`);
     return match;
@@ -103,5 +102,41 @@ describe('SettingsComponent destructive actions', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'El fixture se reinició. Los jugadores y equipos siguen disponibles.',
     );
+  });
+
+  it('saves a backup interval within the supported range', async () => {
+    const updateBackupInterval = vi
+      .spyOn(tournamentRepository, 'updateBackupInterval')
+      .mockResolvedValue();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      '#backup-interval',
+    ) as HTMLInputElement;
+    input.value = '3';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    button(SETTINGS_STRINGS.saveBackupInterval).click();
+    await fixture.whenStable();
+
+    expect(updateBackupInterval).toHaveBeenCalledWith(3);
+  });
+
+  it('rejects backup intervals outside the supported range', async () => {
+    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    const updateBackupInterval = vi
+      .spyOn(tournamentRepository, 'updateBackupInterval')
+      .mockResolvedValue();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      '#backup-interval',
+    ) as HTMLInputElement;
+    input.value = '61';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    button(SETTINGS_STRINGS.saveBackupInterval).click();
+    await fixture.whenStable();
+
+    expect(updateBackupInterval).not.toHaveBeenCalled();
+    expect(window.alert).toHaveBeenCalledWith(SETTINGS_STRINGS.backupIntervalInvalid);
   });
 });

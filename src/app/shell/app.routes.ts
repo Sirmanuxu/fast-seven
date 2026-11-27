@@ -16,6 +16,11 @@ export const routes: Routes = [
   { path: 'panel/formato', component: FormatComponent },
   { path: 'panel/fixture', component: FixtureComponent },
   { path: 'panel/ajustes', component: SettingsComponent },
+  {
+    path: 'panel/respaldo',
+    loadComponent: () =>
+      import('../backups/backups.component').then((module) => module.BackupsComponent),
+  },
   { path: 'jugadores', component: PlayersComponent },
   { path: 'panel/jugadores/importar', component: ImportComponent },
   { path: 'importar', component: ImportComponent },

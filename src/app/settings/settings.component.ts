@@ -15,6 +15,7 @@ export class SettingsComponent implements OnInit {
   protected readonly tournament = signal<Tournament | null>(null);
   protected readonly busy = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
+  protected readonly backupIntervalDraft = signal('5');
   private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
@@ -25,6 +26,7 @@ export class SettingsComponent implements OnInit {
         return;
       }
       this.tournament.set(tournament);
+      this.backupIntervalDraft.set(String(tournament.backupIntervalMin));
     } catch (error) {
       console.error('Loading tournament settings failed', error);
       showErrorPopup(SETTINGS_STRINGS.tournamentLoadFailed);
@@ -61,6 +63,32 @@ export class SettingsComponent implements OnInit {
     } catch (error) {
       console.error('Resetting fixture failed', error);
       showErrorPopup(SETTINGS_STRINGS.resetFixtureFailed);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected updateBackupIntervalDraft(event: Event): void {
+    this.backupIntervalDraft.set((event.target as HTMLInputElement).value);
+  }
+
+  protected async saveBackupInterval(): Promise<void> {
+    const intervalMin = Number(this.backupIntervalDraft());
+    if (!Number.isInteger(intervalMin) || intervalMin < 1 || intervalMin > 60) {
+      showErrorPopup(SETTINGS_STRINGS.backupIntervalInvalid);
+      return;
+    }
+
+    this.busy.set(true);
+    try {
+      await tournamentRepository.updateBackupInterval(intervalMin);
+      this.tournament.update((current) =>
+        current ? { ...current, backupIntervalMin: intervalMin } : current,
+      );
+      this.statusMessage.set(SETTINGS_STRINGS.backupIntervalSaved);
+    } catch (error) {
+      console.error('Saving backup interval failed', error);
+      showErrorPopup(SETTINGS_STRINGS.backupIntervalSaveFailed);
     } finally {
       this.busy.set(false);
     }

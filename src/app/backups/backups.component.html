@@ -1,0 +1,28 @@
+<main>
+  <button type="button" (click)="backToPanel()">{{ strings.backToPanel }}</button>
+  <h1>{{ strings.title }}</h1>
+  <p>{{ strings.description }}</p>
+
+  @if (statusMessage(); as status) {
+    <p role="status">{{ status }}</p>
+  }
+
+  @if (listItems().length === 0) {
+    <p role="status">{{ strings.empty }}</p>
+  } @else {
+    <ul aria-label="Copias de seguridad">
+      @for (item of listItems(); track item.backup.id) {
+        <li>
+          <article>
+            <h2>{{ item.dateLabel }}</h2>
+            <p>{{ item.reasonLabel }}</p>
+            <p>{{ strings.finishedMatches(item.finishedMatchCount) }}</p>
+            <button type="button" (click)="restoreBackup(item.backup)" [disabled]="busy()">
+              {{ strings.restore }}
+            </button>
+          </article>
+        </li>
+      }
+    </ul>
+  }
+</main>

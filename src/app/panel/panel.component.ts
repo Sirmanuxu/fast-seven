@@ -5,15 +5,13 @@ import { spikeDatabase, SpikeRecord } from '../../data/spike-database';
 import { tournamentRepository } from '../../data/tournament-repository';
 import { Tournament } from '../../domain/model';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
-import {
-  PROJECTOR_PANEL_STRINGS,
-  PROJECTOR_VIEW_TITLES,
-} from '../../i18n/projector-panel-strings';
+import { PROJECTOR_PANEL_STRINGS, PROJECTOR_VIEW_TITLES } from '../../i18n/projector-panel-strings';
 import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
 import { showErrorPopup } from '../error-popup';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
 import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
+import { BACKUP_STRINGS } from '../../i18n/backup-strings';
 import { TOURNAMENT_CLOSE_STRINGS } from '../../i18n/tournament-close-strings';
 import {
   Match,
@@ -93,6 +91,7 @@ export class PanelComponent implements OnInit {
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly matchControlStrings = MATCH_CONTROL_STRINGS;
   protected readonly settingsStrings = SETTINGS_STRINGS;
+  protected readonly backupStrings = BACKUP_STRINGS;
   protected readonly snapshot = signal<TournamentSnapshot | null>(null);
   protected readonly projectorState = signal<ProjectorState>({
     forcedView: null,
@@ -352,21 +351,14 @@ export class PanelComponent implements OnInit {
         : control.next?.match.id === matchId
           ? control.next
           : control.following.find((candidate) => candidate.match.id === matchId);
-    if (
-      !snapshot ||
-      !entry ||
-      !entry.resolved.homeTeamId ||
-      !entry.resolved.awayTeamId
-    ) {
+    if (!snapshot || !entry || !entry.resolved.homeTeamId || !entry.resolved.awayTeamId) {
       return;
     }
 
     const absentTeamId =
       absentSide === 'home' ? entry.resolved.homeTeamId : entry.resolved.awayTeamId;
-    const absentName =
-      absentSide === 'home' ? entry.resolved.homeLabel : entry.resolved.awayLabel;
-    const winnerName =
-      absentSide === 'home' ? entry.resolved.awayLabel : entry.resolved.homeLabel;
+    const absentName = absentSide === 'home' ? entry.resolved.homeLabel : entry.resolved.awayLabel;
+    const winnerName = absentSide === 'home' ? entry.resolved.awayLabel : entry.resolved.homeLabel;
     const { winner, loser } = snapshot.tournament.rules.walkoverScore;
     if (
       !window.confirm(
@@ -400,7 +392,10 @@ export class PanelComponent implements OnInit {
     }
   }
 
-  protected async finishControlMatch(matchId: string, suddenDeathWinnerTeamId?: string): Promise<void> {
+  protected async finishControlMatch(
+    matchId: string,
+    suddenDeathWinnerTeamId?: string,
+  ): Promise<void> {
     if (this.eventBusy() || this.startBusy()) return;
     const snapshot = this.snapshot();
     const current = this.matchControl().current;
@@ -430,21 +425,20 @@ export class PanelComponent implements OnInit {
       return;
     }
 
-    const confirmation =
-      suddenDeathWinnerTeamId
-        ? MATCH_CONTROL_STRINGS.confirmSuddenDeath(
-            suddenDeathWinnerTeamId === current.resolved.homeTeamId
-              ? current.resolved.homeLabel
-              : current.resolved.awayLabel,
-            score.home,
-            score.away,
-          )
-        : MATCH_CONTROL_STRINGS.confirmDetailFinish(
-            current.resolved.homeLabel,
-            score.home,
-            score.away,
-            current.resolved.awayLabel,
-          );
+    const confirmation = suddenDeathWinnerTeamId
+      ? MATCH_CONTROL_STRINGS.confirmSuddenDeath(
+          suddenDeathWinnerTeamId === current.resolved.homeTeamId
+            ? current.resolved.homeLabel
+            : current.resolved.awayLabel,
+          score.home,
+          score.away,
+        )
+      : MATCH_CONTROL_STRINGS.confirmDetailFinish(
+          current.resolved.homeLabel,
+          score.home,
+          score.away,
+          current.resolved.awayLabel,
+        );
     if (!window.confirm(confirmation)) return;
 
     this.eventBusy.set(true);
@@ -467,7 +461,10 @@ export class PanelComponent implements OnInit {
   }
 
   protected toggleDirectMode(): void {
-    if (!this.directMode() && this.eventsForMatch(this.matchControl().current?.match.id ?? '').length > 0) {
+    if (
+      !this.directMode() &&
+      this.eventsForMatch(this.matchControl().current?.match.id ?? '').length > 0
+    ) {
       if (!window.confirm(MATCH_CONTROL_STRINGS.confirmDiscardEvents)) return;
     }
     this.directMode.set(!this.directMode());
@@ -518,21 +515,20 @@ export class PanelComponent implements OnInit {
       }
     }
 
-    const confirmation =
-      suddenDeathWinnerTeamId
-        ? MATCH_CONTROL_STRINGS.confirmSuddenDeath(
-            suddenDeathWinnerTeamId === current.resolved.homeTeamId
-              ? current.resolved.homeLabel
-              : current.resolved.awayLabel,
-            homePoints,
-            awayPoints,
-          )
-        : MATCH_CONTROL_STRINGS.confirmDirectFinish(
-            current.resolved.homeLabel,
-            homePoints,
-            awayPoints,
-            current.resolved.awayLabel,
-          );
+    const confirmation = suddenDeathWinnerTeamId
+      ? MATCH_CONTROL_STRINGS.confirmSuddenDeath(
+          suddenDeathWinnerTeamId === current.resolved.homeTeamId
+            ? current.resolved.homeLabel
+            : current.resolved.awayLabel,
+          homePoints,
+          awayPoints,
+        )
+      : MATCH_CONTROL_STRINGS.confirmDirectFinish(
+          current.resolved.homeLabel,
+          homePoints,
+          awayPoints,
+          current.resolved.awayLabel,
+        );
     if (!window.confirm(confirmation)) return;
 
     this.eventBusy.set(true);
@@ -551,7 +547,7 @@ export class PanelComponent implements OnInit {
         updatedSnapshot?.tournament.rules.tiebreakers.includes('TRIES_FOR') === true;
       if (usesTriesFor) {
         const directMatchCount =
-          (updatedSnapshot?.matches.filter((match) => match.result?.mode === 'DIRECT').length ?? 0);
+          updatedSnapshot?.matches.filter((match) => match.result?.mode === 'DIRECT').length ?? 0;
         this.statusMessage.set(MATCH_CONTROL_STRINGS.triesIncompleteWarning(directMatchCount));
       } else {
         this.statusMessage.set(MATCH_CONTROL_STRINGS.matchFinished);
@@ -578,9 +574,7 @@ export class PanelComponent implements OnInit {
     }
 
     const playerId =
-      teamId === current.resolved.homeTeamId
-        ? this.homePlayerId()
-        : this.awayPlayerId();
+      teamId === current.resolved.homeTeamId ? this.homePlayerId() : this.awayPlayerId();
     const event: MatchEvent = {
       id: crypto.randomUUID(),
       matchId: current.match.id,
@@ -697,29 +691,27 @@ export class PanelComponent implements OnInit {
       : null;
     const labels = [
       stage?.name,
-      group
-        ? MATCH_CONTROL_STRINGS.groupLabel.replace('{name}', group.name)
-        : null,
+      group ? MATCH_CONTROL_STRINGS.groupLabel.replace('{name}', group.name) : null,
     ].filter((label): label is string => label !== null && label !== undefined);
 
     return labels.length > 0 ? labels.join(' · ') : null;
   }
 
-  protected playersForTeam(teamId: string, side: 'home' | 'away'): readonly {
+  protected playersForTeam(
+    teamId: string,
+    side: 'home' | 'away',
+  ): readonly {
     readonly id: string;
     readonly name: string;
   }[] {
-    const search =
-      (side === 'home' ? this.homePlayerSearch() : this.awayPlayerSearch())
-        .trim()
-        .toLocaleLowerCase('es');
+    const search = (side === 'home' ? this.homePlayerSearch() : this.awayPlayerSearch())
+      .trim()
+      .toLocaleLowerCase('es');
     return (this.snapshot()?.players ?? [])
       .filter((player) => player.teamId === teamId)
       .filter((player) => {
         if (!search) return true;
-        return `${player.firstName} ${player.lastName}`
-          .toLocaleLowerCase('es')
-          .includes(search);
+        return `${player.firstName} ${player.lastName}`.toLocaleLowerCase('es').includes(search);
       })
       .map((player) => ({
         id: player.id,
@@ -762,9 +754,7 @@ export class PanelComponent implements OnInit {
     if (playerId !== null) {
       const current = this.matchControl().current;
       const expectedTeamId =
-        side === 'home'
-          ? current?.resolved.homeTeamId
-          : current?.resolved.awayTeamId;
+        side === 'home' ? current?.resolved.homeTeamId : current?.resolved.awayTeamId;
       const player = this.snapshot()?.players.find((candidate) => candidate.id === playerId);
       if (!expectedTeamId || player?.teamId !== expectedTeamId) return;
     }
@@ -888,9 +878,7 @@ export class PanelComponent implements OnInit {
   protected updateTimerPresetDuration(id: TimerPresetId, duration: string): void {
     const durationMinutes = Number(duration);
     this.timerPresets.update((presets) =>
-      presets.map((preset) =>
-        preset.id === id ? { ...preset, durationMinutes } : preset,
-      ),
+      presets.map((preset) => (preset.id === id ? { ...preset, durationMinutes } : preset)),
     );
   }
 
@@ -929,9 +917,7 @@ export class PanelComponent implements OnInit {
   protected adjustActiveProjectorTimer(minutes: -1 | 1): void {
     const timer = this.projectorState().timer;
     if (!timer || this.timerBusy()) return;
-    void this.persistProjectorTimer(
-      adjustProjectorTimer(timer, minutes, { nowMs: Date.now }),
-    );
+    void this.persistProjectorTimer(adjustProjectorTimer(timer, minutes, { nowMs: Date.now }));
   }
 
   protected cancelProjectorTimer(): void {
@@ -1140,11 +1126,7 @@ export class PanelComponent implements OnInit {
     this.projectorState.set(projectorState);
     this.projectorFingerprint = JSON.stringify([snapshot, projectorState]);
     this.projectorSequence += 1;
-    this.projectorChannel.publishState(
-      this.projectorSequence,
-      snapshot,
-      projectorState,
-    );
+    this.projectorChannel.publishState(this.projectorSequence, snapshot, projectorState);
   }
 
   protected openProjector(): void {
@@ -1179,6 +1161,10 @@ export class PanelComponent implements OnInit {
     void this.router.navigateByUrl('/panel/ajustes');
   }
 
+  protected openBackups(): void {
+    void this.router.navigateByUrl('/panel/respaldo');
+  }
+
   protected teamName(teamId: string): string {
     return this.snapshot()?.teams.find((team) => team.id === teamId)?.name ?? teamId;
   }
@@ -1210,9 +1196,7 @@ export class PanelComponent implements OnInit {
     this.tournament.set(snapshot?.tournament ?? null);
     this.canClose.set(snapshot ? canCloseTournament(snapshot) : false);
     this.finalResult.set(
-      snapshot?.tournament.status === 'FINISHED'
-        ? computeFinalTournamentResult(snapshot)
-        : null,
+      snapshot?.tournament.status === 'FINISHED' ? computeFinalTournamentResult(snapshot) : null,
     );
     if (!snapshot) {
       this.canClose.set(false);

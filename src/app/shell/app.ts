@@ -1,8 +1,11 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
+import { backupQuotaExceeded, isQuotaExceededError } from '../../data/backup-events';
+import { BACKUP_STRINGS } from '../../i18n/backup-strings';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { showErrorPopup } from '../error-popup';
 import packageMetadata from '../../../package.json';
@@ -18,8 +21,11 @@ export class App implements OnInit {
   protected readonly appVersion = packageMetadata.version;
   protected readonly ready = signal(false);
   protected readonly databaseAvailable = signal(true);
+  protected readonly backupQuotaWarning = signal(false);
+  protected readonly backupQuotaWarningMessage = BACKUP_STRINGS.quotaWarning;
   private readonly router = inject(Router);
   private readonly swUpdate = inject(SwUpdate, { optional: true });
+  private readonly destroyRef = inject(DestroyRef);
 
   async ngOnInit(): Promise<void> {
     const swUpdate = this.swUpdate;
@@ -38,6 +44,10 @@ export class App implements OnInit {
       return;
     }
 
+    backupQuotaExceeded.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.backupQuotaWarning.set(true);
+    });
+
     const tournament = await tournamentRepository.getTournament();
     if (!tournament) {
       if (this.router.url === '/panel' || this.router.url === '/') {
@@ -54,6 +64,16 @@ export class App implements OnInit {
           localStorage.setItem('fast-seven-last-screen', event.urlAfterRedirects);
         }
       });
+    const backupTimer = window.setInterval(() => {
+      if (this.router.url.startsWith('/proyector')) return;
+      void tournamentRepository.createPeriodicBackupIfDue(Date.now()).catch((error: unknown) => {
+        console.error('Creating periodic tournament backup failed', error);
+        if (!isQuotaExceededError(error)) {
+          showErrorPopup(BACKUP_STRINGS.periodicBackupFailed);
+        }
+      });
+    }, 60_000);
+    this.destroyRef.onDestroy(() => window.clearInterval(backupTimer));
     this.ready.set(true);
   }
 }

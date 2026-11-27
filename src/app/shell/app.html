@@ -7,6 +7,9 @@
     <h1>{{ strings.databaseUnavailableTitle }}</h1>
   </main>
 } @else {
+  @if (backupQuotaWarning()) {
+    <aside role="alert">{{ backupQuotaWarningMessage }}</aside>
+  }
   <router-outlet />
 }
 <aside class="app-version" aria-label="Versión de la aplicación">v{{ appVersion }}</aside>

@@ -1,7 +1,9 @@
 <main>
   <h1>{{ strings.panelTitle }}</h1>
   <p role="status">
-    {{ projectorConnected() ? strings.projectorConnectedStatus : strings.projectorDisconnectedStatus }}
+    {{
+      projectorConnected() ? strings.projectorConnectedStatus : strings.projectorDisconnectedStatus
+    }}
   </p>
   <p>{{ strings.projectorInstructions }}</p>
 
@@ -138,23 +140,13 @@
       <option value="FULLSCREEN">{{ projectorStrings.messageFullscreen }}</option>
     </select>
     <div class="message-control-actions">
-      <button
-        type="button"
-        (click)="saveProjectorMessage()"
-        [disabled]="projectorMessageBusy()"
-      >
+      <button type="button" (click)="saveProjectorMessage()" [disabled]="projectorMessageBusy()">
         {{
-          projectorState().message
-            ? projectorStrings.messageUpdate
-            : projectorStrings.messageShow
+          projectorState().message ? projectorStrings.messageUpdate : projectorStrings.messageShow
         }}
       </button>
       @if (projectorState().message) {
-        <button
-          type="button"
-          (click)="clearProjectorMessage()"
-          [disabled]="projectorMessageBusy()"
-        >
+        <button type="button" (click)="clearProjectorMessage()" [disabled]="projectorMessageBusy()">
           {{ projectorStrings.messageClear }}
         </button>
       }
@@ -185,9 +177,15 @@
               <span class="match-context">{{ context }}</span>
             }
             @if (directMode()) {
-              <span>{{ current.resolved.homeLabel }} {{ directHomeScore() }} - {{ directAwayScore() }} {{ current.resolved.awayLabel }}</span>
+              <span
+                >{{ current.resolved.homeLabel }} {{ directHomeScore() }} - {{ directAwayScore() }}
+                {{ current.resolved.awayLabel }}</span
+              >
             } @else if (liveScore(); as score) {
-              <span>{{ current.resolved.homeLabel }} {{ score.home }} - {{ score.away }} {{ current.resolved.awayLabel }}</span>
+              <span
+                >{{ current.resolved.homeLabel }} {{ score.home }} - {{ score.away }}
+                {{ current.resolved.awayLabel }}</span
+              >
             }
           </div>
 
@@ -219,171 +217,180 @@
               </label>
             </div>
           } @else {
-          <div class="team-columns">
-            <section class="team-column">
-              <h3>{{ current.resolved.homeLabel }}</h3>
-              <div class="player-picker">
-                <label>
-                  {{ matchControlStrings.playerSearch }}
-                  <input
-                    type="search"
-                    role="combobox"
-                    aria-autocomplete="list"
-                    aria-controls="home-player-options"
-                    [attr.aria-expanded]="activePlayerSearch() === 'home'"
-                    [value]="playerSearchValue('home')"
-                    (focus)="openPlayerSearch('home')"
-                    (input)="updatePlayerSearch('home', $any($event.target).value)"
-                  />
-                </label>
-                <ul
-                  id="home-player-options"
-                  class="player-options"
-                  role="listbox"
-                  [hidden]="activePlayerSearch() !== 'home'"
-                >
-                  <li role="presentation">
-                    <button
-                      type="button"
-                      role="option"
-                      [attr.aria-selected]="homePlayerId() === null"
-                      (click)="selectPlayer('home', null)"
-                    >
-                      {{ matchControlStrings.noAuthor }}
-                    </button>
-                  </li>
-                  @for (
-                    player of playersForTeam(current.resolved.homeTeamId ?? '', 'home');
-                    track player.id
-                  ) {
+            <div class="team-columns">
+              <section class="team-column">
+                <h3>{{ current.resolved.homeLabel }}</h3>
+                <div class="player-picker">
+                  <label>
+                    {{ matchControlStrings.playerSearch }}
+                    <input
+                      type="search"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-controls="home-player-options"
+                      [attr.aria-expanded]="activePlayerSearch() === 'home'"
+                      [value]="playerSearchValue('home')"
+                      (focus)="openPlayerSearch('home')"
+                      (input)="updatePlayerSearch('home', $any($event.target).value)"
+                    />
+                  </label>
+                  <ul
+                    id="home-player-options"
+                    class="player-options"
+                    role="listbox"
+                    [hidden]="activePlayerSearch() !== 'home'"
+                  >
                     <li role="presentation">
                       <button
                         type="button"
                         role="option"
-                        [attr.aria-selected]="homePlayerId() === player.id"
-                        (click)="selectPlayer('home', player.id)"
+                        [attr.aria-selected]="homePlayerId() === null"
+                        (click)="selectPlayer('home', null)"
                       >
-                        {{ player.name }}
+                        {{ matchControlStrings.noAuthor }}
                       </button>
                     </li>
-                  } @empty {
-                    <li class="no-player-options" role="presentation">
-                      {{ matchControlStrings.noPlayersFound }}
-                    </li>
-                  }
-                </ul>
-              </div>
-              <button
-                type="button"
-                (click)="addMatchEvent(current.resolved.homeTeamId ?? '', 'TRY')"
-                [disabled]="eventBusy()"
-              >
-                {{ matchControlStrings.try }}
-              </button>
-              <button
-                type="button"
-                (click)="addMatchEvent(current.resolved.homeTeamId ?? '', 'CONVERSION')"
-                [disabled]="eventBusy() || !canConvert(current.resolved.homeTeamId ?? '')"
-              >
-                {{ matchControlStrings.conversion }}
-              </button>
-            </section>
-
-            <section class="team-column">
-              <h3>{{ current.resolved.awayLabel }}</h3>
-              <div class="player-picker">
-                <label>
-                  {{ matchControlStrings.playerSearch }}
-                  <input
-                    type="search"
-                    role="combobox"
-                    aria-autocomplete="list"
-                    aria-controls="away-player-options"
-                    [attr.aria-expanded]="activePlayerSearch() === 'away'"
-                    [value]="playerSearchValue('away')"
-                    (focus)="openPlayerSearch('away')"
-                    (input)="updatePlayerSearch('away', $any($event.target).value)"
-                  />
-                </label>
-                <ul
-                  id="away-player-options"
-                  class="player-options"
-                  role="listbox"
-                  [hidden]="activePlayerSearch() !== 'away'"
+                    @for (
+                      player of playersForTeam(current.resolved.homeTeamId ?? '', 'home');
+                      track player.id
+                    ) {
+                      <li role="presentation">
+                        <button
+                          type="button"
+                          role="option"
+                          [attr.aria-selected]="homePlayerId() === player.id"
+                          (click)="selectPlayer('home', player.id)"
+                        >
+                          {{ player.name }}
+                        </button>
+                      </li>
+                    } @empty {
+                      <li class="no-player-options" role="presentation">
+                        {{ matchControlStrings.noPlayersFound }}
+                      </li>
+                    }
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  (click)="addMatchEvent(current.resolved.homeTeamId ?? '', 'TRY')"
+                  [disabled]="eventBusy()"
                 >
-                  <li role="presentation">
-                    <button
-                      type="button"
-                      role="option"
-                      [attr.aria-selected]="awayPlayerId() === null"
-                      (click)="selectPlayer('away', null)"
-                    >
-                      {{ matchControlStrings.noAuthor }}
-                    </button>
-                  </li>
-                  @for (
-                    player of playersForTeam(current.resolved.awayTeamId ?? '', 'away');
-                    track player.id
-                  ) {
+                  {{ matchControlStrings.try }}
+                </button>
+                <button
+                  type="button"
+                  (click)="addMatchEvent(current.resolved.homeTeamId ?? '', 'CONVERSION')"
+                  [disabled]="eventBusy() || !canConvert(current.resolved.homeTeamId ?? '')"
+                >
+                  {{ matchControlStrings.conversion }}
+                </button>
+              </section>
+
+              <section class="team-column">
+                <h3>{{ current.resolved.awayLabel }}</h3>
+                <div class="player-picker">
+                  <label>
+                    {{ matchControlStrings.playerSearch }}
+                    <input
+                      type="search"
+                      role="combobox"
+                      aria-autocomplete="list"
+                      aria-controls="away-player-options"
+                      [attr.aria-expanded]="activePlayerSearch() === 'away'"
+                      [value]="playerSearchValue('away')"
+                      (focus)="openPlayerSearch('away')"
+                      (input)="updatePlayerSearch('away', $any($event.target).value)"
+                    />
+                  </label>
+                  <ul
+                    id="away-player-options"
+                    class="player-options"
+                    role="listbox"
+                    [hidden]="activePlayerSearch() !== 'away'"
+                  >
                     <li role="presentation">
                       <button
                         type="button"
                         role="option"
-                        [attr.aria-selected]="awayPlayerId() === player.id"
-                        (click)="selectPlayer('away', player.id)"
+                        [attr.aria-selected]="awayPlayerId() === null"
+                        (click)="selectPlayer('away', null)"
                       >
-                        {{ player.name }}
+                        {{ matchControlStrings.noAuthor }}
                       </button>
                     </li>
-                  } @empty {
-                    <li class="no-player-options" role="presentation">
-                      {{ matchControlStrings.noPlayersFound }}
+                    @for (
+                      player of playersForTeam(current.resolved.awayTeamId ?? '', 'away');
+                      track player.id
+                    ) {
+                      <li role="presentation">
+                        <button
+                          type="button"
+                          role="option"
+                          [attr.aria-selected]="awayPlayerId() === player.id"
+                          (click)="selectPlayer('away', player.id)"
+                        >
+                          {{ player.name }}
+                        </button>
+                      </li>
+                    } @empty {
+                      <li class="no-player-options" role="presentation">
+                        {{ matchControlStrings.noPlayersFound }}
+                      </li>
+                    }
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  (click)="addMatchEvent(current.resolved.awayTeamId ?? '', 'TRY')"
+                  [disabled]="eventBusy()"
+                >
+                  {{ matchControlStrings.try }}
+                </button>
+                <button
+                  type="button"
+                  (click)="addMatchEvent(current.resolved.awayTeamId ?? '', 'CONVERSION')"
+                  [disabled]="eventBusy() || !canConvert(current.resolved.awayTeamId ?? '')"
+                >
+                  {{ matchControlStrings.conversion }}
+                </button>
+              </section>
+            </div>
+
+            <section class="event-list">
+              <h3>{{ matchControlStrings.eventList }}</h3>
+              @if (eventsForMatch(current.match.id).length > 0) {
+                <ul>
+                  @for (event of eventsForMatch(current.match.id); track event.id) {
+                    <li>
+                      <span>
+                        {{
+                          event.teamId === current.resolved.homeTeamId
+                            ? current.resolved.homeLabel
+                            : current.resolved.awayLabel
+                        }}
+                        ·
+                        {{
+                          event.type === 'TRY'
+                            ? matchControlStrings.try
+                            : matchControlStrings.conversion
+                        }}
+                        · {{ eventLabel(event) }}
+                      </span>
+                      <button
+                        type="button"
+                        (click)="undoMatchEvent(event.id)"
+                        [disabled]="eventBusy()"
+                      >
+                        {{ matchControlStrings.undoEvent }}
+                      </button>
                     </li>
                   }
                 </ul>
-              </div>
-              <button
-                type="button"
-                (click)="addMatchEvent(current.resolved.awayTeamId ?? '', 'TRY')"
-                [disabled]="eventBusy()"
-              >
-                {{ matchControlStrings.try }}
-              </button>
-              <button
-                type="button"
-                (click)="addMatchEvent(current.resolved.awayTeamId ?? '', 'CONVERSION')"
-                [disabled]="eventBusy() || !canConvert(current.resolved.awayTeamId ?? '')"
-              >
-                {{ matchControlStrings.conversion }}
-              </button>
+              } @else {
+                <p role="status">{{ matchControlStrings.noEvents }}</p>
+              }
             </section>
-          </div>
-
-          <section class="event-list">
-            <h3>{{ matchControlStrings.eventList }}</h3>
-            @if (eventsForMatch(current.match.id).length > 0) {
-              <ul>
-                @for (event of eventsForMatch(current.match.id); track event.id) {
-                  <li>
-                    <span>
-                      {{ event.teamId === current.resolved.homeTeamId ? current.resolved.homeLabel : current.resolved.awayLabel }}
-                      · {{ event.type === 'TRY' ? matchControlStrings.try : matchControlStrings.conversion }}
-                      · {{ eventLabel(event) }}
-                    </span>
-                    <button
-                      type="button"
-                      (click)="undoMatchEvent(event.id)"
-                      [disabled]="eventBusy()"
-                    >
-                      {{ matchControlStrings.undoEvent }}
-                    </button>
-                  </li>
-                }
-              </ul>
-            } @else {
-              <p role="status">{{ matchControlStrings.noEvents }}</p>
-            }
-          </section>
           }
 
           <div>
@@ -402,14 +409,18 @@
               <p role="status">{{ matchControlStrings.suddenDeath }}</p>
               <button
                 type="button"
-                (click)="finishControlMatch(current.match.id, current.resolved.homeTeamId ?? undefined)"
+                (click)="
+                  finishControlMatch(current.match.id, current.resolved.homeTeamId ?? undefined)
+                "
                 [disabled]="startBusy() || eventBusy()"
               >
                 {{ matchControlStrings.suddenDeathWinner(current.resolved.homeLabel) }}
               </button>
               <button
                 type="button"
-                (click)="finishControlMatch(current.match.id, current.resolved.awayTeamId ?? undefined)"
+                (click)="
+                  finishControlMatch(current.match.id, current.resolved.awayTeamId ?? undefined)
+                "
                 [disabled]="startBusy() || eventBusy()"
               >
                 {{ matchControlStrings.suddenDeathWinner(current.resolved.awayLabel) }}
@@ -503,17 +514,19 @@
       }
     </section>
 
-  }
-
-  @else if (tournament()?.status === 'FINISHED') {
+  } @else if (tournament()?.status === 'FINISHED') {
     <section class="final-result">
       <h2>{{ tournamentCloseStrings.tournamentFinished }}</h2>
       @if (finalResult(); as final) {
         @if (final.championTeamId; as champion) {
-          <p><strong>{{ tournamentCloseStrings.champion }}:</strong> {{ teamName(champion) }}</p>
+          <p>
+            <strong>{{ tournamentCloseStrings.champion }}:</strong> {{ teamName(champion) }}
+          </p>
         }
         @if (final.runnerUpTeamId; as runnerUp) {
-          <p><strong>{{ tournamentCloseStrings.runnerUp }}:</strong> {{ teamName(runnerUp) }}</p>
+          <p>
+            <strong>{{ tournamentCloseStrings.runnerUp }}:</strong> {{ teamName(runnerUp) }}
+          </p>
         }
         <h3>{{ tournamentCloseStrings.finalPositions }}</h3>
         <ul class="final-position-list">
@@ -552,6 +565,7 @@
   <button type="button" (click)="openRules()">Reglas</button>
   <button type="button" (click)="openFormat()">Formato</button>
   <button type="button" (click)="openFixture()">{{ strings.openFixture }}</button>
+  <button type="button" (click)="openBackups()">{{ backupStrings.title }}</button>
   <button type="button" (click)="openSettings()">{{ settingsStrings.title }}</button>
 
   @if (lastRecord(); as record) {

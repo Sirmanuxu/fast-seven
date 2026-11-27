@@ -1,6 +1,14 @@
 export const SETTINGS_STRINGS = {
   title: 'Ajustes',
   backToPanel: 'Volver al panel',
+  backupIntervalTitle: 'Copias automáticas',
+  backupIntervalDescription:
+    'Elegí cada cuántos minutos se crea una copia si hubo cambios. Se permiten valores de 1 a 60 minutos.',
+  backupIntervalLabel: 'Intervalo entre copias (minutos)',
+  saveBackupInterval: 'Guardar intervalo',
+  backupIntervalInvalid: 'Ingresá un intervalo entero entre 1 y 60 minutos.',
+  backupIntervalSaved: 'Se guardó el intervalo de las copias automáticas.',
+  backupIntervalSaveFailed: 'No se pudo guardar el intervalo de las copias automáticas.',
   newTournamentTitle: 'Nuevo torneo',
   newTournamentDescription:
     'Se eliminarán el torneo actual, jugadores, equipos, etapas, grupos, partidos, eventos y sorteos. Las copias automáticas se conservarán. Antes de continuar, acordate de guardar el archivo del torneo fuera del navegador: la copia automática no lo reemplaza.',

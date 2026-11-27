@@ -7,6 +7,25 @@
   }
 
   <section>
+    <h2>{{ strings.backupIntervalTitle }}</h2>
+    <p>{{ strings.backupIntervalDescription }}</p>
+    <label for="backup-interval">{{ strings.backupIntervalLabel }}</label>
+    <input
+      id="backup-interval"
+      type="number"
+      min="1"
+      max="60"
+      step="1"
+      [value]="backupIntervalDraft()"
+      [disabled]="busy()"
+      (input)="updateBackupIntervalDraft($event)"
+    />
+    <button type="button" (click)="saveBackupInterval()" [disabled]="busy()">
+      {{ strings.saveBackupInterval }}
+    </button>
+  </section>
+
+  <section>
     <h2>{{ strings.newTournamentTitle }}</h2>
     <p>{{ strings.newTournamentDescription }}</p>
     <button type="button" (click)="createNewTournament()" [disabled]="busy()">
