@@ -1,20 +1,33 @@
 main {
+  width: 100%;
+  min-height: 100vh;
   min-height: 100dvh;
+  padding: clamp(1rem, 3vmin, 4rem);
+  box-sizing: border-box;
   display: grid;
   place-content: center;
-  gap: clamp(0.5rem, 2vh, 2rem);
+  gap: clamp(0.5rem, 2vmin, 2rem);
   text-align: center;
   background: #111;
   color: white;
   cursor: none;
   overflow: hidden;
-  font-size: clamp(2rem, 5vw, 6rem);
+  font-size: clamp(1.25rem, min(5vw, 8vh), 6rem);
+  line-height: 1.1;
+}
+
+h1,
+p {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 button {
   justify-self: center;
-  min-height: 44px;
-  font-size: clamp(1rem, 2vw, 2rem);
+  min-height: max(44px, 6vh);
+  padding: 0.5em 1em;
+  font-size: clamp(1rem, min(2.5vw, 4vh), 2rem);
   cursor: pointer;
 }
 
@@ -24,6 +37,7 @@ button {
   margin: 0;
 }
 
-.connection {
-  font-size: clamp(1rem, 2vw, 2.5rem);
+.connection,
+.public-message {
+  font-size: clamp(1rem, min(3vw, 5vh), 3rem);
 }
