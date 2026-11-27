@@ -5,6 +5,7 @@ import { generateGroupsKnockoutFixtureContract } from './groups-knockout';
 import { generateGroupsCupsFixtureContract } from './groups-cups';
 import { generateGroupsPositionPlayoffsFixtureContract } from './groups-position-playoffs';
 import { generateSwissFixtureContract } from './swiss';
+import { generateDoubleEliminationFixtureContract } from './double-elimination';
 
 export const generateFixture: GenerateFixture = (input) => {
   const params: FormatParams = input.params;
@@ -25,6 +26,9 @@ export const generateFixture: GenerateFixture = (input) => {
   }
   if (params.format === 'SWISS') {
     return generateSwissFixtureContract(input);
+  }
+  if (params.format === 'DOUBLE_ELIMINATION') {
+    return generateDoubleEliminationFixtureContract(input);
   }
   return {
     ok: false,
