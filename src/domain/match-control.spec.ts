@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildMatchControlView, startMatch } from './match-control';
+import { buildMatchControlView, finishDetailMatch, startMatch } from './match-control';
 import { createFixedClock } from './clock';
 import { Match, ResolvedMatch, TournamentSnapshot } from './model';
 
@@ -77,6 +77,64 @@ function snapshot(matches: readonly Match[]): TournamentSnapshot {
 }
 
 describe('match control', () => {
+  it('finishes a detail match with the recomputed score', () => {
+    const live = match('one', 1, 'IN_PROGRESS');
+    const base = snapshot([live]);
+    const event = {
+      id: 'try-1',
+      matchId: 'one',
+      teamId: 'home-one',
+      type: 'TRY' as const,
+      playerId: null,
+      createdAt: '2026-11-26T12:34:56.000Z',
+    };
+
+    const result = finishDetailMatch(
+      base,
+      [resolved('one')],
+      'one',
+      [event],
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        status: 'FINISHED',
+        result: {
+          mode: 'DETAIL',
+          homePoints: 5,
+          awayPoints: 0,
+          definition: 'REGULAR',
+        },
+        finishedAt: '2026-11-26T12:40:00.000Z',
+      },
+    });
+  });
+
+  it('blocks a tied result in an elimination stage', () => {
+    const live = { ...match('one', 1, 'IN_PROGRESS'), stageId: 'knockout' };
+    const base = {
+      ...snapshot([live]),
+      stages: [
+        { id: 'knockout', type: 'KNOCKOUT' as const, name: 'Llaves', order: 1, cup: null },
+      ],
+    };
+
+    const result = finishDetailMatch(
+      base,
+      [resolved('one')],
+      'one',
+      [],
+      createFixedClock(Date.parse('2026-11-26T12:40:00.000Z')),
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: 'eliminationTie' },
+    });
+  });
+
   it('starts a playable pending match and records the real start time', () => {
     const original = match('one', 1);
     const result = startMatch(

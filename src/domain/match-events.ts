@@ -110,3 +110,32 @@ export function validateMatchEventPlayer(
 
   return { ok: true, value: null };
 }
+
+export function addMatchEvent(
+  events: readonly MatchEvent[],
+  event: MatchEvent,
+  homeTeamId: Id,
+  awayTeamId: Id,
+  players: readonly Player[],
+): Result<readonly MatchEvent[], DomainError> {
+  const teamsResult = validateEventTeams(events, homeTeamId, awayTeamId);
+  if (!teamsResult.ok) {
+    return teamsResult;
+  }
+  if (event.teamId !== homeTeamId && event.teamId !== awayTeamId) {
+    return error('teamNotInMatch');
+  }
+
+  const playerResult = validateMatchEventPlayer(event, players);
+  if (!playerResult.ok) {
+    return playerResult;
+  }
+
+  if (event.type === 'CONVERSION' && !canAddConversion(events, event.teamId)) {
+    return error('conversionsExceedTries');
+  }
+
+  const nextEvents = [...events, event];
+  const scoreResult = computeScore(nextEvents, homeTeamId, awayTeamId);
+  return scoreResult.ok ? { ok: true, value: nextEvents } : scoreResult;
+}

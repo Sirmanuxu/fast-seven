@@ -1,5 +1,12 @@
 # Decision log
 
+## 2026-11-27 - HU-34 - Detail match result entry
+
+- **Decision:** Implement live try and conversion entry in the existing match-control panel, with player search, no-author events, individual undo, and an atomic detail-match finalization transaction.
+- **Reason:** HU-34 owns the live event-entry and result-detail workflow. Sharing the match-control state and the existing MatchEvent domain rules avoids duplicating result calculations and keeps event persistence immediate.
+- **Decision:** Block tied elimination-stage results in HU-34 instead of implementing sudden death.
+- **Reason:** Sudden-death winner selection and its result definition belong to HU-36 and are outside this story's acceptance criteria.
+
 ## 2026-11-24 - HU-28 - Resolve match references
 
 - **Decision:** Recompute resolved teams from the complete tournament snapshot and expose

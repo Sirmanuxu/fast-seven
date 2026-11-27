@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addMatchEvent,
   computeScore,
   removeMatchEvent,
   canAddConversion,
@@ -78,6 +79,24 @@ describe('computeScore', () => {
 });
 
 describe('match event actions', () => {
+  it('adds a try and immediately recomputes a valid event list', () => {
+    const tryEvent = event('try-1', homeTeamId, 'TRY', null);
+
+    expect(addMatchEvent([], tryEvent, homeTeamId, awayTeamId, [])).toEqual({
+      ok: true,
+      value: [tryEvent],
+    });
+  });
+
+  it('rejects a conversion without an available try', () => {
+    const conversion = event('conversion-1', homeTeamId, 'CONVERSION', null);
+
+    expect(addMatchEvent([], conversion, homeTeamId, awayTeamId, [])).toMatchObject({
+      ok: false,
+      error: { code: 'conversionsExceedTries' },
+    });
+  });
+
   it('rejects removing a try while its conversion remains', () => {
     const events = [
       event('try-1', homeTeamId, 'TRY'),

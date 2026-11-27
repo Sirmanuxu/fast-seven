@@ -1,5 +1,15 @@
-import { Clock, DomainError, Id, Match, ResolvedMatch, Result, TournamentSnapshot } from './model';
+import {
+  Clock,
+  DomainError,
+  Id,
+  Match,
+  MatchEvent,
+  ResolvedMatch,
+  Result,
+  TournamentSnapshot,
+} from './model';
 import { formatIsoDateTime } from './schedule';
+import { computeScore, validateMatchEventPlayer } from './match-events';
 
 export interface MatchControlView {
   readonly current: { readonly match: Match; readonly resolved: ResolvedMatch } | null;
@@ -82,6 +92,70 @@ export function finishMatch(
     value: {
       ...match,
       status: 'FINISHED',
+      finishedAt: formatIsoDateTime(clock.nowMs()),
+    },
+  };
+}
+
+export function finishDetailMatch(
+  snapshot: TournamentSnapshot,
+  resolvedMatches: readonly ResolvedMatch[],
+  matchId: Id,
+  events: readonly MatchEvent[],
+  clock: Clock,
+): Result<Match, DomainError> {
+  if (snapshot.tournament.status !== 'RUNNING') {
+    return error('tournamentNotRunning', 'matchControl.tournamentNotRunning');
+  }
+
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId);
+  if (!match) {
+    return error('matchNotFound', 'matchControl.matchNotFound', { matchId });
+  }
+  if (match.status !== 'IN_PROGRESS') {
+    return error('matchNotInProgress', 'matchControl.matchNotInProgress');
+  }
+
+  const resolved = resolvedMatches.find((candidate) => candidate.matchId === matchId);
+  if (!resolved?.isPlayable || resolved.homeTeamId === null || resolved.awayTeamId === null) {
+    return error('matchNotResolved', 'matchControl.matchNotResolved');
+  }
+
+  for (const event of events) {
+    const playerResult = validateMatchEventPlayer(event, snapshot.players);
+    if (!playerResult.ok) {
+      return playerResult;
+    }
+  }
+
+  const score = computeScore(events, resolved.homeTeamId, resolved.awayTeamId);
+  if (!score.ok) {
+    return score;
+  }
+
+  const stage = snapshot.stages.find((candidate) => candidate.id === match.stageId);
+  const isEliminationStage =
+    stage?.type === 'KNOCKOUT' ||
+    stage?.type === 'CUP' ||
+    stage?.type === 'WINNERS_BRACKET' ||
+    stage?.type === 'LOSERS_BRACKET' ||
+    stage?.type === 'GRAND_FINAL';
+  if (isEliminationStage && score.value.home === score.value.away) {
+    return error('eliminationTie', 'matchControl.eliminationTie');
+  }
+
+  return {
+    ok: true,
+    value: {
+      ...match,
+      status: 'FINISHED',
+      result: {
+        mode: 'DETAIL',
+        homePoints: score.value.home,
+        awayPoints: score.value.away,
+        definition: 'REGULAR',
+        winnerTeamId: null,
+      },
       finishedAt: formatIsoDateTime(clock.nowMs()),
     },
   };

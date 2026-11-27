@@ -9,11 +9,21 @@ import { SPIKE_STRINGS } from '../../i18n/spike-strings';
 import { ProjectorChannel } from '../../sync/projector-channel';
 import { showErrorPopup } from '../error-popup';
 import { MATCH_CONTROL_STRINGS } from '../../i18n/match-control-strings';
-import { ResolvedMatch, TournamentSnapshot } from '../../domain/model';
+import {
+  MatchEvent,
+  ResolvedMatch,
+  TournamentSnapshot,
+} from '../../domain/model';
 import { resolveMatches } from '../../domain/resolve-matches';
 import { createSeededRng } from '../../domain/rng';
 import { computeScheduleDetails, ScheduleDetails } from '../../domain/schedule';
 import { buildMatchControlView, MatchControlView } from '../../domain/match-control';
+import {
+  addMatchEvent,
+  computeScore,
+  removeMatchEvent,
+  canAddConversion,
+} from '../../domain/match-events';
 
 @Component({
   selector: 'app-panel',
@@ -49,6 +59,11 @@ export class PanelComponent implements OnInit {
     next: null,
     following: [],
   });
+  protected readonly homePlayerSearch = signal('');
+  protected readonly awayPlayerSearch = signal('');
+  protected readonly homePlayerId = signal<string | null>(null);
+  protected readonly awayPlayerId = signal<string | null>(null);
+  protected readonly eventBusy = signal(false);
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.projectorChannel.close());
@@ -120,19 +135,193 @@ export class PanelComponent implements OnInit {
   }
 
   protected async finishControlMatch(matchId: string): Promise<void> {
-    if (this.startBusy()) return;
-    if (!window.confirm(MATCH_CONTROL_STRINGS.confirmFinish)) return;
-    this.startBusy.set(true);
+    if (this.eventBusy() || this.startBusy()) return;
+    const snapshot = this.snapshot();
+    const current = this.matchControl().current;
+    if (!snapshot || !current || current.match.id !== matchId) return;
+    if (!current.resolved.homeTeamId || !current.resolved.awayTeamId) return;
+
+    const score = this.liveScore();
+    if (!score) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.eventSaveFailed);
+      return;
+    }
+
+    const stage = snapshot.stages.find((candidate) => candidate.id === current.match.stageId);
+    const isElimination =
+      stage?.type === 'KNOCKOUT' ||
+      stage?.type === 'CUP' ||
+      stage?.type === 'WINNERS_BRACKET' ||
+      stage?.type === 'LOSERS_BRACKET' ||
+      stage?.type === 'GRAND_FINAL';
+    if (isElimination && score.home === score.away) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.eliminationTie);
+      return;
+    }
+
+    const confirmation = MATCH_CONTROL_STRINGS.confirmDetailFinish(
+      current.resolved.homeLabel,
+      score.home,
+      score.away,
+      current.resolved.awayLabel,
+    );
+    if (!window.confirm(confirmation)) return;
+
+    this.eventBusy.set(true);
     try {
-      await tournamentRepository.finishMatch(matchId, new Date().toISOString());
+      const events = this.eventsForMatch(matchId);
+      await tournamentRepository.finishMatchWithEvents(
+        matchId,
+        events,
+        new Date().toISOString(),
+      );
       await this.loadMatchControl();
       this.statusMessage.set(MATCH_CONTROL_STRINGS.matchFinished);
     } catch (error) {
       console.error('Finishing match failed', error);
       showErrorPopup(MATCH_CONTROL_STRINGS.finishFailed);
     } finally {
-      this.startBusy.set(false);
+      this.eventBusy.set(false);
     }
+  }
+
+  protected async addMatchEvent(teamId: string, type: MatchEvent['type']): Promise<void> {
+    if (this.eventBusy()) return;
+    const current = this.matchControl().current;
+    const snapshot = this.snapshot();
+    if (!current || !snapshot) return;
+    if (!current.resolved.homeTeamId || !current.resolved.awayTeamId) return;
+
+    const events = this.eventsForMatch(current.match.id);
+    if (type === 'CONVERSION' && !canAddConversion(events, teamId)) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.conversionUnavailable);
+      return;
+    }
+
+    const playerId =
+      teamId === current.resolved.homeTeamId
+        ? this.homePlayerId()
+        : this.awayPlayerId();
+    const event: MatchEvent = {
+      id: crypto.randomUUID(),
+      matchId: current.match.id,
+      teamId,
+      type,
+      playerId,
+      createdAt: new Date().toISOString(),
+    };
+    const result = addMatchEvent(
+      events,
+      event,
+      current.resolved.homeTeamId,
+      current.resolved.awayTeamId,
+      snapshot.players,
+    );
+    if (!result.ok) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.eventSaveFailed);
+      return;
+    }
+
+    this.eventBusy.set(true);
+    try {
+      await tournamentRepository.saveMatchWithEvents({
+        match: current.match,
+        events: result.value,
+      });
+      await this.loadMatchControl();
+      this.statusMessage.set(MATCH_CONTROL_STRINGS.eventSaved);
+    } catch (error) {
+      console.error('Adding match event failed', error);
+      showErrorPopup(MATCH_CONTROL_STRINGS.eventSaveFailed);
+    } finally {
+      this.eventBusy.set(false);
+    }
+  }
+
+  protected async undoMatchEvent(eventId: string): Promise<void> {
+    if (this.eventBusy()) return;
+    const current = this.matchControl().current;
+    if (!current) return;
+    if (!current.resolved.homeTeamId || !current.resolved.awayTeamId) return;
+
+    const events = this.eventsForMatch(current.match.id);
+    const result = removeMatchEvent(
+      events,
+      eventId,
+      current.resolved.homeTeamId,
+      current.resolved.awayTeamId,
+    );
+    if (!result.ok) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.eventRemoveFailed);
+      return;
+    }
+
+    this.eventBusy.set(true);
+    try {
+      await tournamentRepository.saveMatchWithEvents({
+        match: current.match,
+        events: result.value,
+      });
+      await this.loadMatchControl();
+      this.statusMessage.set(MATCH_CONTROL_STRINGS.eventRemoved);
+    } catch (error) {
+      console.error('Removing match event failed', error);
+      showErrorPopup(MATCH_CONTROL_STRINGS.eventRemoveFailed);
+    } finally {
+      this.eventBusy.set(false);
+    }
+  }
+
+  protected liveScore(): { readonly home: number; readonly away: number } | null {
+    const current = this.matchControl().current;
+    if (!current) return null;
+    if (!current.resolved.homeTeamId || !current.resolved.awayTeamId) return null;
+    const score = computeScore(
+      this.eventsForMatch(current.match.id),
+      current.resolved.homeTeamId,
+      current.resolved.awayTeamId,
+    );
+    return score.ok ? score.value : null;
+  }
+
+  protected eventsForMatch(matchId: string): readonly MatchEvent[] {
+    return this.snapshot()?.events.filter((event) => event.matchId === matchId) ?? [];
+  }
+
+  protected playersForTeam(teamId: string, side: 'home' | 'away'): readonly {
+    readonly id: string;
+    readonly name: string;
+  }[] {
+    const search =
+      (side === 'home' ? this.homePlayerSearch() : this.awayPlayerSearch())
+        .trim()
+        .toLocaleLowerCase('es');
+    return (this.snapshot()?.players ?? [])
+      .filter((player) => player.teamId === teamId)
+      .filter((player) => {
+        if (!search) return true;
+        return `${player.firstName} ${player.lastName}`
+          .toLocaleLowerCase('es')
+          .includes(search);
+      })
+      .map((player) => ({
+        id: player.id,
+        name: `${player.firstName} ${player.lastName}${player.disambiguation ? ` (${player.disambiguation})` : ''}`,
+      }));
+  }
+
+  protected eventLabel(event: MatchEvent): string {
+    if (!event.playerId) return MATCH_CONTROL_STRINGS.noAuthor;
+    const player = this.snapshot()?.players.find((candidate) => candidate.id === event.playerId);
+    return player
+      ? `${player.firstName} ${player.lastName}${player.disambiguation ? ` (${player.disambiguation})` : ''}`
+      : MATCH_CONTROL_STRINGS.noAuthor;
+  }
+
+  protected canConvert(teamId: string): boolean {
+    const current = this.matchControl().current;
+    if (!current || !teamId) return false;
+    return canAddConversion(this.eventsForMatch(current.match.id), teamId);
   }
 
   protected tentativeStart(matchId: string): string | null {

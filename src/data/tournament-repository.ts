@@ -23,6 +23,7 @@ import { canCreateOrDeleteTeam, getDefaultTeamColorPair, normalizeTeamName } fro
 import { normalizePlayerKey } from '../domain/player';
 import { startTournament } from '../domain/start-tournament';
 import {
+  finishDetailMatch,
   finishMatch as finishMatchDomain,
   startMatch as startMatchDomain,
 } from '../domain/match-control';
@@ -206,6 +207,53 @@ export class TournamentRepository {
 
         await this.writeBackup('MATCH_FINISHED', snapshot);
         await tournamentDatabase.matches.put(finished.value);
+        await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: finishedAt,
+        });
+      },
+    );
+  }
+
+  async finishMatchWithEvents(
+    matchId: string,
+    events: readonly MatchEvent[],
+    finishedAt: string,
+  ): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const seed =
+          snapshot.draws.find((draw) => draw.payload.kind === 'TIEBREAK')?.seed ?? 'match-control';
+        const resolved = resolveMatches(snapshot, createSeededRng(seed));
+        const finished = finishDetailMatch(
+          snapshot,
+          resolved,
+          matchId,
+          events,
+          createFixedClock(Date.parse(finishedAt)),
+        );
+        if (!finished.ok) {
+          throw new Error(`Detail match cannot finish: ${finished.error.code}`);
+        }
+
+        await this.writeBackup('MATCH_FINISHED', snapshot);
+        await tournamentDatabase.matches.put(finished.value);
+        await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        await tournamentDatabase.events.bulkPut([...events]);
         await tournamentDatabase.tournament.update(tournament.id, {
           updatedAt: finishedAt,
         });
