@@ -172,6 +172,7 @@ export class TournamentRepository {
       'rw',
       [
         'tournament',
+        'players',
         'teams',
         'stages',
         'groups',

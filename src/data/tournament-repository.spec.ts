@@ -463,6 +463,7 @@ describe('TournamentRepository tournament reset actions', () => {
       'rw',
       expect.arrayContaining([
         'tournament',
+        'players',
         'teams',
         'stages',
         'groups',
