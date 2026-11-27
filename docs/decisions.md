@@ -773,3 +773,10 @@
 - **Reason:** Editing a score can change the table without changing qualification or pairings;
   changing pairings requires replacing the next round and resetting later rounds through the
   existing cascade backup and undo mechanism.
+
+## 2026-11-27 - HU-55 - Double-elimination bracket generation
+
+- **Decision:** Generate winners and losers brackets with `WINNER_OF` and `LOSER_OF` references;
+  add the conditional reset match only when the configured parameter enables it.
+- **Reason:** References preserve elimination structure across result edits and let the existing
+  resolver compute participants and byes from results instead of storing derived teams.
