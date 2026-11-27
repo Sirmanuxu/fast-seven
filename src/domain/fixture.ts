@@ -35,7 +35,6 @@ export const generateFixture: GenerateFixture = (input) => {
     error: {
       code: 'unsupportedFormat',
       messageKey: 'fixture.unsupportedFormat',
-      params: { format: params.format },
     },
   };
 };

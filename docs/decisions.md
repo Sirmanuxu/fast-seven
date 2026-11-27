@@ -780,3 +780,27 @@
   add the conditional reset match only when the configured parameter enables it.
 - **Reason:** References preserve elimination structure across result edits and let the existing
   resolver compute participants and byes from results instead of storing derived teams.
+
+## 2026-11-27 - HU-56 - Double-elimination progression
+
+- **Decision:** Derive lives and eliminations from finished match results and resolved
+  participants; require sudden-death winners for tied elimination matches.
+- **Reason:** The domain already has result modes and resolved bracket references, so loss counts
+  can be computed without storing derived tournament state.
+- **Decision:** Enable the conditional grand-final reset only when the losers-bracket champion
+  wins the first grand final.
+- **Reason:** The reset is part of the bracket structure but must not become pending or block
+  closing when the winners-bracket champion wins.
+
+## 2026-11-27 - HU-57 - Double-elimination byes
+
+- **Decision:** Represent non-power-of-two winners byes as finished phantom matches and build
+  the remaining losers path with explicit reference chains.
+- **Reason:** Phantom matches preserve the fixed bracket size, resolve automatically, remain
+  excluded from scheduling and visible counts, and do not require fixed team participants.
+
+## 2026-11-27 - Epic E7 - Advanced formats
+
+- **Decision:** Raise the production initial-bundle error budget from 1.08 MB to 1.09 MB.
+- **Reason:** The Swiss and double-elimination implementations increased the bundle by 4.42 kB
+  beyond the previous E7-era ceiling.
