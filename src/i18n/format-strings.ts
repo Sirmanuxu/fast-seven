@@ -15,6 +15,7 @@ interface FormatStrings {
   readonly save: string;
   readonly saved: string;
   readonly saveFailed: string;
+  readonly formatLocked: string;
   readonly fixtureResetConfirmation: string;
   readonly fixtureReset: string;
   readonly totalMatches: string;
@@ -76,6 +77,8 @@ export const FORMAT_STRINGS: FormatStrings = {
   save: 'Guardar formato',
   saved: 'Formato, duración y descanso guardados.',
   saveFailed: 'No se pudo guardar el formato. Revisá el almacenamiento del navegador.',
+  formatLocked:
+    'El torneo está en curso o finalizado. Para cambiar el formato, primero hay que reiniciarlo.',
   fixtureResetConfirmation:
     'Cambiar el formato va a borrar el fixture y los sorteos asociados. Se conservarán los equipos y jugadores. ¿Querés continuar?',
   fixtureReset: 'Formato actualizado. Generá un fixture nuevo para continuar.',

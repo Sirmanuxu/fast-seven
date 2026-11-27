@@ -8,6 +8,10 @@
     <p role="status">{{ status }}</p>
   }
 
+  @if (formatLocked) {
+    <p role="status">{{ strings.formatLocked }}</p>
+  }
+
   <section class="controls">
     <label
       >{{ strings.teamCount }}
@@ -15,6 +19,7 @@
         type="number"
         min="0"
         [value]="teamCount()"
+        [disabled]="formatLocked"
         (input)="setTeamCount($any($event.target).value)"
       />
     </label>
@@ -24,6 +29,7 @@
         type="number"
         min="0"
         [value]="matchDuration()"
+        [disabled]="formatLocked"
         (input)="setMatchDuration($any($event.target).value)"
       />
     </label>
@@ -33,6 +39,7 @@
         type="number"
         min="0"
         [value]="restDuration()"
+        [disabled]="formatLocked"
         (input)="setRestDuration($any($event.target).value)"
       />
     </label>
@@ -45,7 +52,9 @@
         <input
           type="checkbox"
           [checked]="compared().includes(option.format)"
-          [disabled]="!option.viable && !compared().includes(option.format)"
+          [disabled]="
+            formatLocked || (!option.viable && !compared().includes(option.format))
+          "
           (change)="toggleComparison(option.format)"
         />
         {{ formatLabel(option.format) }}
@@ -92,7 +101,9 @@
           @for (warning of option.warnings; track warning.code) {
             <p class="warning">{{ warningText(warning.code, option) }}</p>
           }
-          <button type="button" (click)="choose(option)">{{ strings.select }}</button>
+          <button type="button" (click)="choose(option)" [disabled]="formatLocked">
+            {{ strings.select }}
+          </button>
         } @else {
           <p class="disabled-reason">{{ strings.notViable }}: {{ reasonText(option) }}</p>
         }
@@ -126,7 +137,11 @@
         @if (params.format === 'ROUND_ROBIN') {
           <label>
             {{ strings.rounds }}
-            <select [value]="params.rounds" (change)="setRoundCount($any($event.target).value)">
+            <select
+              [value]="params.rounds"
+              [disabled]="formatLocked"
+              (change)="setRoundCount($any($event.target).value)"
+            >
               <option [value]="1">1</option>
               <option [value]="2">2</option>
             </select>
@@ -142,6 +157,7 @@
               min="1"
               [max]="teamCount() - 1"
               [value]="params.rounds"
+              [disabled]="formatLocked"
               (input)="setRoundCount($any($event.target).value)"
             />
             <small>{{ strings.swissRoundsDescription }}</small>
@@ -153,6 +169,7 @@
             <input
               type="checkbox"
               [checked]="params.grandFinalReset"
+              [disabled]="formatLocked"
               (change)="setGrandFinalReset($any($event.target).checked)"
             />
             {{ strings.grandFinalReset }}
@@ -167,7 +184,11 @@
         ) {
           <label>
             {{ strings.groupCount }}
-            <select [value]="params.groupCount" (change)="setGroupCount($any($event.target).value)">
+            <select
+              [value]="params.groupCount"
+              [disabled]="formatLocked"
+              (change)="setGroupCount($any($event.target).value)"
+            >
               @for (count of groupAlternatives; track count) {
                 <option [value]="count">{{ count }} grupos ({{ groupSizeText(count) }})</option>
               }
@@ -184,6 +205,7 @@
               type="number"
               min="0"
               [value]="params.qualifiersPerGroup"
+              [disabled]="formatLocked"
               (input)="setQualifiers($any($event.target).value)"
             />
             <small>{{ strings.qualifiersDescription }}</small>
@@ -192,6 +214,7 @@
             <input
               type="checkbox"
               [checked]="params.thirdPlaceMatch"
+              [disabled]="formatLocked"
               (change)="setThirdPlace($any($event.target).checked)"
             />
             {{ strings.thirdPlaceMatch }}
@@ -204,6 +227,7 @@
             <input
               type="checkbox"
               [checked]="params.thirdPlaceMatch"
+              [disabled]="formatLocked"
               (change)="setThirdPlace($any($event.target).checked)"
             />
             {{ strings.thirdPlaceMatch }}
@@ -255,7 +279,7 @@
         <p role="status">{{ strings.groupDrawDisabled }}</p>
       } @else {
         <p>{{ strings.groupDrawDescription }}</p>
-        <button type="button" (click)="previewGroupDraw()">
+        <button type="button" (click)="previewGroupDraw()" [disabled]="formatLocked">
           {{ groupDrawPlan() ? strings.groupDrawRepeat : strings.groupDrawButton }}
         </button>
       }
@@ -280,6 +304,7 @@
             {{ strings.groupMoveTeam }}
             <select
               [value]="selectedMoveTeamId()"
+              [disabled]="formatLocked"
               (change)="selectedMoveTeamId.set($any($event.target).value)"
             >
               <option value="">—</option>
@@ -290,7 +315,11 @@
           </label>
           <label>
             {{ strings.groupMoveFrom }}
-            <select [value]="selectedMoveFrom()" (change)="setMoveFrom($any($event.target).value)">
+            <select
+              [value]="selectedMoveFrom()"
+              [disabled]="formatLocked"
+              (change)="setMoveFrom($any($event.target).value)"
+            >
               @for (group of plan.groupTeamIds; track $index) {
                 <option [value]="$index">Grupo {{ groupName($index) }}</option>
               }
@@ -298,7 +327,11 @@
           </label>
           <label>
             {{ strings.groupMoveTo }}
-            <select [value]="selectedMoveTo()" (change)="setMoveTo($any($event.target).value)">
+            <select
+              [value]="selectedMoveTo()"
+              [disabled]="formatLocked"
+              (change)="setMoveTo($any($event.target).value)"
+            >
               @for (group of plan.groupTeamIds; track $index) {
                 <option [value]="$index">Grupo {{ groupName($index) }}</option>
               }
@@ -308,6 +341,7 @@
             {{ strings.groupMoveSwap }}
             <select
               [value]="selectedSwapTeamId()"
+              [disabled]="formatLocked"
               (change)="selectedSwapTeamId.set($any($event.target).value)"
             >
               <option value="">—</option>
@@ -320,6 +354,7 @@
             type="button"
             (click)="movePreviewTeam()"
             [disabled]="
+              formatLocked ||
               !selectedMoveTeamId() ||
               !selectedSwapTeamId() ||
               selectedMoveFrom() === selectedMoveTo()
@@ -328,7 +363,11 @@
             {{ strings.groupMoveButton }}
           </button>
         </fieldset>
-        <button type="button" (click)="confirmGroupDraw()" [disabled]="groupDrawBusy()">
+        <button
+          type="button"
+          (click)="confirmGroupDraw()"
+          [disabled]="formatLocked || groupDrawBusy()"
+        >
           {{ strings.groupDrawConfirm }}
         </button>
       }
@@ -356,7 +395,7 @@
   <button
     type="button"
     (click)="save()"
-    [disabled]="isSaving() || !selected() || parameterErrors.length > 0"
+    [disabled]="formatLocked || isSaving() || !selected() || parameterErrors.length > 0"
   >
     {{ strings.save }}
   </button>

@@ -69,7 +69,8 @@ export class FixtureComponent implements OnInit {
   }
 
   protected get hasFixture(): boolean {
-    return this.snapshot()?.tournament.status === 'FIXTURE_GENERATED';
+    const status = this.snapshot()?.tournament.status;
+    return status === 'FIXTURE_GENERATED' || status === 'RUNNING' || status === 'FINISHED';
   }
 
   protected get canModifyFixture(): boolean {
@@ -181,6 +182,18 @@ export class FixtureComponent implements OnInit {
       neighbor.status === 'PENDING' &&
       !neighbor.isPhantom &&
       !neighbor.isConditional
+    );
+  }
+
+  protected canStartMatch(match: Match): boolean {
+    return (
+      this.snapshot()?.tournament.status === 'FIXTURE_GENERATED' &&
+      match.status === 'PENDING' &&
+      !match.isPhantom &&
+      !match.isConditional &&
+      this.resolvedMatches().some(
+        (resolved) => resolved.matchId === match.id && resolved.isPlayable,
+      )
     );
   }
 
@@ -305,6 +318,24 @@ export class FixtureComponent implements OnInit {
       return;
     }
     await this.persistOrders(reset.value, this.strings.orderReset);
+  }
+
+  protected async startMatch(match: Match): Promise<void> {
+    const snapshot = this.snapshot();
+    if (!snapshot || this.isBusy() || !this.canStartMatch(match)) return;
+    if (!window.confirm(this.strings.confirmStart)) return;
+
+    this.isBusy.set(true);
+    try {
+      await tournamentRepository.startMatch(match.id, new Date().toISOString());
+      await this.load();
+      this.statusMessage.set(this.strings.matchStarted);
+    } catch (error) {
+      console.error('Starting tournament match failed', error);
+      showErrorPopup(this.strings.startFailed);
+    } finally {
+      this.isBusy.set(false);
+    }
   }
 
   protected openFormat(): void {

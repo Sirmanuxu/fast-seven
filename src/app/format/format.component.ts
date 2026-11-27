@@ -47,6 +47,11 @@ export class FormatComponent implements OnInit {
 
   private readonly router = inject(Router);
 
+  protected get formatLocked(): boolean {
+    const status = this.tournament()?.status;
+    return status === 'RUNNING' || status === 'FINISHED';
+  }
+
   protected get options(): readonly FormatOption[] {
     const tournament = this.tournament();
     if (!tournament) return [];
