@@ -120,6 +120,7 @@ export function generateGroupsCupsFixture(
     { id: groupStageId, type: 'GROUPS', name: 'Fase de grupos', order: 1, cup: null },
   ];
   const matches: Match[] = [...groupMatches.value];
+  const cupFinals: { readonly level: number; readonly match: Match }[] = [];
   let globalOrder = matches.length + 1;
 
   for (let level = 1; level <= maxGroupSize; level += 1) {
@@ -157,9 +158,18 @@ export function generateGroupsCupsFixture(
       return cupMatches;
     }
     for (const match of cupMatches.value) {
-      matches.push({ ...match, order: globalOrder });
-      globalOrder += 1;
+      if (match.label === 'Final') {
+        cupFinals.push({ level, match });
+      } else {
+        matches.push({ ...match, order: globalOrder });
+        globalOrder += 1;
+      }
     }
+  }
+
+  for (const { match } of cupFinals.sort((left, right) => right.level - left.level)) {
+    matches.push({ ...match, order: globalOrder });
+    globalOrder += 1;
   }
 
   return { ok: true, value: { stages, groups: input.groups, matches } };

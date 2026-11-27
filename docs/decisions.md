@@ -528,3 +528,10 @@
   or team assignments, and prevents schedule breaks from referencing removed matches.
 - **Decision:** Show the required reminder to save a tournament file, but do not add file export.
 - **Reason:** File export belongs to the prerequisite HU-49 and is not present in the current app.
+
+## 2026-11-26 - HU-26 - Cup final order
+
+- **Decision:** Keep preliminary and third-place matches ahead of cup finals, then order finals from
+  the lowest cup to the highest: numbered cups, Copper, Bronze, Silver, Gold.
+- **Reason:** This closes the tournament with the highest-ranked cup while preserving the explicit
+  Copper-to-Gold order and keeping each final after its dependent bracket matches.

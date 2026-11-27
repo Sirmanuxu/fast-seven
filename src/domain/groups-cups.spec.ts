@@ -47,6 +47,21 @@ describe('groups + cups fixture', () => {
     expect(result.value.matches.map((match) => match.order)).toEqual(
       result.value.matches.map((_, index) => index + 1),
     );
+    const cupByStageId = new Map(
+      result.value.stages.map((stage) => [stage.id, stage.cup]),
+    );
+    const finals = result.value.matches.filter((match) => match.label === 'Final');
+    expect(finals.map((match) => cupByStageId.get(match.stageId))).toEqual([
+      'COPPER',
+      'BRONZE',
+      'SILVER',
+      'GOLD',
+    ]);
+    expect(
+      result.value.matches
+        .filter((match) => match.label !== 'Final')
+        .every((match) => match.order < finals[0].order),
+    ).toBe(true);
     const groupStageId = result.value.stages[0].id;
     expect(result.value.matches.slice(0, 3).every((match) => match.stageId === groupStageId)).toBe(
       true,
@@ -99,6 +114,22 @@ describe('groups + cups fixture', () => {
     expect(firstGoldRound[0].away).toEqual({ kind: 'LEVEL_POSITION', level: 1, position: 4 });
     expect(firstGoldRound[1].home).toEqual({ kind: 'LEVEL_POSITION', level: 1, position: 2 });
     expect(firstGoldRound[1].away).toEqual({ kind: 'LEVEL_POSITION', level: 1, position: 3 });
+    const cupByStageId = new Map(
+      result.value.stages.map((stage) => [stage.id, stage.cup]),
+    );
+    const finals = result.value.matches.filter((match) => match.label === 'Final');
+    expect(finals.map((match) => cupByStageId.get(match.stageId))).toEqual([
+      'COPPER',
+      'BRONZE',
+      'SILVER',
+      'GOLD',
+    ]);
+    const lastThirdPlaceOrder = Math.max(
+      ...result.value.matches
+        .filter((match) => match.label === 'Tercer puesto')
+        .map((match) => match.order),
+    );
+    expect(finals[0].order).toBeGreaterThan(lastThirdPlaceOrder);
   });
 
   it('gives first-round byes to the highest-ranked seeds', () => {

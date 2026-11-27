@@ -285,8 +285,24 @@ function orderPendingMatches(
       }
       const leftGroupPhase = stageTypes.get(left.stageId) === 'GROUPS' ? 0 : 1;
       const rightGroupPhase = stageTypes.get(right.stageId) === 'GROUPS' ? 0 : 1;
+      const leftCupFinal =
+        stageTypes.get(left.stageId) === 'CUP' && left.label === 'Final';
+      const rightCupFinal =
+        stageTypes.get(right.stageId) === 'CUP' && right.label === 'Final';
+      if (leftGroupPhase !== rightGroupPhase) {
+        return leftGroupPhase - rightGroupPhase;
+      }
+      if (leftCupFinal !== rightCupFinal) {
+        return leftCupFinal ? 1 : -1;
+      }
+      if (leftCupFinal && rightCupFinal) {
+        return (
+          (stageOrder.get(right.stageId) ?? Number.MIN_SAFE_INTEGER) -
+            (stageOrder.get(left.stageId) ?? Number.MIN_SAFE_INTEGER) ||
+          left.order - right.order
+        );
+      }
       return (
-        leftGroupPhase - rightGroupPhase ||
         left.round - right.round ||
         (stageOrder.get(left.stageId) ?? Number.MAX_SAFE_INTEGER) -
           (stageOrder.get(right.stageId) ?? Number.MAX_SAFE_INTEGER) ||

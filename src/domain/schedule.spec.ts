@@ -105,6 +105,80 @@ function roundRobinSnapshot(teamCount: number): TournamentSnapshot {
 }
 
 describe('tentative schedule', () => {
+  it('orders cup finals from Copper to Gold after non-final cup matches', () => {
+    const cups = [
+      { id: 'gold', name: 'Copa de Oro', order: 1, cup: 'GOLD' as const, semiRound: 2 },
+      { id: 'silver', name: 'Copa de Plata', order: 2, cup: 'SILVER' as const, semiRound: 1 },
+      { id: 'bronze', name: 'Copa de Bronce', order: 3, cup: 'BRONZE' as const, semiRound: 3 },
+      { id: 'copper', name: 'Copa de Cobre', order: 4, cup: 'COPPER' as const, semiRound: null },
+    ];
+    const cupMatches = cups.flatMap((cup, index) => {
+      if (cup.semiRound === null) {
+        return [
+          match(
+            `${cup.id}-final`,
+            index + 1,
+            { kind: 'TEAM', teamId: `${cup.id}-a` },
+            { kind: 'TEAM', teamId: `${cup.id}-b` },
+            {
+              stageId: cup.id,
+              round: 1,
+              label: 'Final',
+            },
+          ),
+        ];
+      }
+      return [
+        match(
+          `${cup.id}-semi`,
+          index * 2 + 1,
+          { kind: 'TEAM', teamId: `${cup.id}-a` },
+          { kind: 'TEAM', teamId: `${cup.id}-b` },
+          {
+            stageId: cup.id,
+            round: cup.semiRound,
+            label: 'Semifinal',
+          },
+        ),
+        match(
+          `${cup.id}-final`,
+          index * 2 + 2,
+          { kind: 'WINNER_OF', matchId: `${cup.id}-semi` },
+          { kind: 'TEAM', teamId: `${cup.id}-c` },
+          {
+            stageId: cup.id,
+            round: cup.semiRound + 1,
+            label: 'Final',
+          },
+        ),
+      ];
+    });
+    const details = computeScheduleDetails(
+      snapshot([], cupMatches, undefined, {
+        stages: cups.map((cup) => ({
+          id: cup.id,
+          type: 'CUP',
+          name: cup.name,
+          order: cup.order,
+          cup: cup.cup,
+        })),
+      }),
+      Date.UTC(2026, 10, 26, 10, 0),
+      [],
+      'SUGGESTED',
+    );
+
+    expect(details.orderedMatchIds).toEqual([
+      'silver-semi',
+      'gold-semi',
+      'bronze-semi',
+      'copper-final',
+      'bronze-final',
+      'silver-final',
+      'gold-final',
+    ]);
+  });
+
   it('schedules five matches from the configured start time and inserts breaks', () => {
     const matches = Array.from({ length: 5 }, (_, index) =>
       match(

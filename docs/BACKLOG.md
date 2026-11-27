@@ -652,6 +652,7 @@ Criterios de aceptación:
 - Grupos desparejos: la última copa tiene menos equipos, se arma con los que haya y se explica.
 - Copas de 1 equipo no se generan. Copas de 2 equipos son una final.
 - Cada copa tiene sus propias posiciones finales.
+- Después de todas las rondas previas, las finales se juegan de menor a mayor copa: Cobre, Bronce, Plata y Oro (y luego las copas numeradas, si existen).
 
 **HU-27: Generador, grupos + cruces de posiciones** · Should · Depende de: HU-25
 

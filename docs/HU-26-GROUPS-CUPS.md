@@ -23,6 +23,8 @@
       stage name.
 - [x] One-team cups are omitted; two-team cups contain one final.
 - [x] Each cup has its own stage and bracket, keeping its final placements separate.
+- [x] Cup finals follow all preliminary and third-place matches, ordered from the lowest cup to
+      Gold (Copper, Bronze, Silver, Gold).
 - [x] Added the 12-team / 26-match reference case and uneven-group, seeding, byes and draw-reuse
       coverage.
 
