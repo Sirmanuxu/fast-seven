@@ -625,3 +625,14 @@
 - **Reason:** `ProjectorState` must survive refreshes and remain independent from tournament snapshot exports.
 - **Decision:** Open projector windows with `_blank` instead of a shared named window.
 - **Reason:** It allows several public projector windows to run simultaneously.
+
+## 2026-11-27 - HU-43 - Projector views
+
+- **Decision:** Choose a context-appropriate default view while no forced view is stored: teams and fixture in setup, match plate or next match while running, and final result when finished.
+- **Reason:** HU-44 owns automatic view rotation and HU-45 owns manual selection; HU-43 needs a useful screen before those stories are implemented.
+- **Decision:** Rotate group standings and bracket stages every 12 seconds, and exclude data-empty views from the view list.
+- **Reason:** This satisfies the subview rotation and empty-view criteria without introducing a second top-level rotation mechanism.
+- **Decision:** Determine black/white team-label text by computing WCAG relative luminance and contrast against each team’s primary color.
+- **Reason:** Choosing the higher-contrast foreground gives a consistent readable label without modifying team colors.
+- **Decision:** Lazy-load the projector route.
+- **Reason:** The multi-view presentation is independent of panel workflows and should not further increase the initial bundle.
