@@ -19,7 +19,11 @@ import {
 import { resolveMatches } from '../../domain/resolve-matches';
 import { createSeededRng } from '../../domain/rng';
 import { computeScheduleDetails, ScheduleDetails } from '../../domain/schedule';
-import { buildMatchControlView, MatchControlView } from '../../domain/match-control';
+import {
+  buildMatchControlView,
+  MatchControlView,
+  undoMatchInProgress,
+} from '../../domain/match-control';
 import {
   addMatchEvent,
   computeScore,
@@ -138,6 +142,50 @@ export class PanelComponent implements OnInit {
     } catch (error) {
       console.error('Starting match failed', error);
       showErrorPopup(MATCH_CONTROL_STRINGS.startFailed);
+    } finally {
+      this.startBusy.set(false);
+    }
+  }
+
+  protected async undoMatchInProgress(matchId: string): Promise<void> {
+    if (this.startBusy() || this.eventBusy()) return;
+    if (!window.confirm(MATCH_CONTROL_STRINGS.confirmUndoInProgress)) return;
+
+    const snapshot = this.snapshot();
+    if (!snapshot) return;
+
+    const eventsExist = snapshot.events.some((event) => event.matchId === matchId);
+    const preserveEvents =
+      !eventsExist || window.confirm(MATCH_CONTROL_STRINGS.confirmPreserveEvents);
+    const preview = undoMatchInProgress(snapshot, matchId, preserveEvents);
+    if (!preview.ok) {
+      showErrorPopup(MATCH_CONTROL_STRINGS.undoInProgressFailed);
+      return;
+    }
+
+    const resetTournament =
+      preview.value.shouldOfferFixtureReset &&
+      window.confirm(MATCH_CONTROL_STRINGS.confirmFixtureReset);
+
+    this.startBusy.set(true);
+    try {
+      await tournamentRepository.undoMatchInProgress(
+        matchId,
+        preserveEvents,
+        resetTournament,
+        new Date().toISOString(),
+      );
+      await this.loadMatchControl();
+      const next = this.matchControl().next;
+      this.projectorChannel.publish(
+        next
+          ? `${next.resolved.homeLabel} - ${next.resolved.awayLabel}`
+          : MATCH_CONTROL_STRINGS.noNextMatch,
+      );
+      this.statusMessage.set(MATCH_CONTROL_STRINGS.inProgressUndone);
+    } catch (error) {
+      console.error('Undoing in-progress match failed', error);
+      showErrorPopup(MATCH_CONTROL_STRINGS.undoInProgressFailed);
     } finally {
       this.startBusy.set(false);
     }

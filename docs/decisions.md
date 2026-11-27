@@ -1,5 +1,14 @@
 # Decision log
 
+## 2026-11-27 - HU-39 - Undo in-progress match
+
+- **Decision:** Return an `IN_PROGRESS` match to `PENDING` by clearing `startedAt`, `finishedAt`, and `result`, and let the operator choose whether to preserve or delete events loaded for that match.
+- **Reason:** The story requires explicit event handling and the data contract represents live events separately from the match result. Clearing only derived in-progress state preserves operator intent when events are kept and prevents stale live events when they are discarded.
+- **Decision:** Offer the return to `FIXTURE_GENERATED` only when the undone match is the first playable match, no other match is finished or in progress, and no event belongs to another match.
+- **Reason:** This conservative check matches the “nothing else was touched” criterion while still allowing the operator to undo a first erroneous start and lift the tournament lock.
+- **Decision:** Publish the next match context through the existing projector channel after undo, and create a `MANUAL` snapshot backup in the same atomic repository transaction.
+- **Reason:** The existing projector implementation currently receives contextual text; publishing the next/empty state restores it after the live match disappears. A snapshot protects the undo operation even though HU-39 does not define a dedicated backup reason.
+
 ## 2026-11-26 - HU-38 - Result editing and cascade
 
 - **Decision:** Add finalized-result editing to the existing fixture screen, including score, mode, definition, and event author/team/type changes.

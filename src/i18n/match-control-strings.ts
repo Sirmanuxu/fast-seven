@@ -70,6 +70,13 @@ export const MATCH_CONTROL_STRINGS = {
     `¿Deshacer el W.O. de ${homeName} ${homePoints} - ${awayPoints} ${awayName}? El partido volverá a pendiente.`,
   walkoverUndone: 'El W.O. se deshizo y el partido volvió a pendiente.',
   undoWalkoverFailed: 'No se pudo deshacer el W.O.',
+  undoInProgress: 'Volver a pendiente',
+  confirmUndoInProgress: '¿Querés volver este partido a pendiente?',
+  confirmPreserveEvents: '¿Querés conservar los eventos cargados?',
+  confirmFixtureReset:
+    'Este fue el primer partido y todavía no hubo otros cambios. ¿Querés volver el torneo a fixture generado?',
+  inProgressUndone: 'El partido volvió a pendiente.',
+  undoInProgressFailed: 'No se pudo volver el partido a pendiente.',
   confirmDetailFinish: (homeName: string, homePoints: number, awayPoints: number, awayName: string) =>
     `¿Finalizar ${homeName} ${homePoints} - ${awayPoints} ${awayName}?`,
 } as const;

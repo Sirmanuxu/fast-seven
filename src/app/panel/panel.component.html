@@ -247,6 +247,13 @@
                 {{ matchControlStrings.finish }}
               </button>
             }
+            <button
+              type="button"
+              (click)="undoMatchInProgress(current.match.id)"
+              [disabled]="startBusy() || eventBusy()"
+            >
+              {{ matchControlStrings.undoInProgress }}
+            </button>
           </div>
         </article>
       } @else {

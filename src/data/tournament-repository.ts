@@ -32,6 +32,7 @@ import {
   startMatch as startMatchDomain,
   switchDirectToDetail,
   undoWalkover as undoWalkoverDomain,
+  undoMatchInProgress,
 } from '../domain/match-control';
 import { analyzeEditImpactWithDraws } from '../domain/edit-impact';
 import { resolveMatches } from '../domain/resolve-matches';
@@ -608,6 +609,54 @@ export class TournamentRepository {
 
         await tournamentDatabase.matches.put(undone.value);
         await tournamentDatabase.tournament.update(tournament.id, {
+          updatedAt: changedAt,
+        });
+      },
+    );
+  }
+
+  async undoMatchInProgress(
+    matchId: string,
+    preserveEvents: boolean,
+    resetTournament: boolean,
+    changedAt: string,
+  ): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [
+        'tournament',
+        'players',
+        'teams',
+        'stages',
+        'groups',
+        'matches',
+        'events',
+        'draws',
+        'backups',
+      ],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament) throw new Error('No tournament is available');
+        const snapshot = await this.readSnapshot(tournament);
+        const undone = undoMatchInProgress(
+          snapshot,
+          matchId,
+          preserveEvents,
+        );
+        if (!undone.ok) {
+          throw new Error(`In-progress match cannot be undone: ${undone.error.code}`);
+        }
+        if (resetTournament && !undone.value.shouldOfferFixtureReset) {
+          throw new Error('Tournament cannot be returned to fixture generated');
+        }
+
+        await this.writeBackup('MANUAL', snapshot);
+        await tournamentDatabase.matches.put(undone.value.match);
+        if (!preserveEvents) {
+          await tournamentDatabase.events.where('matchId').equals(matchId).delete();
+        }
+        await tournamentDatabase.tournament.update(tournament.id, {
+          ...(resetTournament ? { status: 'FIXTURE_GENERATED' as const } : {}),
           updatedAt: changedAt,
         });
       },
