@@ -1,9 +1,10 @@
-import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SwUpdate } from '@angular/service-worker';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { tournamentRepository } from '../../data/tournament-repository';
+import { TournamentSnapshot } from '../../domain/model';
 import {
   autoSaveWriteFailed,
   autoSaveWriteSucceeded,
@@ -11,10 +12,16 @@ import {
   backupQuotaExceeded,
   isQuotaExceededError,
 } from '../../data/backup-events';
-import { getAutoSaveDirectoryHandle, saveSnapshotToAutoSaveDirectory } from '../../data/auto-save-directory';
+import {
+  getAutoSaveDirectoryHandle,
+  saveSnapshotToAutoSaveDirectory,
+} from '../../data/auto-save-directory';
+import { databaseWriteFailed, setDatabaseWriteAllowed } from '../../data/database-write-gate';
 import { BACKUP_STRINGS } from '../../i18n/backup-strings';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { TOURNAMENT_FILE_STRINGS } from '../../i18n/tournament-file-strings';
+import { PANEL_LOCK_STRINGS } from '../../i18n/panel-lock-strings';
+import { PanelLockService } from './panel-lock.service';
 import { showErrorPopup } from '../error-popup';
 import { TournamentFileBarComponent } from '../tournament-file-bar/tournament-file-bar.component';
 import packageMetadata from '../../../package.json';
@@ -33,12 +40,39 @@ export class App implements OnInit {
   protected readonly backupQuotaWarning = signal(false);
   protected readonly backupQuotaWarningMessage = BACKUP_STRINGS.quotaWarning;
   protected readonly autoSaveFailure = signal(false);
+  protected readonly databaseWriteFailure = signal(false);
   protected readonly fileStrings = TOURNAMENT_FILE_STRINGS;
+  protected readonly lockStrings = PANEL_LOCK_STRINGS;
+  protected readonly panelLock = new PanelLockService();
+  protected readonly lockMessage = computed(() => {
+    switch (this.panelLock.status()) {
+      case 'READ_ONLY':
+        return PANEL_LOCK_STRINGS.readOnly;
+      case 'TAKING_CONTROL':
+        return PANEL_LOCK_STRINGS.takingControl;
+      case 'UNSUPPORTED':
+        return PANEL_LOCK_STRINGS.unsupported;
+      case 'FAILED':
+        return PANEL_LOCK_STRINGS.failed;
+      default:
+        return '';
+    }
+  });
+  protected readonly recoveryMessage = computed(() => {
+    const recovery = this.panelLock.recovery();
+    if (!recovery) return null;
+    const savedAt = recovery.lastSavedAt
+      ? new Date(recovery.lastSavedAt).toLocaleTimeString('es-AR')
+      : PANEL_LOCK_STRINGS.unknownSaveTime;
+    return PANEL_LOCK_STRINGS.unexpectedShutdown(savedAt);
+  });
   private readonly router = inject(Router);
   private readonly swUpdate = inject(SwUpdate, { optional: true });
   private readonly destroyRef = inject(DestroyRef);
 
   async ngOnInit(): Promise<void> {
+    this.destroyRef.onDestroy(() => this.panelLock.dispose());
+    setDatabaseWriteAllowed(false);
     const swUpdate = this.swUpdate;
     if (swUpdate?.isEnabled) {
       void swUpdate.checkForUpdate();
@@ -55,8 +89,12 @@ export class App implements OnInit {
       return;
     }
 
+    if (!this.router.url.startsWith('/proyector')) await this.panelLock.activate();
     backupQuotaExceeded.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.backupQuotaWarning.set(true);
+    });
+    databaseWriteFailed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.databaseWriteFailure.set(true);
     });
     autoSaveWriteFailed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.autoSaveFailure.set(true);
@@ -64,9 +102,9 @@ export class App implements OnInit {
     autoSaveWriteSucceeded.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.autoSaveFailure.set(false);
     });
-    backupCreated.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+    backupCreated.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((backup) => {
       if (this.router.url.startsWith('/proyector')) return;
-      window.setTimeout(() => void this.saveLatestTournamentToFolder(), 0);
+      window.setTimeout(() => void this.saveBackupToFolder(backup.snapshot), 0);
     });
 
     const tournament = await tournamentRepository.getTournament();
@@ -79,14 +117,22 @@ export class App implements OnInit {
     }
 
     this.router.events
-      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe((event) => {
         if (event.urlAfterRedirects === '/panel' || event.urlAfterRedirects === '/proyector') {
           localStorage.setItem('fast-seven-last-screen', event.urlAfterRedirects);
         }
+        if (event.urlAfterRedirects.startsWith('/proyector')) {
+          void this.panelLock.deactivate();
+        } else {
+          void this.panelLock.activate();
+        }
       });
     const backupTimer = window.setInterval(() => {
-      if (this.router.url.startsWith('/proyector')) return;
+      if (this.panelLock.status() !== 'OWNER') return;
       void tournamentRepository.createPeriodicBackupIfDue(Date.now()).catch((error: unknown) => {
         console.error('Creating periodic tournament backup failed', error);
         if (!isQuotaExceededError(error)) {
@@ -98,12 +144,10 @@ export class App implements OnInit {
     this.ready.set(true);
   }
 
-  private async saveLatestTournamentToFolder(): Promise<void> {
+  private async saveBackupToFolder(snapshot: TournamentSnapshot): Promise<void> {
     try {
       const handle = await getAutoSaveDirectoryHandle();
       if (!handle) return;
-      const snapshot = await tournamentRepository.getSnapshot();
-      if (!snapshot) return;
       const result = await saveSnapshotToAutoSaveDirectory(
         snapshot,
         packageMetadata.version,
@@ -113,5 +157,18 @@ export class App implements OnInit {
     } catch (error) {
       console.error('Saving the tournament to the selected folder failed', error);
     }
+  }
+
+  protected clearDatabaseWriteFailure(): void {
+    this.databaseWriteFailure.set(false);
+  }
+
+  protected takePanelControl(): void {
+    void this.panelLock.takeControl();
+  }
+
+  protected reviewRecoveryBackups(): void {
+    this.panelLock.dismissRecovery();
+    void this.router.navigateByUrl('/panel/respaldo');
   }
 }

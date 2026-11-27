@@ -7,13 +7,55 @@
     <h1>{{ strings.databaseUnavailableTitle }}</h1>
   </main>
 } @else {
+  @if (panelLock.readOnly()) {
+    <aside class="persistence-error-banner" role="alert">
+      <p>{{ lockMessage() }}</p>
+      @if (panelLock.status() === 'READ_ONLY' || panelLock.status() === 'TAKING_CONTROL') {
+        <button
+          type="button"
+          (click)="takePanelControl()"
+          [disabled]="panelLock.status() === 'TAKING_CONTROL'"
+        >
+          {{
+            panelLock.status() === 'TAKING_CONTROL'
+              ? lockStrings.takingControl
+              : lockStrings.takeControl
+          }}
+        </button>
+      }
+      @if (panelLock.takeoverFailed()) {
+        <p>{{ lockStrings.takeControlFailed }}</p>
+      }
+    </aside>
+  }
+  @if (recoveryMessage(); as message) {
+    <aside class="persistence-error-banner" role="alert">
+      <p>{{ message }}</p>
+      <button type="button" (click)="reviewRecoveryBackups()">
+        {{ lockStrings.reviewBackups }}
+      </button>
+      <button type="button" (click)="panelLock.dismissRecovery()">
+        {{ lockStrings.dismiss }}
+      </button>
+    </aside>
+  }
   @if (backupQuotaWarning()) {
     <aside role="alert">{{ backupQuotaWarningMessage }}</aside>
   }
   @if (autoSaveFailure()) {
     <aside role="alert">{{ fileStrings.autoSaveFailed }}</aside>
   }
-  <app-tournament-file-bar />
-  <router-outlet />
+  @if (databaseWriteFailure() && !panelLock.readOnly()) {
+    <aside class="persistence-error-banner" role="alert">
+      <p>{{ lockStrings.writeFailed }}</p>
+      <button type="button" (click)="fileBar.saveTournamentFile()">
+        {{ lockStrings.saveToFile }}
+      </button>
+    </aside>
+  }
+  <section [attr.inert]="panelLock.readOnly() ? '' : null">
+    <app-tournament-file-bar #fileBar (fileSaved)="clearDatabaseWriteFailure()" />
+    <router-outlet />
+  </section>
 }
 <aside class="app-version" aria-label="Versión de la aplicación">v{{ appVersion }}</aside>

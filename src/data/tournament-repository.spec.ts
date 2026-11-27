@@ -12,7 +12,7 @@ import {
 } from '../domain/model';
 import { TournamentRepository } from './tournament-repository';
 import { tournamentDatabase } from './tournament-database';
-import { backupQuotaExceeded } from './backup-events';
+import { backupCreated, backupQuotaExceeded } from './backup-events';
 
 function match(id: string, order: number, status: Match['status'] = 'PENDING'): Match {
   return {
@@ -135,10 +135,17 @@ describe('TournamentRepository backups', () => {
     const deleteBackups = vi
       .spyOn(tournamentDatabase.backups, 'bulkDelete')
       .mockResolvedValue(undefined);
+    const backupSnapshot = snapshot();
+    const createdEvent = vi.fn();
+    const subscription = backupCreated.subscribe(createdEvent);
 
-    await new TournamentRepository().createBackup('PERIODIC', snapshot());
+    await new TournamentRepository().createBackup('PERIODIC', backupSnapshot);
 
     expect(deleteBackups).toHaveBeenCalledWith(expect.arrayContaining(['regular-0', 'regular-1']));
+    expect(createdEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: 'PERIODIC', snapshot: backupSnapshot }),
+    );
+    subscription.unsubscribe();
   });
 
   it('does not create periodic backups without changes and creates one after the interval', async () => {

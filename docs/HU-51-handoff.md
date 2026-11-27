@@ -42,5 +42,7 @@
   only from the explicit user action.
 - The backup event is emitted after the IndexedDB transaction commits. The file write and export
   metadata update happen afterward, so filesystem failure cannot abort the tournament backup.
+- The event carries the committed backup snapshot, so pre-load and cascade backups export the
+  prior tournament state rather than a newer state read after the operation.
 - Manual browser verification is still required for real File System Access API permission and
   removable-drive behavior.

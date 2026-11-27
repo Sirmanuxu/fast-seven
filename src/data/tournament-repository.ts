@@ -1446,8 +1446,8 @@ export class TournamentRepository {
       throw error;
     }
     const transaction = Dexie.currentTransaction;
-    if (transaction) transaction.on('complete', () => backupCreated.next());
-    else backupCreated.next();
+    if (transaction) transaction.on('complete', () => backupCreated.next(backup));
+    else backupCreated.next(backup);
     return backup;
   }
 

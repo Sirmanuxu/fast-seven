@@ -1,7 +1,8 @@
 import { Subject } from 'rxjs';
+import { Backup } from '../domain/model';
 
 export const backupQuotaExceeded = new Subject<void>();
-export const backupCreated = new Subject<void>();
+export const backupCreated = new Subject<Backup>();
 export const autoSaveWriteFailed = new Subject<void>();
 export const autoSaveWriteSucceeded = new Subject<void>();
 

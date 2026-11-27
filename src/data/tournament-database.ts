@@ -1,5 +1,11 @@
 import Dexie, { Table } from 'dexie';
 import {
+  DatabaseWriteBlockedError,
+  databaseWriteFailed,
+  databaseWriteSucceeded,
+  isDatabaseWriteAllowed,
+} from './database-write-gate';
+import {
   Backup,
   Draw,
   Group,
@@ -34,6 +40,13 @@ export interface StoredAutoSaveDirectory {
   readonly handle: AutoSaveDirectoryHandle;
 }
 
+export interface StoredPanelSession {
+  readonly id: 'current';
+  readonly cleanShutdown: boolean;
+  readonly startedAt: string;
+  readonly lastSavedAt: string | null;
+}
+
 export const TOURNAMENT_SCHEMA_VERSION = 2;
 
 export class TournamentDatabase extends Dexie {
@@ -49,9 +62,44 @@ export class TournamentDatabase extends Dexie {
   projectorState!: Table<StoredProjectorState, 'current'>;
   tournamentFileState!: Table<StoredTournamentFileState, 'current'>;
   autoSaveDirectory!: Table<StoredAutoSaveDirectory, 'current'>;
+  panelSession!: Table<StoredPanelSession, 'current'>;
 
   constructor() {
     super('fast-seven');
+    this.use({
+      stack: 'dbcore',
+      create: (downlevel) => ({
+        ...downlevel,
+        table: (name) => {
+          const table = downlevel.table(name);
+          return {
+            ...table,
+            mutate: async (request) => {
+              if (name !== 'panelSession' && !isDatabaseWriteAllowed()) {
+                throw new DatabaseWriteBlockedError();
+              }
+              try {
+                const result = await table.mutate(request);
+                if (name !== 'panelSession') {
+                  if (result.numFailures > 0) databaseWriteFailed.next();
+                  const transaction = Dexie.currentTransaction;
+                  if (transaction) {
+                    transaction.on('complete', () => databaseWriteSucceeded.next());
+                    transaction.on('abort', () => databaseWriteFailed.next());
+                  } else {
+                    databaseWriteSucceeded.next();
+                  }
+                }
+                return result;
+              } catch (error) {
+                if (!(error instanceof DatabaseWriteBlockedError)) databaseWriteFailed.next();
+                throw error;
+              }
+            },
+          };
+        },
+      }),
+    });
     this.version(1).stores({
       tournament: 'id, status, updatedAt',
       players: 'id, teamId, category, normalizedKey',
@@ -71,6 +119,9 @@ export class TournamentDatabase extends Dexie {
     });
     this.version(4).stores({
       autoSaveDirectory: 'id',
+    });
+    this.version(5).stores({
+      panelSession: 'id',
     });
   }
 }

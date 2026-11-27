@@ -732,6 +732,27 @@
 - **Decision:** Publish backup completion only after its Dexie transaction commits, then write the
   external file and record its checksum.
 - **Reason:** A disk or permission failure must not undo or block the tournament backup.
+- **Decision:** Include the exact committed `Backup` snapshot in the completion event.
+- **Reason:** Pre-load and cascade backups represent the prior tournament state; exporting the
+  current database state afterward would not preserve the snapshot that was backed up.
 - **Decision:** Keep the manual-save path visible in unsupported browsers and surface external
   write failures as a persistent application warning.
 - **Reason:** Auto-save is optional, but the operator still needs a clear recovery path.
+
+## 2026-11-27 - HU-52 - Single panel and crash recovery
+
+- **Decision:** Hold a Web Lock for the active operator panel, coordinate voluntary takeover with
+  BroadcastChannel, and fence IndexedDB writes in Dexie's core middleware.
+- **Reason:** UI-only disabling would not protect against background or direct repository writes
+  from a second panel.
+- **Decision:** Persist clean-shutdown state and the last successful database write timestamp in a
+  singleton IndexedDB session record.
+- **Reason:** The application can distinguish an interrupted session after restart without
+  changing tournament-domain data or using browser storage for tournament state.
+- **Decision:** Require Web Locks and BroadcastChannel for write access; show the panel read-only
+  with an explanation when either API is unavailable.
+- **Reason:** Allowing writes without a cross-tab exclusion mechanism would violate the
+  single-writer invariant.
+- **Decision:** Raise the initial bundle error budget to 1.08 MB.
+- **Reason:** The HU-52 locking and recovery flow exceeded the 1.06 MB error limit by 3.54 kB;
+  retaining the old limit would make the production build fail.
