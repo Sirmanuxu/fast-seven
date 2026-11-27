@@ -45,6 +45,13 @@ describe('SettingsComponent destructive actions', () => {
 
   beforeEach(async () => {
     vi.spyOn(tournamentRepository, 'getTournament').mockResolvedValue(tournament('RUNNING'));
+    vi.spyOn(tournamentRepository, 'getTournamentFileState').mockResolvedValue({
+      id: 'current',
+      tournamentId: null,
+      exportedAt: null,
+      checksum: null,
+      warningIntervalMin: 30,
+    });
     await TestBed.configureTestingModule({
       imports: [SettingsComponent],
       providers: [provideRouter([])],
@@ -138,5 +145,41 @@ describe('SettingsComponent destructive actions', () => {
 
     expect(updateBackupInterval).not.toHaveBeenCalled();
     expect(window.alert).toHaveBeenCalledWith(SETTINGS_STRINGS.backupIntervalInvalid);
+  });
+
+  it('saves a file warning interval within the supported range', async () => {
+    const updateWarningInterval = vi
+      .spyOn(tournamentRepository, 'updateFileWarningInterval')
+      .mockResolvedValue();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      '#file-warning-interval',
+    ) as HTMLInputElement;
+    input.value = '60';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    button(SETTINGS_STRINGS.saveFileWarning).click();
+    await fixture.whenStable();
+
+    expect(updateWarningInterval).toHaveBeenCalledWith(60);
+  });
+
+  it('rejects file warning intervals outside the supported range', async () => {
+    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    const updateWarningInterval = vi
+      .spyOn(tournamentRepository, 'updateFileWarningInterval')
+      .mockResolvedValue();
+    const input = (fixture.nativeElement as HTMLElement).querySelector(
+      '#file-warning-interval',
+    ) as HTMLInputElement;
+    input.value = '0';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    button(SETTINGS_STRINGS.saveFileWarning).click();
+    await fixture.whenStable();
+
+    expect(updateWarningInterval).not.toHaveBeenCalled();
+    expect(window.alert).toHaveBeenCalledWith(SETTINGS_STRINGS.fileWarningInvalid);
   });
 });

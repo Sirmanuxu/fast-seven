@@ -16,6 +16,7 @@ export class SettingsComponent implements OnInit {
   protected readonly busy = signal(false);
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly backupIntervalDraft = signal('5');
+  protected readonly fileWarningDraft = signal('30');
   private readonly router = inject(Router);
 
   async ngOnInit(): Promise<void> {
@@ -27,6 +28,8 @@ export class SettingsComponent implements OnInit {
       }
       this.tournament.set(tournament);
       this.backupIntervalDraft.set(String(tournament.backupIntervalMin));
+      const fileState = await tournamentRepository.getTournamentFileState();
+      this.fileWarningDraft.set(String(fileState.warningIntervalMin));
     } catch (error) {
       console.error('Loading tournament settings failed', error);
       showErrorPopup(SETTINGS_STRINGS.tournamentLoadFailed);
@@ -89,6 +92,30 @@ export class SettingsComponent implements OnInit {
     } catch (error) {
       console.error('Saving backup interval failed', error);
       showErrorPopup(SETTINGS_STRINGS.backupIntervalSaveFailed);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  protected updateFileWarningDraft(event: Event): void {
+    this.fileWarningDraft.set((event.target as HTMLInputElement).value);
+  }
+
+  protected async saveFileWarningInterval(): Promise<void> {
+    const intervalMin = Number(this.fileWarningDraft());
+    if (!Number.isInteger(intervalMin) || intervalMin < 1 || intervalMin > 1440) {
+      showErrorPopup(SETTINGS_STRINGS.fileWarningInvalid);
+      return;
+    }
+
+    this.busy.set(true);
+    try {
+      await tournamentRepository.updateFileWarningInterval(intervalMin);
+      this.fileWarningDraft.set(String(intervalMin));
+      this.statusMessage.set(SETTINGS_STRINGS.fileWarningSaved);
+    } catch (error) {
+      console.error('Saving unsaved-file warning interval failed', error);
+      showErrorPopup(SETTINGS_STRINGS.fileWarningSaveFailed);
     } finally {
       this.busy.set(false);
     }

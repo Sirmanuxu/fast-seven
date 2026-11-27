@@ -9,6 +9,14 @@ export const SETTINGS_STRINGS = {
   backupIntervalInvalid: 'Ingresá un intervalo entero entre 1 y 60 minutos.',
   backupIntervalSaved: 'Se guardó el intervalo de las copias automáticas.',
   backupIntervalSaveFailed: 'No se pudo guardar el intervalo de las copias automáticas.',
+  fileWarningTitle: 'Aviso de archivo sin guardar',
+  fileWarningDescription:
+    'Elegí después de cuántos minutos sin guardar el torneo a un archivo querés recibir un aviso. Usá un valor entre 1 y 1440.',
+  fileWarningLabel: 'Minutos antes del aviso',
+  saveFileWarning: 'Guardar aviso',
+  fileWarningInvalid: 'Ingresá una cantidad entera entre 1 y 1440 minutos.',
+  fileWarningSaved: 'Se guardó el intervalo del aviso.',
+  fileWarningSaveFailed: 'No se pudo guardar el intervalo del aviso.',
   newTournamentTitle: 'Nuevo torneo',
   newTournamentDescription:
     'Se eliminarán el torneo actual, jugadores, equipos, etapas, grupos, partidos, eventos y sorteos. Las copias automáticas se conservarán. Antes de continuar, acordate de guardar el archivo del torneo fuera del navegador: la copia automática no lo reemplaza.',

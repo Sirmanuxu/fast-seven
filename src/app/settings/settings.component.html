@@ -26,6 +26,25 @@
   </section>
 
   <section>
+    <h2>{{ strings.fileWarningTitle }}</h2>
+    <p>{{ strings.fileWarningDescription }}</p>
+    <label for="file-warning-interval">{{ strings.fileWarningLabel }}</label>
+    <input
+      id="file-warning-interval"
+      type="number"
+      min="1"
+      max="1440"
+      step="1"
+      [value]="fileWarningDraft()"
+      [disabled]="busy()"
+      (input)="updateFileWarningDraft($event)"
+    />
+    <button type="button" (click)="saveFileWarningInterval()" [disabled]="busy()">
+      {{ strings.saveFileWarning }}
+    </button>
+  </section>
+
+  <section>
     <h2>{{ strings.newTournamentTitle }}</h2>
     <p>{{ strings.newTournamentDescription }}</p>
     <button type="button" (click)="createNewTournament()" [disabled]="busy()">

@@ -16,6 +16,14 @@ export interface StoredProjectorState extends ProjectorState {
   readonly id: 'current';
 }
 
+export interface StoredTournamentFileState {
+  readonly id: 'current';
+  readonly tournamentId: string | null;
+  readonly exportedAt: string | null;
+  readonly checksum: string | null;
+  readonly warningIntervalMin: number;
+}
+
 export const TOURNAMENT_SCHEMA_VERSION = 2;
 
 export class TournamentDatabase extends Dexie {
@@ -29,6 +37,7 @@ export class TournamentDatabase extends Dexie {
   draws!: Table<Draw, string>;
   backups!: Table<Backup, string>;
   projectorState!: Table<StoredProjectorState, 'current'>;
+  tournamentFileState!: Table<StoredTournamentFileState, 'current'>;
 
   constructor() {
     super('fast-seven');
@@ -45,6 +54,9 @@ export class TournamentDatabase extends Dexie {
     });
     this.version(2).stores({
       projectorState: 'id',
+    });
+    this.version(3).stores({
+      tournamentFileState: 'id',
     });
   }
 }

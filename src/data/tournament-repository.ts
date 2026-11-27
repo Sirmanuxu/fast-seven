@@ -20,7 +20,11 @@ import {
   TournamentSnapshot,
   FormatParams,
 } from '../domain/model';
-import { TOURNAMENT_SCHEMA_VERSION, tournamentDatabase } from './tournament-database';
+import {
+  StoredTournamentFileState,
+  TOURNAMENT_SCHEMA_VERSION,
+  tournamentDatabase,
+} from './tournament-database';
 import { canCreateOrDeleteTeam, getDefaultTeamColorPair, normalizeTeamName } from '../domain/team';
 import { normalizePlayerKey } from '../domain/player';
 import { startTournament } from '../domain/start-tournament';
@@ -110,6 +114,8 @@ export interface ConfirmImportSummary {
   readonly underMinimumTeams: readonly string[];
 }
 
+export const DEFAULT_FILE_WARNING_INTERVAL_MIN = 30;
+
 export class TournamentRepository {
   async open(): Promise<void> {
     await tournamentDatabase.open();
@@ -160,6 +166,55 @@ export class TournamentRepository {
   async getBackups(): Promise<readonly Backup[]> {
     const backups = await tournamentDatabase.backups.toArray();
     return backups.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+
+  async getTournamentFileState(): Promise<StoredTournamentFileState> {
+    return (
+      (await tournamentDatabase.tournamentFileState.get('current')) ?? {
+        id: 'current',
+        tournamentId: null,
+        exportedAt: null,
+        checksum: null,
+        warningIntervalMin: DEFAULT_FILE_WARNING_INTERVAL_MIN,
+      }
+    );
+  }
+
+  async recordTournamentFileExport(
+    tournamentId: string,
+    exportedAt: string,
+    checksum: string,
+  ): Promise<void> {
+    await tournamentDatabase.transaction(
+      'rw',
+      [tournamentDatabase.tournament, tournamentDatabase.tournamentFileState],
+      async () => {
+        const tournament = await this.getTournament();
+        if (!tournament || tournament.id !== tournamentId) {
+          throw new Error('Tournament changed while the file was being saved');
+        }
+        const state = await this.getTournamentFileState();
+        await tournamentDatabase.tournamentFileState.put({
+          ...state,
+          tournamentId,
+          exportedAt,
+          checksum,
+        });
+      },
+    );
+  }
+
+  async updateFileWarningInterval(intervalMin: number): Promise<void> {
+    if (!Number.isInteger(intervalMin) || intervalMin < 1 || intervalMin > 1440) {
+      throw new Error('File warning interval must be between 1 and 1440 minutes');
+    }
+    await tournamentDatabase.transaction('rw', tournamentDatabase.tournamentFileState, async () => {
+      const state = await this.getTournamentFileState();
+      await tournamentDatabase.tournamentFileState.put({
+        ...state,
+        warningIntervalMin: intervalMin,
+      });
+    });
   }
 
   async restoreBackup(backupId: string, changedAt: string): Promise<void> {

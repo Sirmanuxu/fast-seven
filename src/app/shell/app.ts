@@ -8,10 +8,11 @@ import { backupQuotaExceeded, isQuotaExceededError } from '../../data/backup-eve
 import { BACKUP_STRINGS } from '../../i18n/backup-strings';
 import { PERSISTENCE_STRINGS } from '../../i18n/persistence-strings';
 import { showErrorPopup } from '../error-popup';
+import { TournamentFileBarComponent } from '../tournament-file-bar/tournament-file-bar.component';
 import packageMetadata from '../../../package.json';
 
 @Component({
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, TournamentFileBarComponent],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',

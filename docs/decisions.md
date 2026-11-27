@@ -691,3 +691,16 @@
 - **Decision:** Publish quota exhaustion through a data-layer event so the application shell can
   keep a visible warning while the repository still rejects the failed write.
 - **Reason:** Backup failure must be surfaced without disguising it as a successful save.
+
+## 2026-11-27 - HU-49 - Save tournament to a file
+
+- **Decision:** Keep the existing `TournamentFile.schemaVersion` field and hash the complete
+  `TournamentSnapshot` with Web Crypto SHA-256.
+- **Reason:** The domain model is the protected type contract; the snapshot already excludes
+  projector state and contains the full persisted tournament data.
+- **Decision:** Persist export timestamp and checksum separately from tournament records, and
+  store the configurable warning interval in IndexedDB.
+- **Reason:** Export metadata is not tournament-domain data and should not alter the domain model.
+- **Decision:** Raise the initial bundle error budget to 1.03 MB.
+- **Reason:** The required global export control exceeded the existing 1.02 MB limit by 4.84 kB;
+  retaining the old limit would make the production build fail.

@@ -1,0 +1,14 @@
+@if (available() && !projectorRoute()) {
+  <header class="tournament-file-bar">
+    <button type="button" (click)="saveTournamentFile()" [disabled]="saving()">
+      {{ saving() ? strings.saving : strings.save }}
+    </button>
+    <p role="status">{{ lastSavedLabel() }}</p>
+    @if (unsavedWarningVisible()) {
+      <p role="alert">{{ strings.unsavedWarning(warningIntervalMin()) }}</p>
+    }
+    @if (statusMessage(); as status) {
+      <p role="status">{{ status }}</p>
+    }
+  </header>
+}

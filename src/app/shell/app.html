@@ -10,6 +10,7 @@
   @if (backupQuotaWarning()) {
     <aside role="alert">{{ backupQuotaWarningMessage }}</aside>
   }
+  <app-tournament-file-bar />
   <router-outlet />
 }
 <aside class="app-version" aria-label="Versión de la aplicación">v{{ appVersion }}</aside>
