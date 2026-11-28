@@ -1,5 +1,7 @@
 # FastSeven
 
+See the [Spanish user manual](docs/manual-usuario.md) for the complete tournament workflow.
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.3.0.
 
 ## Development server
