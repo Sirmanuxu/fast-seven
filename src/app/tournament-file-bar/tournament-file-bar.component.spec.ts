@@ -6,6 +6,7 @@ import { createTournamentFile } from '../../data/tournament-file';
 import { TournamentSnapshot } from '../../domain/model';
 import { TOURNAMENT_FILE_STRINGS } from '../../i18n/tournament-file-strings';
 import { TournamentFileBarComponent } from './tournament-file-bar.component';
+import { activeErrorModal, dismissErrorModal } from '../error-popup';
 
 function snapshot(name = 'Tournament'): TournamentSnapshot {
   const timestamp = '2026-11-25T00:00:00.000Z';
@@ -75,6 +76,7 @@ describe('TournamentFileBarComponent loading', () => {
 
   afterEach(() => {
     fixture.destroy();
+    dismissErrorModal();
     vi.restoreAllMocks();
   });
 
@@ -120,13 +122,12 @@ describe('TournamentFileBarComponent loading', () => {
     const loadTournamentFile = vi
       .spyOn(tournamentRepository, 'loadTournamentFile')
       .mockResolvedValue();
-    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
     const confirm = vi.spyOn(window, 'confirm');
 
     await selectFile(JSON.stringify({ ...imported, checksum: '0'.repeat(64) }));
-    await vi.waitFor(() => expect(window.alert).toHaveBeenCalled());
+    await vi.waitFor(() => expect(activeErrorModal()).not.toBeNull());
 
-    expect(window.alert).toHaveBeenCalledWith(TOURNAMENT_FILE_STRINGS.checksumMismatch);
+    expect(activeErrorModal()?.message).toBe(TOURNAMENT_FILE_STRINGS.checksumMismatch);
     expect(confirm).not.toHaveBeenCalled();
     expect(loadTournamentFile).not.toHaveBeenCalled();
   });

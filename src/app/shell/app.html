@@ -24,55 +24,34 @@
       <aside class="update-banner" role="status">{{ serviceWorkerStrings.updateFailed }}</aside>
     }
   }
-  @if (panelLock.readOnly()) {
-    <aside class="persistence-error-banner" role="alert">
-      <p>{{ lockMessage() }}</p>
-      @if (panelLock.status() === 'READ_ONLY' || panelLock.status() === 'TAKING_CONTROL') {
-        <button
-          type="button"
-          (click)="takePanelControl()"
-          [disabled]="panelLock.status() === 'TAKING_CONTROL'"
-        >
-          {{
-            panelLock.status() === 'TAKING_CONTROL'
-              ? lockStrings.takingControl
-              : lockStrings.takeControl
-          }}
-        </button>
-      }
-      @if (panelLock.takeoverFailed()) {
-        <p>{{ lockStrings.takeControlFailed }}</p>
-      }
-    </aside>
-  }
-  @if (recoveryMessage(); as message) {
-    <aside class="persistence-error-banner" role="alert">
-      <p>{{ message }}</p>
-      <button type="button" (click)="reviewRecoveryBackups()">
-        {{ lockStrings.reviewBackups }}
-      </button>
-      <button type="button" (click)="panelLock.dismissRecovery()">
-        {{ lockStrings.dismiss }}
-      </button>
-    </aside>
-  }
-  @if (backupQuotaWarning()) {
-    <aside role="alert">{{ backupQuotaWarningMessage }}</aside>
-  }
-  @if (autoSaveFailure()) {
-    <aside role="alert">{{ fileStrings.autoSaveFailed }}</aside>
-  }
-  @if (databaseWriteFailure() && !panelLock.readOnly()) {
-    <aside class="persistence-error-banner" role="alert">
-      <p>{{ lockStrings.writeFailed }}</p>
-      <button type="button" (click)="fileBar.saveTournamentFile()">
-        {{ lockStrings.saveToFile }}
-      </button>
-    </aside>
-  }
-  <section [attr.inert]="panelLock.readOnly() ? '' : null">
+  <section class="application-workspace" [attr.inert]="panelLock.readOnly() ? '' : null">
     <app-tournament-file-bar #fileBar (fileSaved)="clearDatabaseWriteFailure()" />
-    <router-outlet />
+    @if (showNavigation()) {
+      <div class="application-shell">
+        @defer (on immediate) {
+          <app-primary-navigation />
+        } @placeholder {
+          <div class="navigation-placeholder" aria-hidden="true"></div>
+        }
+
+        <div class="application-content">
+          <div class="app-page">
+            <router-outlet />
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="app-page" [class.projector-display]="projectorRoute()">
+        <router-outlet />
+      </div>
+    }
   </section>
 }
-<aside class="app-version" aria-label="Versión de la aplicación">v{{ appVersion }}</aside>
+<aside
+  class="app-version"
+  [class.in-panel]="showNavigation()"
+  aria-label="Versión de la aplicación"
+>
+  v{{ appVersion }}
+</aside>
+<app-error-modal />

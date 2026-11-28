@@ -1,4 +1,13 @@
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  inject,
+  OnInit,
+  signal,
+  ViewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter, fromEvent } from 'rxjs';
@@ -22,13 +31,21 @@ import { TOURNAMENT_FILE_STRINGS } from '../../i18n/tournament-file-strings';
 import { PANEL_LOCK_STRINGS } from '../../i18n/panel-lock-strings';
 import { PanelLockService } from './panel-lock.service';
 import { ServiceWorkerUpdateService } from './service-worker-update.service';
-import { showErrorPopup } from '../error-popup';
+import { showErrorModal, showErrorPopup } from '../error-popup';
 import { TournamentFileBarComponent } from '../tournament-file-bar/tournament-file-bar.component';
+import { PrimaryNavigationComponent } from '../navigation/primary-navigation.component';
+import { ErrorModalComponent } from '../error-modal/error-modal.component';
 import { SERVICE_WORKER_STRINGS } from '../../i18n/service-worker-strings';
+import { ERROR_MODAL_STRINGS } from '../../i18n/error-modal-strings';
 import packageMetadata from '../../../package.json';
 
 @Component({
-  imports: [RouterOutlet, TournamentFileBarComponent],
+  imports: [
+    ErrorModalComponent,
+    PrimaryNavigationComponent,
+    RouterOutlet,
+    TournamentFileBarComponent,
+  ],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.css',
@@ -40,6 +57,7 @@ export class App implements OnInit {
   protected readonly updateService = inject(ServiceWorkerUpdateService);
   protected readonly online = signal(typeof navigator === 'undefined' || navigator.onLine);
   protected readonly projectorRoute = signal(false);
+  protected readonly showNavigation = signal(false);
   protected readonly ready = signal(false);
   protected readonly databaseAvailable = signal(true);
   protected readonly backupQuotaWarning = signal(false);
@@ -49,6 +67,69 @@ export class App implements OnInit {
   protected readonly fileStrings = TOURNAMENT_FILE_STRINGS;
   protected readonly lockStrings = PANEL_LOCK_STRINGS;
   protected readonly panelLock = new PanelLockService();
+  private readonly shellErrorModal = effect(() => {
+    if (!this.ready()) return;
+
+    const recoveryMessage = this.recoveryMessage();
+    if (recoveryMessage) {
+      showErrorModal({
+        title: ERROR_MODAL_STRINGS.recoveryTitle,
+        message: recoveryMessage,
+        primaryActionLabel: this.lockStrings.reviewBackups,
+        secondaryActionLabel: this.lockStrings.dismiss,
+        onPrimaryAction: () => this.reviewRecoveryBackups(),
+        onSecondaryAction: () => this.panelLock.dismissRecovery(),
+        onDismiss: () => this.panelLock.dismissRecovery(),
+      });
+      return;
+    }
+
+    if (this.panelLock.readOnly()) {
+      const canTakeControl =
+        this.panelLock.status() === 'READ_ONLY' || this.panelLock.status() === 'TAKING_CONTROL';
+      showErrorModal({
+        title: ERROR_MODAL_STRINGS.persistenceTitle,
+        message: this.panelLock.takeoverFailed()
+          ? `${this.lockMessage()} ${this.lockStrings.takeControlFailed}`
+          : this.lockMessage(),
+        ...(canTakeControl
+          ? {
+              primaryActionLabel: this.lockStrings.takeControl,
+              onPrimaryAction: () => this.takePanelControl(),
+            }
+          : {}),
+      });
+      return;
+    }
+
+    if (this.backupQuotaWarning()) {
+      showErrorModal({
+        title: ERROR_MODAL_STRINGS.backupTitle,
+        message: this.backupQuotaWarningMessage,
+        onDismiss: () => this.backupQuotaWarning.set(false),
+      });
+      return;
+    }
+
+    if (this.autoSaveFailure()) {
+      showErrorModal({
+        title: ERROR_MODAL_STRINGS.autoSaveTitle,
+        message: this.fileStrings.autoSaveFailed,
+        onDismiss: () => this.autoSaveFailure.set(false),
+      });
+      return;
+    }
+
+    if (this.databaseWriteFailure()) {
+      showErrorModal({
+        title: ERROR_MODAL_STRINGS.persistenceTitle,
+        message: this.lockStrings.writeFailed,
+        primaryActionLabel: this.lockStrings.saveToFile,
+        onPrimaryAction: () => this.fileBar?.saveTournamentFile(),
+        onDismiss: () => this.databaseWriteFailure.set(false),
+      });
+    }
+  });
   protected readonly lockMessage = computed(() => {
     switch (this.panelLock.status()) {
       case 'READ_ONLY':
@@ -83,12 +164,13 @@ export class App implements OnInit {
   );
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  @ViewChild('fileBar') private fileBar?: TournamentFileBarComponent;
 
   async ngOnInit(): Promise<void> {
     this.destroyRef.onDestroy(() => this.panelLock.dispose());
     setDatabaseWriteAllowed(false);
     this.online.set(typeof navigator === 'undefined' || navigator.onLine);
-    this.projectorRoute.set(this.router.url.startsWith('/proyector'));
+    this.updateNavigation(this.router.url);
     this.updateService.checkForUpdates();
     fromEvent(window, 'online')
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -136,7 +218,7 @@ export class App implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((event) => {
-        this.projectorRoute.set(event.urlAfterRedirects.startsWith('/proyector'));
+        this.updateNavigation(event.urlAfterRedirects);
         if (event.urlAfterRedirects === '/panel' || event.urlAfterRedirects === '/proyector') {
           localStorage.setItem('fast-seven-last-screen', event.urlAfterRedirects);
         }
@@ -185,5 +267,12 @@ export class App implements OnInit {
   protected reviewRecoveryBackups(): void {
     this.panelLock.dismissRecovery();
     void this.router.navigateByUrl('/panel/respaldo');
+  }
+
+  private updateNavigation(url: string): void {
+    const route = url.split('?')[0];
+    const isProjector = route.startsWith('/proyector');
+    this.projectorRoute.set(isProjector);
+    this.showNavigation.set(!isProjector && route !== '/' && route !== '/bienvenida');
   }
 }

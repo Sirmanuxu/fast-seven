@@ -1,7 +1,10 @@
 <main>
   <header>
     <button type="button" (click)="goBack()">← Panel</button>
-    <h1>{{ strings.title }}</h1>
+    <div class="page-heading">
+      <p class="page-eyebrow">{{ strings.preparationLabel }}</p>
+      <h1>{{ strings.title }}</h1>
+    </div>
     <div class="header-actions">
       <button type="button" (click)="openAdd()">{{ strings.add }}</button>
       <button type="button" (click)="openImport()">{{ strings.importPlayers }}</button>
@@ -11,6 +14,21 @@
   @if (statusMessage(); as message) {
     <p role="status">{{ message }}</p>
   }
+
+  <section class="player-metrics" aria-label="Resumen de jugadores">
+    <article>
+      <span>{{ strings.totalRegistered }}</span>
+      <strong>{{ players().length }}</strong>
+    </article>
+    <article>
+      <span>{{ strings.assignedToTeams }}</span>
+      <strong>{{ assignedPlayersCount }}</strong>
+    </article>
+    <article>
+      <span>{{ strings.awaitingAssignment }}</span>
+      <strong>{{ unassignedPlayersCount }}</strong>
+    </article>
+  </section>
 
   <section class="filters" aria-label="Filtros de jugadores">
     <label>
@@ -49,7 +67,9 @@
     </label>
   </section>
 
-  <p>{{ filteredPlayers.length }} {{ strings.total }}</p>
+  <p class="results-count" role="status">
+    {{ strings.showingResults }} {{ filteredPlayers.length }} {{ strings.total }}
+  </p>
 
   @if (formOpen()) {
     <section class="form-card" aria-label="Formulario de jugador">

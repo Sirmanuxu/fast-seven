@@ -12,20 +12,6 @@
   pointer-events: none;
 }
 
-.persistence-error-banner {
-  padding: 0.75rem 1rem;
-  background-color: var(--color-danger);
-  color: var(--color-on-danger);
-}
-
-.persistence-error-banner p {
-  margin: 0 0 0.5rem;
-}
-
-.persistence-error-banner button {
-  min-height: 44px;
-}
-
 .connectivity-indicator,
 .update-banner {
   display: flex;
@@ -49,6 +35,53 @@
 
 .update-banner button {
   min-height: 44px;
+}
+
+.application-workspace {
+  min-width: 0;
+}
+
+.application-shell {
+  --navigation-width: 16rem;
+  display: grid;
+  grid-template-columns: var(--navigation-width) minmax(0, 1fr);
+  min-height: calc(100dvh - 3.5rem);
+  background: var(--color-background);
+}
+
+.application-content {
+  position: relative;
+  min-width: 0;
+}
+
+.navigation-placeholder {
+  min-height: 100dvh;
+  background: var(--color-surface);
+}
+
+.app-page {
+  min-width: 0;
+}
+
+@media (min-width: 56.001rem) {
+  .app-version.in-panel {
+    left: calc(16rem + 0.75rem);
+  }
+}
+
+@media (max-width: 56rem) {
+  .application-shell {
+    display: block;
+    min-height: calc(100dvh - 3.5rem);
+  }
+
+  .navigation-placeholder {
+    display: none;
+  }
+
+  .app-page {
+    padding-bottom: 1rem;
+  }
 }
 
 @media (max-width: 36rem) {

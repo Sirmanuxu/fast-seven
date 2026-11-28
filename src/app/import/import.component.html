@@ -9,6 +9,19 @@
 
   <p role="status">{{ strings.noWrite }}</p>
 
+  <ol class="import-stepper" aria-label="Etapas de importación">
+    @for (step of importSteps; track step.key; let index = $index) {
+      <li
+        [class.active]="index === currentStepIndex"
+        [class.complete]="index < currentStepIndex"
+        [attr.aria-current]="index === currentStepIndex ? 'step' : null"
+      >
+        <span>{{ index + 1 }}</span>
+        <strong>{{ step.label }}</strong>
+      </li>
+    }
+  </ol>
+
   @if (statusMessage(); as status) {
     <p role="status" class="status">{{ status }}</p>
   }

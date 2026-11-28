@@ -5,6 +5,7 @@ import { tournamentRepository } from '../../data/tournament-repository';
 import { Tournament } from '../../domain/model';
 import { SETTINGS_STRINGS } from '../../i18n/settings-strings';
 import { SettingsComponent } from './settings.component';
+import { activeErrorModal, dismissErrorModal } from '../error-popup';
 
 function tournament(status: Tournament['status']): Tournament {
   return {
@@ -63,6 +64,7 @@ describe('SettingsComponent destructive actions', () => {
   });
 
   afterEach(() => {
+    dismissErrorModal();
     vi.restoreAllMocks();
   });
 
@@ -129,7 +131,6 @@ describe('SettingsComponent destructive actions', () => {
   });
 
   it('rejects backup intervals outside the supported range', async () => {
-    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
     const updateBackupInterval = vi
       .spyOn(tournamentRepository, 'updateBackupInterval')
       .mockResolvedValue();
@@ -144,7 +145,7 @@ describe('SettingsComponent destructive actions', () => {
     await fixture.whenStable();
 
     expect(updateBackupInterval).not.toHaveBeenCalled();
-    expect(window.alert).toHaveBeenCalledWith(SETTINGS_STRINGS.backupIntervalInvalid);
+    expect(activeErrorModal()?.message).toBe(SETTINGS_STRINGS.backupIntervalInvalid);
   });
 
   it('saves a file warning interval within the supported range', async () => {
@@ -165,7 +166,6 @@ describe('SettingsComponent destructive actions', () => {
   });
 
   it('rejects file warning intervals outside the supported range', async () => {
-    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
     const updateWarningInterval = vi
       .spyOn(tournamentRepository, 'updateFileWarningInterval')
       .mockResolvedValue();
@@ -180,6 +180,6 @@ describe('SettingsComponent destructive actions', () => {
     await fixture.whenStable();
 
     expect(updateWarningInterval).not.toHaveBeenCalled();
-    expect(window.alert).toHaveBeenCalledWith(SETTINGS_STRINGS.fileWarningInvalid);
+    expect(activeErrorModal()?.message).toBe(SETTINGS_STRINGS.fileWarningInvalid);
   });
 });

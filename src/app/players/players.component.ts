@@ -63,6 +63,14 @@ export class PlayersComponent implements OnInit {
     });
   }
 
+  protected get assignedPlayersCount(): number {
+    return this.players().filter((player) => player.teamId !== null).length;
+  }
+
+  protected get unassignedPlayersCount(): number {
+    return this.players().filter((player) => player.teamId === null).length;
+  }
+
   protected openAdd(): void {
     this.editingId.set(null);
     this.firstName.set('');

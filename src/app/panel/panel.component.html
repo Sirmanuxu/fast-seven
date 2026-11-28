@@ -1,157 +1,180 @@
 <main>
-  <h1>{{ strings.panelTitle }}</h1>
-  <p role="status">
-    {{
-      projectorConnected() ? strings.projectorConnectedStatus : strings.projectorDisconnectedStatus
-    }}
-  </p>
-  <p>{{ strings.projectorInstructions }}</p>
+  <header class="panel-header">
+    <div>
+      <p class="panel-eyebrow">{{ tournament()?.name }}</p>
+      <h1>{{ strings.panelTitle }}</h1>
+      <p>{{ strings.projectorInstructions }}</p>
+    </div>
+    <p class="projector-connection" [class.connected]="projectorConnected()" role="status">
+      <span aria-hidden="true"></span>
+      {{
+        projectorConnected()
+          ? strings.projectorConnectedStatus
+          : strings.projectorDisconnectedStatus
+      }}
+    </p>
+  </header>
 
-  <section class="projector-view-control" aria-labelledby="projector-view-control-title">
-    <h2 id="projector-view-control-title">{{ projectorStrings.controlTitle }}</h2>
-    @if (projectorWarning(); as warning) {
-      <p role="alert">{{ warning }}</p>
-    }
-    @if (projectorState().forcedView) {
-      <p role="status">
-        <strong>{{ projectorStrings.pinnedStatus }}:</strong>
-        {{ forcedProjectorViewLabel() }}
-      </p>
-      <button type="button" (click)="returnProjectorToAutomatic()">
-        {{ projectorStrings.returnAutomatic }}
-      </button>
-    } @else {
-      <p role="status">{{ projectorStrings.automaticStatus }}</p>
-    }
-
-    <label for="projector-view">{{ projectorStrings.selectView }}</label>
-    <select
-      id="projector-view"
-      [value]="projectorState().forcedView?.kind ?? ''"
-      (change)="selectProjectorView($event)"
-    >
-      <option value="">{{ projectorStrings.automatic }}</option>
-      @for (view of projectorViewSelection().availableViews; track view) {
-        <option [value]="view">{{ projectorViewTitles[view] }}</option>
-      }
-    </select>
-
-    @if (projectorState().forcedView?.kind === 'BRACKET') {
-      <label for="projector-bracket">{{ projectorStrings.selectBracket }}</label>
-      <select
-        id="projector-bracket"
-        [value]="selectedProjectorStageId()"
-        (change)="selectProjectorBracket($event)"
-      >
-        @for (bracket of projectorViewSelection().brackets; track bracket.id) {
-          <option [value]="bracket.id">{{ bracket.title }}</option>
+  <details class="projector-tools">
+    <summary>{{ projectorStrings.controlTitle }}</summary>
+    <div class="projector-tools-grid">
+      <section class="projector-view-control" aria-labelledby="projector-view-control-title">
+        <h2 id="projector-view-control-title">{{ projectorStrings.controlTitle }}</h2>
+        @if (projectorWarning(); as warning) {
+          <p role="alert">{{ warning }}</p>
         }
-      </select>
-    }
-  </section>
+        @if (projectorState().forcedView) {
+          <p role="status">
+            <strong>{{ projectorStrings.pinnedStatus }}:</strong>
+            {{ forcedProjectorViewLabel() }}
+          </p>
+          <button type="button" (click)="returnProjectorToAutomatic()">
+            {{ projectorStrings.returnAutomatic }}
+          </button>
+        } @else {
+          <p role="status">{{ projectorStrings.automaticStatus }}</p>
+        }
 
-  <section class="projector-timer-control" aria-labelledby="projector-timer-control-title">
-    <h2 id="projector-timer-control-title">{{ projectorStrings.timerTitle }}</h2>
-    @if (projectorState().timer; as activeTimer) {
-      <p role="status">
-        <strong>{{ activeTimer.name }}</strong>
-        · {{ activeTimerRemaining(activeTimer) }}
-      </p>
-      <div class="timer-control-actions">
-        <button type="button" (click)="adjustActiveProjectorTimer(-1)" [disabled]="timerBusy()">
-          {{ projectorStrings.timerSubtractMinute }}
-        </button>
-        <button type="button" (click)="adjustActiveProjectorTimer(1)" [disabled]="timerBusy()">
-          {{ projectorStrings.timerAddMinute }}
-        </button>
-        <button type="button" (click)="cancelProjectorTimer()" [disabled]="timerBusy()">
-          {{ projectorStrings.timerCancel }}
-        </button>
-      </div>
-    } @else {
-      <p role="status">{{ projectorStrings.timerInactive }}</p>
-    }
+        <label for="projector-view">{{ projectorStrings.selectView }}</label>
+        <select
+          id="projector-view"
+          [value]="projectorState().forcedView?.kind ?? ''"
+          (change)="selectProjectorView($event)"
+        >
+          <option value="">{{ projectorStrings.automatic }}</option>
+          @for (view of projectorViewSelection().availableViews; track view) {
+            <option [value]="view">{{ projectorViewTitles[view] }}</option>
+          }
+        </select>
 
-    <div class="timer-preset-grid">
-      @for (preset of timerPresets(); track preset.id) {
-        <fieldset class="timer-preset">
-          <legend>{{ preset.name || projectorStrings.timerPreset }}</legend>
-          <label [for]="'timer-name-' + preset.id">{{ projectorStrings.timerName }}</label>
+        @if (projectorState().forcedView?.kind === 'BRACKET') {
+          <label for="projector-bracket">{{ projectorStrings.selectBracket }}</label>
+          <select
+            id="projector-bracket"
+            [value]="selectedProjectorStageId()"
+            (change)="selectProjectorBracket($event)"
+          >
+            @for (bracket of projectorViewSelection().brackets; track bracket.id) {
+              <option [value]="bracket.id">{{ bracket.title }}</option>
+            }
+          </select>
+        }
+      </section>
+
+      <section class="projector-timer-control" aria-labelledby="projector-timer-control-title">
+        <h2 id="projector-timer-control-title">{{ projectorStrings.timerTitle }}</h2>
+        @if (projectorState().timer; as activeTimer) {
+          <p role="status">
+            <strong>{{ activeTimer.name }}</strong>
+            · {{ activeTimerRemaining(activeTimer) }}
+          </p>
+          <div class="timer-control-actions">
+            <button type="button" (click)="adjustActiveProjectorTimer(-1)" [disabled]="timerBusy()">
+              {{ projectorStrings.timerSubtractMinute }}
+            </button>
+            <button type="button" (click)="adjustActiveProjectorTimer(1)" [disabled]="timerBusy()">
+              {{ projectorStrings.timerAddMinute }}
+            </button>
+            <button type="button" (click)="cancelProjectorTimer()" [disabled]="timerBusy()">
+              {{ projectorStrings.timerCancel }}
+            </button>
+          </div>
+        } @else {
+          <p role="status">{{ projectorStrings.timerInactive }}</p>
+        }
+
+        <div class="timer-preset-grid">
+          @for (preset of timerPresets(); track preset.id) {
+            <fieldset class="timer-preset">
+              <legend>{{ preset.name || projectorStrings.timerPreset }}</legend>
+              <label [for]="'timer-name-' + preset.id">{{ projectorStrings.timerName }}</label>
+              <input
+                [id]="'timer-name-' + preset.id"
+                type="text"
+                [value]="preset.name"
+                (input)="updateTimerPresetName(preset.id, $any($event.target).value)"
+              />
+              <label [for]="'timer-duration-' + preset.id">
+                {{ projectorStrings.timerDuration }}
+              </label>
+              <input
+                [id]="'timer-duration-' + preset.id"
+                type="number"
+                min="1"
+                step="1"
+                [value]="preset.durationMinutes"
+                (input)="updateTimerPresetDuration(preset.id, $any($event.target).value)"
+              />
+              <button
+                type="button"
+                (click)="startProjectorTimer(preset)"
+                [disabled]="timerBusy() || !isTimerPresetValid(preset)"
+              >
+                {{ projectorStrings.timerStart }}
+              </button>
+            </fieldset>
+          }
+        </div>
+        <label class="timer-sound-label">
           <input
-            [id]="'timer-name-' + preset.id"
-            type="text"
-            [value]="preset.name"
-            (input)="updateTimerPresetName(preset.id, $any($event.target).value)"
+            type="checkbox"
+            [checked]="timerSoundEnabled()"
+            (change)="setTimerSoundEnabled($event)"
           />
-          <label [for]="'timer-duration-' + preset.id">
-            {{ projectorStrings.timerDuration }}
-          </label>
-          <input
-            [id]="'timer-duration-' + preset.id"
-            type="number"
-            min="1"
-            step="1"
-            [value]="preset.durationMinutes"
-            (input)="updateTimerPresetDuration(preset.id, $any($event.target).value)"
-          />
+          {{ projectorStrings.timerSoundLabel }}
+        </label>
+      </section>
+
+      <section class="projector-message-control" aria-labelledby="projector-message-control-title">
+        <h2 id="projector-message-control-title">{{ projectorStrings.messageTitle }}</h2>
+        <label for="projector-message-text">{{ projectorStrings.messageTextLabel }}</label>
+        <textarea
+          id="projector-message-text"
+          rows="3"
+          [attr.maxlength]="projectorMessageMaxLength"
+          [value]="projectorMessageDraft()"
+          [disabled]="projectorMessageBusy()"
+          [attr.aria-describedby]="'projector-message-count'"
+          (input)="updateProjectorMessageDraft($event)"
+        ></textarea>
+        <p id="projector-message-count" class="message-character-count">
+          {{ projectorMessageDraft().length }}/{{ projectorMessageMaxLength }}
+        </p>
+        <label for="projector-message-mode">{{ projectorStrings.messageModeLabel }}</label>
+        <select
+          id="projector-message-mode"
+          [value]="projectorMessageMode()"
+          [disabled]="projectorMessageBusy()"
+          (change)="selectProjectorMessageMode($event)"
+        >
+          <option value="BANNER">{{ projectorStrings.messageBanner }}</option>
+          <option value="FULLSCREEN">{{ projectorStrings.messageFullscreen }}</option>
+        </select>
+        <div class="message-control-actions">
           <button
             type="button"
-            (click)="startProjectorTimer(preset)"
-            [disabled]="timerBusy() || !isTimerPresetValid(preset)"
+            (click)="saveProjectorMessage()"
+            [disabled]="projectorMessageBusy()"
           >
-            {{ projectorStrings.timerStart }}
+            {{
+              projectorState().message
+                ? projectorStrings.messageUpdate
+                : projectorStrings.messageShow
+            }}
           </button>
-        </fieldset>
-      }
+          @if (projectorState().message) {
+            <button
+              type="button"
+              (click)="clearProjectorMessage()"
+              [disabled]="projectorMessageBusy()"
+            >
+              {{ projectorStrings.messageClear }}
+            </button>
+          }
+        </div>
+      </section>
     </div>
-    <label class="timer-sound-label">
-      <input
-        type="checkbox"
-        [checked]="timerSoundEnabled()"
-        (change)="setTimerSoundEnabled($event)"
-      />
-      {{ projectorStrings.timerSoundLabel }}
-    </label>
-  </section>
-
-  <section class="projector-message-control" aria-labelledby="projector-message-control-title">
-    <h2 id="projector-message-control-title">{{ projectorStrings.messageTitle }}</h2>
-    <label for="projector-message-text">{{ projectorStrings.messageTextLabel }}</label>
-    <textarea
-      id="projector-message-text"
-      rows="3"
-      [attr.maxlength]="projectorMessageMaxLength"
-      [value]="projectorMessageDraft()"
-      [disabled]="projectorMessageBusy()"
-      [attr.aria-describedby]="'projector-message-count'"
-      (input)="updateProjectorMessageDraft($event)"
-    ></textarea>
-    <p id="projector-message-count" class="message-character-count">
-      {{ projectorMessageDraft().length }}/{{ projectorMessageMaxLength }}
-    </p>
-    <label for="projector-message-mode">{{ projectorStrings.messageModeLabel }}</label>
-    <select
-      id="projector-message-mode"
-      [value]="projectorMessageMode()"
-      [disabled]="projectorMessageBusy()"
-      (change)="selectProjectorMessageMode($event)"
-    >
-      <option value="BANNER">{{ projectorStrings.messageBanner }}</option>
-      <option value="FULLSCREEN">{{ projectorStrings.messageFullscreen }}</option>
-    </select>
-    <div class="message-control-actions">
-      <button type="button" (click)="saveProjectorMessage()" [disabled]="projectorMessageBusy()">
-        {{
-          projectorState().message ? projectorStrings.messageUpdate : projectorStrings.messageShow
-        }}
-      </button>
-      @if (projectorState().message) {
-        <button type="button" (click)="clearProjectorMessage()" [disabled]="projectorMessageBusy()">
-          {{ projectorStrings.messageClear }}
-        </button>
-      }
-    </div>
-  </section>
+  </details>
 
   @if (statusMessage(); as status) {
     <p role="status">{{ status }}</p>
@@ -180,15 +203,21 @@
               <span class="match-context">{{ context }}</span>
             }
             @if (directMode()) {
-              <span
-                >{{ current.resolved.homeLabel }} {{ directHomeScore() }} - {{ directAwayScore() }}
-                {{ current.resolved.awayLabel }}</span
-              >
+              <div class="scoreboard-row">
+                <span class="scoreboard-team">{{ current.resolved.homeLabel }}</span>
+                <span class="score-number">{{ directHomeScore() }}</span>
+                <span class="score-separator">—</span>
+                <span class="score-number">{{ directAwayScore() }}</span>
+                <span class="scoreboard-team">{{ current.resolved.awayLabel }}</span>
+              </div>
             } @else if (liveScore(); as score) {
-              <span
-                >{{ current.resolved.homeLabel }} {{ score.home }} - {{ score.away }}
-                {{ current.resolved.awayLabel }}</span
-              >
+              <div class="scoreboard-row">
+                <span class="scoreboard-team">{{ current.resolved.homeLabel }}</span>
+                <span class="score-number">{{ score.home }}</span>
+                <span class="score-separator">—</span>
+                <span class="score-number">{{ score.away }}</span>
+                <span class="scoreboard-team">{{ current.resolved.awayLabel }}</span>
+              </div>
             }
           </div>
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, effect, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   computeFormatOption,
@@ -19,7 +19,8 @@ import { tournamentRepository } from '../../data/tournament-repository';
 import { FORMAT_STRINGS } from '../../i18n/format-strings';
 import { EXPLANATION_STRINGS } from '../../i18n/explanations-strings';
 import { ExplanationComponent } from '../explanation/explanation.component';
-import { showErrorPopup } from '../error-popup';
+import { showErrorModal, showErrorPopup } from '../error-popup';
+import { ERROR_MODAL_STRINGS } from '../../i18n/error-modal-strings';
 
 @Component({
   imports: [ExplanationComponent],
@@ -50,6 +51,15 @@ export class FormatComponent implements OnInit {
   protected readonly selectedMoveTo = signal(0);
 
   private readonly router = inject(Router);
+  private previousParameterError = '';
+  private readonly parameterErrorModal = effect(() => {
+    const message = this.parameterErrors.join('\n');
+    if (message === this.previousParameterError) return;
+    this.previousParameterError = message;
+    if (message) {
+      showErrorModal({ title: ERROR_MODAL_STRINGS.validationTitle, message });
+    }
+  });
 
   protected get formatLocked(): boolean {
     const status = this.tournament()?.status;

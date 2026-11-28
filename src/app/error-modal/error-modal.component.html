@@ -1,0 +1,33 @@
+@if (errorModal(); as error) {
+  <dialog
+    #dialog
+    class="error-modal"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="error-modal-title"
+    aria-describedby="error-modal-message"
+    (cancel)="preventNativeClose($event)"
+  >
+    <div class="error-modal-content">
+      <span class="error-modal-icon" aria-hidden="true">!</span>
+      <p class="error-modal-eyebrow">fast-seven</p>
+      <h2 id="error-modal-title">{{ error.title }}</h2>
+      <p id="error-modal-message">{{ error.message }}</p>
+      <footer>
+        @if (error.primaryActionLabel) {
+          <button type="button" class="primary-action" (click)="runPrimaryAction()">
+            {{ error.primaryActionLabel }}
+          </button>
+        }
+        @if (error.secondaryActionLabel) {
+          <button type="button" (click)="runSecondaryAction()">
+            {{ error.secondaryActionLabel }}
+          </button>
+        }
+        <button type="button" class="dismiss-action" autofocus (click)="dismiss()">
+          {{ strings.close }}
+        </button>
+      </footer>
+    </div>
+  </dialog>
+}

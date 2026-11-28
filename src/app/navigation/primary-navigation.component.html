@@ -1,0 +1,44 @@
+<button
+  type="button"
+  class="mobile-navigation-toggle"
+  aria-controls="primary-navigation"
+  [attr.aria-expanded]="mobileNavigationOpen()"
+  [attr.aria-label]="mobileNavigationOpen() ? strings.close : strings.open"
+  (click)="toggleNavigation()"
+>
+  {{ mobileNavigationOpen() ? strings.close : strings.menu }}
+</button>
+
+<nav
+  class="primary-navigation"
+  [class.is-open]="mobileNavigationOpen()"
+  id="primary-navigation"
+  [attr.aria-label]="strings.label"
+>
+  <a class="brand-link" href="#/panel" (click)="closeNavigation()">{{ strings.brand }}</a>
+
+  @for (group of navigationSections; track group.title) {
+    <div class="navigation-group">
+      <p class="navigation-heading">{{ group.title }}</p>
+      @for (link of group.links; track link.path) {
+        <a
+          [attr.href]="'#' + link.path"
+          [class.active]="currentRoute() === link.path"
+          [attr.aria-current]="currentRoute() === link.path ? 'page' : null"
+          (click)="closeNavigation()"
+        >
+          {{ link.label }}
+        </a>
+      }
+    </div>
+  }
+</nav>
+
+@if (mobileNavigationOpen()) {
+  <button
+    type="button"
+    class="navigation-scrim"
+    [attr.aria-label]="strings.close"
+    (click)="closeNavigation()"
+  ></button>
+}

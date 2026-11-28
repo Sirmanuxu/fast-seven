@@ -1,5 +1,10 @@
 export const PLAYER_STRINGS = {
   title: 'Jugadores',
+  preparationLabel: 'Preparación · Planteles',
+  totalRegistered: 'Jugadores inscriptos',
+  assignedToTeams: 'En equipos',
+  awaitingAssignment: 'Sin equipo',
+  showingResults: 'en pantalla',
   add: 'Agregar jugador',
   edit: 'Editar jugador',
   save: 'Guardar jugador',

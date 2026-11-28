@@ -514,7 +514,7 @@ export class PanelComponent implements OnInit {
     }
 
     if (!isScoreReachable(homePoints) || !isScoreReachable(awayPoints)) {
-      window.alert(MATCH_CONTROL_STRINGS.unreachableScore);
+      showErrorPopup(MATCH_CONTROL_STRINGS.unreachableScore);
     }
 
     const snapshot = this.snapshot();

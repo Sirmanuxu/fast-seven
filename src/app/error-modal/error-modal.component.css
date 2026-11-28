@@ -1,0 +1,88 @@
+.error-modal {
+  width: min(32rem, calc(100vw - 2rem));
+  max-width: none;
+  padding: 0;
+  border: 1px solid var(--color-outline-variant);
+  border-radius: 1rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 24px 80px color-mix(in srgb, var(--color-background) 70%, transparent);
+}
+
+.error-modal::backdrop {
+  background: color-mix(in srgb, var(--color-background) 84%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.error-modal-content {
+  display: grid;
+  gap: 0.6rem;
+  padding: clamp(1.25rem, 5vw, 2rem);
+}
+
+.error-modal-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--color-danger);
+  border-radius: 50%;
+  background: var(--color-danger-container);
+  color: var(--color-on-danger-container);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.error-modal-eyebrow {
+  margin: 0;
+  color: var(--color-danger);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.error-modal h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 4vw, 2rem);
+}
+
+.error-modal-content > p:last-of-type {
+  margin: 0.25rem 0 0.5rem;
+  color: var(--color-text-muted);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.error-modal footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.error-modal footer button {
+  min-width: 7rem;
+  margin: 0;
+}
+
+.error-modal .primary-action {
+  border-color: var(--color-primary-strong);
+  background: var(--color-primary-strong);
+  color: var(--color-on-primary);
+}
+
+@media (max-width: 36rem) {
+  .error-modal footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .error-modal footer button {
+    width: 100%;
+  }
+}

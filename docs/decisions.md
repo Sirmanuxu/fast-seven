@@ -814,3 +814,30 @@
 - **Decision:** Raise the production initial-bundle error budget from 1.08 MB to 1.09 MB.
 - **Reason:** The Swiss and double-elimination implementations increased the bundle by 4.42 kB
   beyond the previous E7-era ceiling.
+
+## 2026-11-27 - UI refactor - Shared navigation and visual system
+
+- **Decision:** Translate the Stitch palette and grouped navigation into local CSS tokens and
+  hash links for existing routes while retaining screen components and tournament workflows.
+  Keep the public projector as a separate read-only view.
+- **Reason:** The supplied archive is a visual scaffold with incompatible architecture and
+  simulated persistence. A local CSS implementation adopts its visual direction without
+  replacing the app's data or behavior.
+- **Decision:** Use local system-font fallbacks rather than the remote font imports in the archive.
+- **Reason:** The app must remain usable offline and should not rely on third-party font requests.
+- **Decision:** Raise the initial bundle error budget from 1.10 MB to 1.12 MB.
+- **Reason:** The existing bundle was within 57 kB of its error limit; the new navigation and
+  shared visual treatment add about 66 kB raw while increasing estimated transfer size by about
+  3.7 kB. The smaller increase preserves a bounded budget without removing the design changes.
+- **Decision:** Raise the initial bundle error budget to 1.14 MB for the screen-composition pass.
+- **Reason:** The actual live-scoreboard, player-summary and import-stepper templates add about
+  7.3 kB beyond the 1.12 MB cap. The 1.14 MB cap keeps a small fixed margin for the measured
+  refactor rather than disabling bundle-size validation.
+
+## 2026-11-28 - UI refactor - Custom error modal
+
+- **Decision:** Route application errors through one localized Angular modal backed by shared
+  state, and render format-parameter validation there instead of as inline error cards.
+- **Reason:** A single accessible modal gives errors consistent presentation while retaining
+  recovery and save actions. Informational messages, warnings, and row-level import review states
+  remain in context because they are not blocking application errors.

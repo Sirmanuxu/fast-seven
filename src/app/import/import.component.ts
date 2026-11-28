@@ -40,6 +40,12 @@ export class ImportComponent {
   private selectedFile: File | null = null;
 
   protected readonly strings = IMPORT_STRINGS;
+  protected readonly importSteps = [
+    { key: 'FILE', label: IMPORT_STRINGS.stepFileLabel },
+    { key: 'MAPPING', label: IMPORT_STRINGS.stepMappingLabel },
+    { key: 'REVIEW', label: IMPORT_STRINGS.stepReviewLabel },
+    { key: 'CONFIRMATION', label: IMPORT_STRINGS.stepConfirmationLabel },
+  ] as const;
   protected readonly preview = signal<ImportPreview | null>(null);
   protected readonly encoding = signal<ImportEncoding | ''>('');
   protected readonly delimiter = signal<ImportDelimiter | ''>('');
@@ -130,6 +136,10 @@ export class ImportComponent {
 
   protected get missingMappings(): readonly string[] {
     return getMissingRequiredMappings(this.mapping());
+  }
+
+  protected get currentStepIndex(): number {
+    return this.importSteps.findIndex((step) => step.key === this.step());
   }
 
   protected get mappedPreviewRows(): readonly {
